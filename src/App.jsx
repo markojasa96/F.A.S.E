@@ -420,6 +420,14 @@ const EXDB = {
   ],
 };
 
+/* ─── Lista plana de todos los ejercicios disponibles (para el creador de rutinas) ─── */
+const ALL_EXERCISES_FLAT = (() => {
+  const map = new Map();
+  Object.values(EXDB).forEach((arr) => arr.forEach((e) => { if (!map.has(e.n)) map.set(e.n, { name: e.n, type: e.t, tip: e.tip }); }));
+  Object.values(ATLETISMO_EXDB).forEach((arr) => arr.forEach((e) => { if (!map.has(e.n)) map.set(e.n, { name: e.n, type: e.t, tip: e.tip }); }));
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+})();
+
 /* ─── Secciones de Cuerpo (acondicionamiento) ─── */
 const BODY_SECTIONS = [
   {
@@ -527,6 +535,34 @@ const EXRANKS = [
   { min: 0, name: "Novato", color: C.mut },
 ];
 
+/* ─── Comparativas expandidas por disciplina ─── */
+const WEIGHT_SCALE = [
+  { min: 250, emoji: "🐻‍❄️", label: "Un oso polar" },
+  { min: 200, emoji: "🐂", label: "Un toro de lidia" },
+  { min: 150, emoji: "🎹", label: "Un piano de cola" },
+  { min: 100, emoji: "🐻", label: "Un oso pardo" },
+  { min: 80, emoji: "🧑", label: "Una persona promedio" },
+  { min: 50, emoji: "📺", label: "Un televisor de 65 pulgadas" },
+  { min: 20, emoji: "✈️", label: "Una maleta llena de ropa" },
+  { min: 0, emoji: "🪶", label: "Todavía calentando" },
+];
+const PULLUP_SCALE = [
+  { min: 30, emoji: "🦍", label: "Nivel gorila" },
+  { min: 20, emoji: "🦧", label: "Nivel orangután" },
+  { min: 10, emoji: "🐒", label: "Nivel chimpancé (proporcionalmente)" },
+  { min: 0, emoji: "🧑", label: "Nivel humano promedio" },
+];
+const SPRINT_SCALE = [
+  { max: 10, emoji: "⚡", label: "Territorio de los mejores del mundo" },
+  { max: 10.5, emoji: "🏃", label: "Nivel atleta olímpico aficionado" },
+  { max: 11, emoji: "🐘", label: "Velocidad de un elefante en carrera" },
+  { max: 12, emoji: "🐻", label: "Velocidad de un oso corriendo" },
+  { max: Infinity, emoji: "🐕", label: "Más lento que un perro labrador" },
+];
+function pickScale(scale, value, key = "min") {
+  return scale.find((s) => (key === "min" ? value >= s.min : value <= s[key]));
+}
+
 /* ─── Utilidades ─── */
 const dayKey = (ts) => {
   const d = new Date(ts);
@@ -570,6 +606,7 @@ function mulberry32(a) {
 }
 
 const todayKey = () => dayKey(Date.now());
+const seedNow = () => Date.now();
 
 /* ─── Audio (Web Audio API, sin librerías) ───
    El contexto se crea dentro de un gesto del usuario para funcionar en móvil */
@@ -611,6 +648,24 @@ const tripleBeep = () => {
 };
 /* Aviso suave a 3 segundos del final */
 const softBeep = () => beep(440, 0.1, 0.15, 0);
+
+/* ─── Voz sintetizada (Web Speech API, gratis, sin API key) ─── */
+function speak(text) {
+  try {
+    if (!window.speechSynthesis) return;
+    const voices = window.speechSynthesis.getVoices();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "es-MX";
+    u.rate = 0.9;
+    u.pitch = 1.1;
+    const voice = voices.find((v) => v.lang === "es-MX") || voices.find((v) => v.lang === "es-ES") || voices.find((v) => v.lang?.startsWith("es"));
+    if (voice) u.voice = voice;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch {
+    /* voz no disponible */
+  }
+}
 
 /* ─── Categoría de movimiento según el nombre del ejercicio (para el SVG animado) ─── */
 function movementCategory(name) {
@@ -673,6 +728,68 @@ function weightSuggestion(sessions, exName) {
   return { weight: allOk ? maxW + 2.5 : maxW, up: allOk };
 }
 
+/* ─── Orden de disciplinas para agrupar récords ─── */
+const DISC_ORDER = ["gimnasio", "calistenia", "futbolGym", "futbolParque", "atletismo", "especial", "custom"];
+
+/* ─── Récords personales por ejercicio (mejor marca histórica) ─── */
+function computeRecords(sessions) {
+  const map = {};
+  sessions.filter((s) => s.kind === "entreno").forEach((s) => {
+    s.exercises.forEach((e) => {
+      e.sets.forEach((st) => {
+        if (!st.ok) return;
+        const score = st.weight > 0 ? st.weight * 1000 + st.reps : st.reps;
+        const cur = map[e.name];
+        if (!cur || score > cur.score) {
+          map[e.name] = { name: e.name, weight: st.weight, reps: st.reps, ts: s.ts, disc: s.disc, score };
+        }
+      });
+    });
+  });
+  const list = Object.values(map);
+  list.sort((a, b) => {
+    const oa = DISC_ORDER.indexOf(a.disc);
+    const ob = DISC_ORDER.indexOf(b.disc);
+    if (oa !== ob) return (oa === -1 ? 99 : oa) - (ob === -1 ? 99 : ob);
+    return b.score - a.score;
+  });
+  store.set("records", list);
+  return list;
+}
+
+/* ─── Historial de un ejercicio concreto (para la pantalla de detalle) ─── */
+function exerciseHistory(sessions, name) {
+  const rows = [];
+  sessions.filter((s) => s.kind === "entreno").forEach((s) => {
+    s.exercises.forEach((e) => {
+      if (e.name !== name) return;
+      const okSets = e.sets.filter((st) => st.ok);
+      if (!okSets.length) return;
+      const best = okSets.reduce((a, b) => (b.weight > a.weight || (b.weight === a.weight && b.reps > a.reps) ? b : a));
+      rows.push({ ts: s.ts, weight: best.weight, reps: best.reps });
+    });
+  });
+  rows.sort((a, b) => a.ts - b.ts);
+  const last10 = rows.slice(-10);
+  const metricOf = (r) => (r.weight > 0 ? r.weight : r.reps);
+  let trend = "estable";
+  if (rows.length >= 6) {
+    const recent3 = rows.slice(-3).map(metricOf);
+    const prev3 = rows.slice(-6, -3).map(metricOf);
+    const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const diff = avg(recent3) - avg(prev3);
+    if (diff > 0.5) trend = "mejorando";
+    else if (diff < -0.5) trend = "bajando";
+  }
+  const maxMetric = Math.max(...rows.map(metricOf), 0);
+  return { rows: last10, trend, isRecordRow: (r) => metricOf(r) >= maxMetric };
+}
+
+/* ─── Ejercicios de gimnasio que requieren máquinas/barras/poleas ─── */
+function requiresGymEquipment(name) {
+  return /barra|m[aá]quina|polea/i.test(name);
+}
+
 function heroForStreak(streak) {
   let hero = null;
   for (const h of HEROES) if (streak >= h.days) hero = h;
@@ -712,12 +829,14 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const focus = DISCIPLINES[discId].focuses.find((f) => f.id === focusId);
   const matchFocus = (e) => !focus.tags || e.f.some((t) => focus.tags.includes(t));
   const matchBar = (e) => !opts.noBar || !e.bar;
+  const matchEquip = (e) => !(opts.noEquip && discId === "gimnasio") || !requiresGymEquipment(e.n);
+  const matchAll = (e) => matchFocus(e) && matchBar(e) && matchEquip(e);
 
-  let pool = db.filter((e) => matchFocus(e) && matchBar(e) && e.lv[0] <= lvlIdx && lvlIdx <= e.lv[1]);
-  if (pool.length < 5) pool = db.filter((e) => matchFocus(e) && matchBar(e));
-  /* Si el enfoque elegido no tiene alternativas sin barra, prioriza respetar
-     el equipo disponible (casa) antes que el enfoque exacto. */
-  if (pool.length < 5) pool = db.filter(matchBar);
+  let pool = db.filter((e) => matchAll(e) && e.lv[0] <= lvlIdx && lvlIdx <= e.lv[1]);
+  if (pool.length < 5) pool = db.filter(matchAll);
+  /* Si el enfoque elegido no tiene alternativas sin barra/equipo, prioriza
+     respetar el equipo disponible antes que el enfoque exacto. */
+  if (pool.length < 5) pool = db.filter((e) => matchBar(e) && matchEquip(e));
   if (pool.length < 5) pool = db.filter(matchFocus);
 
   const target = Math.max(
@@ -1129,13 +1248,68 @@ const MODE_OPTIONS = [
   { id: "pro", emoji: "⚙️", label: "Control total", desc: "Datos puros, sin distracciones" },
 ];
 
+const NOTIF_HOURS = [
+  { id: "morning", label: "Mañana 7am", hour: 7 },
+  { id: "afternoon", label: "Tarde 5pm", hour: 17 },
+  { id: "night", label: "Noche 8pm", hour: 20 },
+];
+
 function Welcome({ onDone }) {
   const [step, setStep] = useState(1);
   const [value, setValue] = useState("");
+  const [mode, setMode] = useState(null);
   const goToMode = () => {
     if (value.trim()) setStep(2);
   };
-  const chooseMode = (mode) => onDone(value.trim(), mode);
+  const chooseMode = (m) => {
+    setMode(m);
+    setStep(3);
+  };
+  const finish = () => onDone(value.trim(), mode);
+
+  const acceptNotifs = async (hourId) => {
+    try {
+      if (window.Notification) {
+        const perm = await Notification.requestPermission();
+        if (perm === "granted") {
+          store.set("notif_hour", hourId);
+          if (navigator.serviceWorker) {
+            navigator.serviceWorker.register("/sw.js").catch(() => {});
+          }
+        }
+      }
+    } catch {
+      /* notificaciones no disponibles */
+    }
+    finish();
+  };
+
+  if (step === 3) {
+    return (
+      <div className="fade-up" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center", padding: 28, gap: 12 }}>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 40 }}>🔔</div>
+        </div>
+        <p style={{ color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center", lineHeight: 1.5 }}>
+          ¿Quieres que F.A.S.E. te recuerde entrenar cada día? Solo te avisaremos una vez al día.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+          {NOTIF_HOURS.map((h) => (
+            <button key={h.id} className="card" onClick={() => acceptNotifs(h.id)} style={{ textAlign: "center", padding: "12px 8px" }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Sí, recuérdame — {h.label}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          className="btn-xl"
+          onClick={finish}
+          style={{ marginTop: 8, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
+        >
+          Ahora no
+        </button>
+      </div>
+    );
+  }
 
   if (step === 2) {
     return (
@@ -1450,13 +1624,480 @@ const TRAIN_CARDS = [
   { id: "atletismo", ...DISCIPLINES.atletismo },
 ];
 
-function Train({ onStart, onAccent, totalSessions }) {
+const MAX_CUSTOM_ROUTINES = 10;
+
+/* ─── Creador / editor de rutina personalizada ─── */
+function CustomRoutineBuilder({ initial, onSave, onCancel }) {
+  const [name, setName] = useState(initial?.name || "");
+  const [items, setItems] = useState(initial?.exercises || []);
+  const [query, setQuery] = useState("");
+
+  const matches = query.trim()
+    ? ALL_EXERCISES_FLAT.filter((e) => e.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
+    : [];
+
+  const addExercise = (e) => {
+    setItems((prev) => [...prev, { name: e.name, type: e.type, tip: e.tip, sets: 3, reps: e.type === "tiempo" ? "30s" : "10", rest: 60 }]);
+    setQuery("");
+  };
+  const removeAt = (i) => setItems((prev) => prev.filter((_, idx) => idx !== i));
+  const move = (i, dir) => {
+    setItems((prev) => {
+      const next = [...prev];
+      const j = i + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  };
+  const updateField = (i, field, value) => {
+    setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [field]: value } : it)));
+  };
+
+  const canSave = name.trim() && items.length > 0;
+
+  return (
+    <div className="screen">
+      <button onClick={onCancel} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
+        ‹ Cancelar
+      </button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>{initial ? "Editar rutina" : "Nueva rutina"}</h2>
+
+      <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 12, display: "block" }}>NOMBRE</label>
+      <input className="input" placeholder="Ej. Full body express" value={name} onChange={(e) => setName(e.target.value)} style={{ marginTop: 4 }} />
+
+      <div className="sec-title">Buscar ejercicio</div>
+      <input className="input" placeholder="Buscar por nombre..." value={query} onChange={(e) => setQuery(e.target.value)} />
+      {matches.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+          {matches.map((e) => (
+            <button key={e.name} className="card" onClick={() => addExercise(e)} style={{ textAlign: "left", padding: "9px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>{e.name}</span>
+              <span style={{ fontSize: 14, color: C.cyan }}>＋</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="sec-title">Tu rutina · {items.length} ejercicios</div>
+      {items.length === 0 ? (
+        <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 12 }}>
+          Busca y añade ejercicios arriba.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {items.map((it, i) => (
+            <div key={`${it.name}-${i}`} className="card" style={{ padding: "10px 12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>{it.name}</span>
+                <button onClick={() => move(i, -1)} style={{ padding: 4, color: C.mut }}>↑</button>
+                <button onClick={() => move(i, 1)} style={{ padding: 4, color: C.mut }}>↓</button>
+                <button onClick={() => removeAt(i)} style={{ padding: 4, color: C.red }}>✕</button>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 9, color: C.dim }}>SERIES</label>
+                  <input
+                    className="input" type="number" value={it.sets} min={1} max={10}
+                    onChange={(e) => updateField(i, "sets", Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    style={{ padding: 8, fontSize: 12 }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 9, color: C.dim }}>{it.type === "tiempo" ? "TIEMPO" : "REPS"}</label>
+                  <input
+                    className="input" type="text" value={it.reps}
+                    onChange={(e) => updateField(i, "reps", e.target.value)}
+                    style={{ padding: 8, fontSize: 12 }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 9, color: C.dim }}>DESCANSO (S)</label>
+                  <input
+                    className="input" type="number" value={it.rest} min={0} max={300}
+                    onChange={(e) => updateField(i, "rest", Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    style={{ padding: 8, fontSize: 12 }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button
+        className="btn-xl"
+        disabled={!canSave}
+        onClick={() => onSave({ id: initial?.id || `custom-${Date.now()}`, name: name.trim(), exercises: items })}
+        style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}
+      >
+        💾 GUARDAR RUTINA
+      </button>
+    </div>
+  );
+}
+
+/* ─── Modo especial: AMRAP (As Many Rounds As Possible) ─── */
+function AmrapMode({ onFinish, onSave }) {
+  const [duration, setDuration] = useState(null);
+  const [circuit, setCircuit] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [rounds, setRounds] = useState(0);
+  const [done, setDone] = useState(false);
+  const secRef = useRef(0);
+
+  const chooseDuration = (min) => {
+    setDuration(min);
+    const c = genRoutine("calistenia", "todo", 2, seedNow(), { noBar: true }).slice(0, 5);
+    setCircuit(c);
+    secRef.current = min * 60;
+    setSecondsLeft(min * 60);
+  };
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => {
+      secRef.current -= 1;
+      if (secRef.current <= 0) {
+        tripleBeep();
+        setSecondsLeft(0);
+        setRunning(false);
+        setDone(true);
+      } else {
+        setSecondsLeft(secRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const finish = () => {
+    const records = store.get("amrap_records", {});
+    const prevBest = records[duration] || 0;
+    const isRecord = rounds > prevBest;
+    if (isRecord) {
+      records[duration] = rounds;
+      store.set("amrap_records", records);
+    }
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "especial",
+      focusLabel: `AMRAP ${duration} min`, levelIdx: 2,
+      exercises: [{ name: `AMRAP ${duration} min`, sets: [{ weight: 0, reps: rounds, ok: true }] }],
+    });
+    onFinish();
+  };
+
+  if (!duration) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 16 }}>⏱</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>AMRAP</h2>
+        <p className="muted" style={{ marginTop: 4 }}>Cuantas rondas puedas en el tiempo elegido</p>
+        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+          {[5, 10, 15, 20].map((m) => (
+            <button key={m} className="card" onClick={() => chooseDuration(m)} style={{ flex: 1, padding: "16px 4px" }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>{m}</div>
+              <div style={{ fontSize: 10, color: C.mut }}>min</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (done) {
+    const records = store.get("amrap_records", {});
+    const prevBest = records[duration] || 0;
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 60 }}>🎉</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>¡Tiempo!</h2>
+        <div style={{ fontSize: 42, fontWeight: 900, color: C.green, marginTop: 10 }}>{rounds} rondas</div>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>
+          {rounds > prevBest ? `🏆 ¡Nuevo récord! Anterior: ${prevBest}` : `Tu récord: ${Math.max(prevBest, rounds)}`}
+        </p>
+        <button className="btn-xl" onClick={finish} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>
+          VOLVER
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>AMRAP · {duration} min</p>
+      <div style={{ fontSize: 56, fontWeight: 900, marginTop: 8, fontVariantNumeric: "tabular-nums" }}>
+        {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:{String(secondsLeft % 60).padStart(2, "0")}
+      </div>
+      <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
+        <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>CIRCUITO</p>
+        {circuit.map((e, i) => (
+          <p key={i} style={{ fontSize: 12, marginTop: 4 }}>{i + 1}. {e.name} — {e.reps}</p>
+        ))}
+      </div>
+      <div style={{ fontSize: 40, fontWeight: 900, color: C.cyan, marginTop: 20 }}>{rounds}</div>
+      <p style={{ fontSize: 11, color: C.dim }}>rondas completadas</p>
+      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+        <button className="btn-xl" onClick={() => setRounds((r) => Math.max(0, r - 1))} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>−</button>
+        <button className="btn-xl" onClick={() => setRounds((r) => r + 1)} style={{ background: C.cyan, color: "#07070C" }}>+1 RONDA</button>
+      </div>
+      {!running ? (
+        <button className="btn-xl" onClick={() => setRunning(true)} style={{ marginTop: 14, background: C.green, color: "#07070C" }}>▶ INICIAR</button>
+      ) : (
+        <button className="btn-xl" onClick={() => { setRunning(false); setDone(true); }} style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
+          TERMINAR AHORA
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── Modo especial: EMOM (Every Minute On the Minute) ─── */
+function EmomMode({ onFinish, onSave }) {
+  const [duration, setDuration] = useState(null);
+  const [exercises, setExercises] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [done, setDone] = useState(false);
+  const elapsedRef = useRef(0);
+
+  const chooseDuration = (min) => {
+    setDuration(min);
+    const ex = genRoutine("calistenia", "todo", 1, seedNow(), { noBar: true }).slice(0, 2);
+    setExercises(ex);
+  };
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => {
+      elapsedRef.current += 1;
+      const total = duration * 60;
+      if (elapsedRef.current % 60 === 0 && elapsedRef.current < total) tripleBeep();
+      if (elapsedRef.current >= total) {
+        tripleBeep();
+        setRunning(false);
+        setDone(true);
+      }
+      setElapsed(elapsedRef.current);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [running, duration]);
+
+  const finish = () => {
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "especial",
+      focusLabel: `EMOM ${duration} min`, levelIdx: 2,
+      exercises: exercises.map((e) => ({ name: e.name, sets: [{ weight: 0, reps: duration, ok: true }] })),
+    });
+    onFinish();
+  };
+
+  if (!duration) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 16 }}>🔔</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>EMOM</h2>
+        <p className="muted" style={{ marginTop: 4 }}>Cada minuto en punto, haz tus reps</p>
+        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+          {[10, 15, 20].map((m) => (
+            <button key={m} className="card" onClick={() => chooseDuration(m)} style={{ flex: 1, padding: "16px 4px" }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>{m}</div>
+              <div style={{ fontSize: 10, color: C.mut }}>min</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 60 }}>🎉</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>¡EMOM completado!</h2>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>{duration} minutos de trabajo constante.</p>
+        <button className="btn-xl" onClick={finish} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>VOLVER</button>
+      </div>
+    );
+  }
+
+  const secInMinute = 60 - (elapsed % 60);
+  const minuteNum = Math.floor(elapsed / 60) + 1;
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>EMOM · Minuto {minuteNum} de {duration}</p>
+      <div style={{ fontSize: 64, fontWeight: 900, marginTop: 10, color: secInMinute <= 5 ? C.orange : C.text, fontVariantNumeric: "tabular-nums" }}>
+        {secInMinute === 60 ? 0 : secInMinute}
+      </div>
+      <p style={{ fontSize: 11, color: C.dim }}>segundos de este minuto</p>
+      <div className="card" style={{ marginTop: 20, textAlign: "left" }}>
+        {exercises.map((e, i) => (
+          <p key={i} style={{ fontSize: 13, fontWeight: 700, marginTop: i > 0 ? 8 : 0 }}>{e.name} — {e.reps}</p>
+        ))}
+      </div>
+      {!running ? (
+        <button className="btn-xl" onClick={() => setRunning(true)} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>▶ INICIAR</button>
+      ) : (
+        <button className="btn-xl" onClick={() => { setRunning(false); setDone(true); }} style={{ marginTop: 20, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
+          TERMINAR AHORA
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── Modo especial: Intervalos (Tabata / Personalizado) ─── */
+function IntervalMode({ onFinish, onSave }) {
+  const [cfg, setCfg] = useState(null); // { work, rest, rounds }
+  const [customWork, setCustomWork] = useState("30");
+  const [customRest, setCustomRest] = useState("15");
+  const [customRounds, setCustomRounds] = useState("6");
+  const [phase, setPhase] = useState("work");
+  const [round, setRound] = useState(1);
+  const [secLeft, setSecLeft] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+  const secRef = useRef(0);
+
+  const start = (c) => {
+    setCfg(c);
+    setPhase("work");
+    setRound(1);
+    secRef.current = c.work;
+    setSecLeft(c.work);
+  };
+
+  useEffect(() => {
+    if (!running || !cfg) return undefined;
+    const t = setInterval(() => {
+      secRef.current -= 1;
+      if (secRef.current <= 0) {
+        if (phase === "work") {
+          if (round >= cfg.rounds) {
+            tripleBeep();
+            setRunning(false);
+            setDone(true);
+            return;
+          }
+          speak("Descansa");
+          setPhase("rest");
+          secRef.current = cfg.rest;
+          setSecLeft(cfg.rest);
+        } else {
+          speak("Trabaja");
+          setPhase("work");
+          setRound((r) => r + 1);
+          secRef.current = cfg.work;
+          setSecLeft(cfg.work);
+        }
+      } else {
+        setSecLeft(secRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [running, cfg, phase, round]);
+
+  const finish = () => {
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "especial",
+      focusLabel: `Intervalos ${cfg.work}/${cfg.rest}×${cfg.rounds}`, levelIdx: 2,
+      exercises: [{ name: "Intervalos", sets: [{ weight: 0, reps: cfg.rounds, ok: true }] }],
+    });
+    onFinish();
+  };
+
+  if (!cfg) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 16 }}>📊</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Intervalos</h2>
+        <button
+          className="btn-xl"
+          onClick={() => start({ work: 20, rest: 10, rounds: 8 })}
+          style={{ marginTop: 20, background: C.orange, color: "#07070C" }}
+        >
+          🔥 TABATA CLÁSICO (20s/10s×8)
+        </button>
+        <div className="sec-title" style={{ textAlign: "left" }}>Personalizado</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 9, color: C.dim }}>TRABAJO (S)</label>
+            <input className="input" type="number" value={customWork} onChange={(e) => setCustomWork(e.target.value)} style={{ padding: 8, fontSize: 12 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 9, color: C.dim }}>DESCANSO (S)</label>
+            <input className="input" type="number" value={customRest} onChange={(e) => setCustomRest(e.target.value)} style={{ padding: 8, fontSize: 12 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 9, color: C.dim }}>RONDAS</label>
+            <input className="input" type="number" value={customRounds} onChange={(e) => setCustomRounds(e.target.value)} style={{ padding: 8, fontSize: 12 }} />
+          </div>
+        </div>
+        <button
+          className="btn-xl"
+          onClick={() => start({ work: parseInt(customWork, 10) || 20, rest: parseInt(customRest, 10) || 10, rounds: parseInt(customRounds, 10) || 8 })}
+          style={{ marginTop: 10, background: C.cyan, color: "#07070C" }}
+        >
+          COMENZAR PERSONALIZADO
+        </button>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 60 }}>🎉</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>¡Intervalos completados!</h2>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>{cfg.rounds} rondas de {cfg.work}s / {cfg.rest}s.</p>
+        <button className="btn-xl" onClick={finish} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>VOLVER</button>
+      </div>
+    );
+  }
+
+  const isWork = phase === "work";
+  return (
+    <div
+      className="fade-up"
+      style={{
+        position: "fixed", inset: 0, zIndex: 60,
+        background: isWork ? "rgba(34,255,136,0.15)" : "rgba(59,130,246,0.18)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center",
+        transition: "background .3s ease",
+      }}
+    >
+      <p style={{ fontSize: 14, color: C.mut, fontWeight: 700 }}>Ronda {round} de {cfg.rounds}</p>
+      <p style={{ fontSize: 22, fontWeight: 900, marginTop: 8, color: isWork ? C.green : C.blue, letterSpacing: 3 }}>
+        {isWork ? "TRABAJA" : "DESCANSA"}
+      </p>
+      <div style={{ fontSize: 72, fontWeight: 900, marginTop: 10, fontVariantNumeric: "tabular-nums" }}>{secLeft}</div>
+      {!running ? (
+        <button className="btn-xl" onClick={() => { speak("Trabaja"); setRunning(true); }} style={{ marginTop: 20, background: C.green, color: "#07070C", maxWidth: 260 }}>
+          ▶ INICIAR
+        </button>
+      ) : (
+        <button className="btn-xl" onClick={() => { setRunning(false); setDone(true); }} style={{ marginTop: 20, background: C.surface, border: `1px solid ${C.border}`, color: C.text, maxWidth: 260 }}>
+          TERMINAR AHORA
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial }) {
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
   const [seed, setSeed] = useState(0);
   const [calLocation, setCalLocation] = useState(null);
   const [distance, setDistance] = useState(null);
+  const [customRoutines, setCustomRoutines] = useState(() => store.get("custom_routines", []));
+  const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
+  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos"
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -1469,18 +2110,59 @@ function Train({ onStart, onAccent, totalSessions }) {
   };
 
   const pickDisc = (id) => {
-    setDiscId(id);
+    /* Modo sin equipo: fútbol siempre en parque, calistenia siempre en casa */
+    const finalId = id === "futbol" && noEquipment ? "futbolParque" : id;
+    setDiscId(finalId);
     setFocusId("todo");
     setLvlIdx(null);
-    setCalLocation(null);
+    setCalLocation(finalId === "calistenia" && noEquipment ? "casa" : null);
     setDistance(null);
-    if (id === "futbol") onAccent(C.orange);
-    else if (id === "atletismo") onAccent(C.purple);
-    else onAccent(DISCIPLINES[id].color);
+    if (finalId === "futbol") onAccent(C.orange);
+    else if (finalId === "atletismo") onAccent(C.purple);
+    else onAccent(DISCIPLINES[finalId].color);
   };
   const backToDiscs = () => {
     setDiscId(null);
     onAccent(null);
+  };
+
+  const saveCustomRoutine = (routine) => {
+    setCustomRoutines((prev) => {
+      const exists = prev.some((r) => r.id === routine.id);
+      let next;
+      if (exists) {
+        next = prev.map((r) => (r.id === routine.id ? routine : r));
+      } else {
+        if (prev.length >= MAX_CUSTOM_ROUTINES) {
+          alert("Límite alcanzado. Elimina una rutina para crear otra.");
+          return prev;
+        }
+        next = [...prev, routine];
+      }
+      store.set("custom_routines", next);
+      return next;
+    });
+    setBuilderMode(null);
+  };
+
+  const deleteCustomRoutine = (id) => {
+    if (!window.confirm("¿Eliminar esta rutina?")) return;
+    setCustomRoutines((prev) => {
+      const next = prev.filter((r) => r.id !== id);
+      store.set("custom_routines", next);
+      return next;
+    });
+  };
+
+  const startCustomRoutine = (routine) => {
+    onStart({
+      discId: "custom", discLabel: routine.name, discColor: C.cyan, discIcon: "📋",
+      focusLabel: "Personalizada", lvlIdx: 1,
+      exercises: routine.exercises.map((e) => ({
+        name: e.name, type: e.type || "reps", sets: e.sets, reps: e.reps, rest: e.rest,
+        tip: e.tip || "Controla la técnica en cada repetición.",
+      })),
+    });
   };
 
   const isConcreteDisc = discId && discId !== "futbol" && discId !== "atletismo";
@@ -1493,17 +2175,36 @@ function Train({ onStart, onAccent, totalSessions }) {
     /* Semilla automática: cambia cada 3 sesiones + botón "Variar" */
     const focusHash = [...(discId + focusId)].reduce((a, c) => a + c.charCodeAt(0), 0);
     const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + effLvl * 17 + focusHash;
-    let r = genRoutine(discId, focusId, effLvl, seedVal, { noBar: discId === "calistenia" && calLocation === "casa" });
+    let r = genRoutine(discId, focusId, effLvl, seedVal, {
+      noBar: discId === "calistenia" && calLocation === "casa",
+      noEquip: noEquipment,
+    });
     if (energy === "low") r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
     if (energy === "high") r = r.map((e, i) => (i === 0 ? { ...e, sets: Math.min(6, e.sets + 1) } : e));
     return r;
-  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation]);
+  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment]);
 
   const atletRoutine = useMemo(() => {
     if (discId !== "atletismo" || !distance || lvlIdx === null) return null;
     const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + lvlIdx * 17;
     return genAtletismoRoutine(distance, lvlIdx, seedVal);
   }, [discId, distance, lvlIdx, seed, totalSessions]);
+
+  /* ── Creador / editor de rutina personalizada ── */
+  if (builderMode) {
+    return (
+      <CustomRoutineBuilder
+        initial={builderMode === "new" ? null : builderMode}
+        onSave={saveCustomRoutine}
+        onCancel={() => setBuilderMode(null)}
+      />
+    );
+  }
+
+  /* ── Modos especiales (AMRAP / EMOM / Intervalos) ── */
+  if (special === "amrap") return <AmrapMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
+  if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
+  if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
 
   /* ── Pantalla 1: lista de disciplinas ── */
   if (!discId) {
@@ -1531,6 +2232,47 @@ function Train({ onStart, onAccent, totalSessions }) {
             </button>
           ))}
         </div>
+
+        <div className="sec-title">Modo especial</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="card" onClick={() => setSpecial("amrap")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 22 }}>⏱</div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>AMRAP</div>
+          </button>
+          <button className="card" onClick={() => setSpecial("emom")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 22 }}>🔔</div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>EMOM</div>
+          </button>
+          <button className="card" onClick={() => setSpecial("intervalos")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 22 }}>📊</div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Intervalos</div>
+          </button>
+        </div>
+
+        <div className="sec-title">Mi rutina</div>
+        <button
+          className="card fade-up"
+          onClick={() => setBuilderMode("new")}
+          style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", borderLeft: `4px solid ${C.cyan}` }}
+        >
+          <span style={{ fontSize: 26 }}>➕</span>
+          <div style={{ fontSize: 14, fontWeight: 800 }}>Crear rutina personalizada</div>
+        </button>
+        {customRoutines.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+            {customRoutines.map((r) => (
+              <div key={r.id} className="card" style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
+                  <div style={{ fontSize: 11, color: C.mut }}>{r.exercises.length} ejercicios</div>
+                </div>
+                <button onClick={() => startCustomRoutine(r)} style={{ fontSize: 16, padding: 4 }}>▶</button>
+                <button onClick={() => setBuilderMode(r)} style={{ fontSize: 14, padding: 4 }}>✏️</button>
+                <button onClick={() => deleteCustomRoutine(r.id)} style={{ fontSize: 14, padding: 4, color: C.red }}>🗑</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -1839,7 +2581,7 @@ function Train({ onStart, onAccent, totalSessions }) {
 }
 
 /* ─── SESIÓN ACTIVA ─── */
-function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
+function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onToggleVoice }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
   const [phase, setPhase] = useState("work"); // work | rest | exdone | finished
@@ -1877,6 +2619,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
       if (restRef.current === 3) softBeep();
       if (restRef.current <= 0) {
         tripleBeep();
+        if (voiceOn) speak("¡Siguiente serie!");
         setPhase("work");
         setSetNum((n) => n + 1);
       } else {
@@ -1884,7 +2627,14 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
       }
     }, 1000);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
+
+  /* Anuncia el nombre del ejercicio al empezarlo */
+  useEffect(() => {
+    if (voiceOn) speak(ex.name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exIdx]);
 
   const pressKey = (k) => {
     const cur = field === "weight" ? weight : reps;
@@ -1922,6 +2672,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
     if (setNum + 1 >= ex.sets) {
       setFlashDone(true);
       setTimeout(() => setFlashDone(false), 300);
+      if (voiceOn) speak("¡Ejercicio completado!");
       setPhase("exdone");
     } else if (ex.rest > 0) {
       restRef.current = ex.rest;
@@ -1946,6 +2697,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
       };
       onSave(record);
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      if (voiceOn) speak(`¡Sesión completada! Eres un ${LEVELS[plan.lvlIdx]?.name || ""}`);
       setPhase("finished");
     } else {
       const nextEx = plan.exercises[exIdx + 1];
@@ -2088,6 +2840,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
         <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
           {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
         </span>
+        <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 15, padding: 4 }}>
+          {voiceOn ? "🔊" : "🔇"}
+        </button>
       </div>
 
       {/* Progreso de la sesión */}
@@ -2410,6 +3165,7 @@ function OneRM({ onBack }) {
 function Progress({ sessions }) {
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
+  const [recordDetail, setRecordDetail] = useState(null);
 
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
@@ -2446,7 +3202,76 @@ function Progress({ sessions }) {
     return { vols, max };
   }, [workouts]);
 
+  const records = useMemo(() => computeRecords(sessions), [sessions]);
+  const [now] = useState(() => Date.now());
+
+  const maxPullups = useMemo(() => {
+    const vals = workouts
+      .flatMap((s) => s.exercises)
+      .filter((e) => /domin/i.test(e.name))
+      .flatMap((e) => e.sets)
+      .filter((st) => st.ok && st.weight === 0)
+      .map((st) => st.reps);
+    return vals.length ? Math.max(...vals) : 0;
+  }, [workouts]);
+
+  const bestSprintSecs = useMemo(() => {
+    const vals = workouts
+      .filter((s) => s.disc === "atletismo")
+      .flatMap((s) => s.exercises)
+      .filter((e) => /sprint|velocidad/i.test(e.name))
+      .flatMap((e) => e.sets)
+      .filter((st) => st.ok && st.reps > 0)
+      .map((st) => st.reps);
+    return vals.length ? Math.min(...vals) : null;
+  }, [workouts]);
+
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
+
+  if (recordDetail) {
+    const hist = exerciseHistory(sessions, recordDetail);
+    const maxVal = Math.max(1, ...hist.rows.map((r) => (r.weight > 0 ? r.weight : r.reps)));
+    const trendLabel = { mejorando: "📈 Mejorando", estable: "📊 Estable", bajando: "📉 Bajando" }[hist.trend];
+    return (
+      <div className="screen">
+        <button onClick={() => setRecordDetail(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
+          ‹ Progreso
+        </button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>{recordDetail}</h2>
+        <p style={{ fontSize: 13, color: C.cyan, fontWeight: 700, marginTop: 4 }}>{trendLabel}</p>
+
+        <div className="sec-title">Últimas veces</div>
+        <div className="card" style={{ padding: "14px 10px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 5, height: 80 }}>
+            {hist.rows.map((r, i) => {
+              const val = r.weight > 0 ? r.weight : r.reps;
+              const h = Math.max(4, Math.round((val / maxVal) * 80));
+              return (
+                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: 80 }}>
+                  <div style={{ width: "100%", height: h, borderRadius: 4, background: `linear-gradient(180deg, ${C.cyan}, ${C.green})` }} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="sec-title">Historial</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {[...hist.rows].reverse().map((r, i) => (
+            <div key={i} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px" }}>
+              <span style={{ fontSize: 12, color: C.mut }}>{fmtDate(r.ts)}</span>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>
+                {r.weight > 0 ? `${r.weight} kg × ${r.reps}` : `${r.reps} reps`}
+              </span>
+              {hist.isRecordRow(r) && (
+                <span style={{ fontSize: 10, fontWeight: 800, color: C.yellow }}>🏆 récord</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!detail) {
     return (
@@ -2535,6 +3360,41 @@ function Progress({ sessions }) {
           </>
         )}
 
+        <div className="sec-title">🏆 Mis récords</div>
+        {records.length === 0 ? (
+          <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13 }}>
+            Completa tu primera sesión para empezar a registrar récords.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {records.map((r) => {
+              const isNew = now - r.ts <= 14 * 86400000;
+              const d = DISCIPLINES[r.disc];
+              return (
+                <button
+                  key={r.name}
+                  className="card"
+                  onClick={() => setRecordDetail(r.name)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left" }}
+                >
+                  <span style={{ fontSize: 20 }}>{d?.icon || "🏅"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
+                    <div style={{ fontSize: 11, color: C.mut }}>
+                      {r.weight > 0 ? `${r.weight} kg × ${r.reps} reps` : `${r.reps} reps`} · {fmtDate(r.ts)}
+                    </div>
+                  </div>
+                  {isNew && (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: C.orange, background: "rgba(255,122,47,0.15)", padding: "3px 7px", borderRadius: 99, flexShrink: 0 }}>
+                      NUEVO 🔥
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="sec-title">Escalera de niveles</div>
         <div className="card" style={{ display: "flex", justifyContent: "space-between", padding: "14px 12px" }}>
           {LEVELS.map((l, i) => (
@@ -2611,6 +3471,50 @@ function Progress({ sessions }) {
           </div>
         ))}
       </div>
+
+      {(maxWeight > 0 || maxPullups > 0 || bestSprintSecs !== null) && (
+        <>
+          <div className="sec-title">Comparativas</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {maxWeight > 0 && (() => {
+              const s = pickScale(WEIGHT_SCALE, maxWeight);
+              return (
+                <div className="card" style={{ display: "flex", gap: 14, alignItems: "center", padding: "13px 14px" }}>
+                  <span style={{ fontSize: 48 }}>{s.emoji}</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700 }}>En tu mejor levantamiento cargas {maxWeight} kg</p>
+                    <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{s.label}</p>
+                  </div>
+                </div>
+              );
+            })()}
+            {maxPullups > 0 && (() => {
+              const s = pickScale(PULLUP_SCALE, maxPullups);
+              return (
+                <div className="card" style={{ display: "flex", gap: 14, alignItems: "center", padding: "13px 14px" }}>
+                  <span style={{ fontSize: 48 }}>{s.emoji}</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700 }}>Tu máximo de dominadas: {maxPullups}</p>
+                    <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{s.label}</p>
+                  </div>
+                </div>
+              );
+            })()}
+            {bestSprintSecs !== null && (() => {
+              const s = pickScale(SPRINT_SCALE, bestSprintSecs, "max");
+              return (
+                <div className="card" style={{ display: "flex", gap: 14, alignItems: "center", padding: "13px 14px" }}>
+                  <span style={{ fontSize: 48 }}>{s.emoji}</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700 }}>Tu mejor sprint: {bestSprintSecs}s</p>
+                    <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{s.label}</p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </>
+      )}
 
       <div className="sec-title">Tus ejercicios</div>
       {exStats.length === 0 ? (
@@ -2850,6 +3754,9 @@ export default function App() {
   const [weeklyGoal, setWeeklyGoal] = useState(() => store.get("weekly_goal", 4));
   const [editingGoal, setEditingGoal] = useState(false);
   const [highContrast, setHighContrast] = useState(() => store.get("high_contrast", false));
+  const [noEquipment, setNoEquipment] = useState(() => store.get("no_equipment", false));
+  const [toast, setToast] = useState(null);
+  const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
 
   useEffect(() => {
     document.body.classList.toggle("hc", highContrast);
@@ -2859,6 +3766,18 @@ export default function App() {
     setHighContrast((v) => {
       const next = !v;
       store.set("high_contrast", next);
+      return next;
+    });
+  };
+
+  const toggleEquipment = () => {
+    setNoEquipment((v) => {
+      const next = !v;
+      store.set("no_equipment", next);
+      if (next) {
+        setToast("Modo sin equipo activado. Las rutinas se adaptarán.");
+        setTimeout(() => setToast(null), 2500);
+      }
       return next;
     });
   };
@@ -2880,6 +3799,36 @@ export default function App() {
   };
 
   const streak = useMemo(() => calcStreak(sessions, freezes), [sessions, freezes]);
+
+  /* Recordatorio diario: mejor esfuerzo del lado del cliente (revisa mientras la
+     app está abierta; no es un push real en segundo plano sin servidor). */
+  useEffect(() => {
+    const hourId = store.get("notif_hour", null);
+    if (!hourId || !window.Notification || Notification.permission !== "granted") return undefined;
+    const hourMap = { morning: 7, afternoon: 17, night: 20 };
+    const targetHour = hourMap[hourId];
+    const check = () => {
+      const now = new Date();
+      const today = dayKey(now.getTime());
+      const lastShown = store.get("notif_last_shown", null);
+      if (now.getHours() === targetHour && lastShown !== today) {
+        const msg = streak === 0
+          ? "💪 Hoy es un buen día para empezar"
+          : streak < 7
+          ? `🔥 Llevas ${streak} días. No rompas la racha`
+          : `⚡ ${streak} días seguidos. Eres una máquina`;
+        try {
+          new Notification("F.A.S.E.", { body: msg, icon: "/favicon.svg" });
+        } catch {
+          /* silencioso */
+        }
+        store.set("notif_last_shown", today);
+      }
+    };
+    check();
+    const id = setInterval(check, 60000);
+    return () => clearInterval(id);
+  }, [streak]);
 
   /* Streak freeze: disponible si la cadena terminó anteayer y no se usó este mes */
   const freezeInfo = useMemo(() => computeFreezeInfo(sessions, freezes), [sessions, freezes]);
@@ -2935,6 +3884,8 @@ export default function App() {
         sessions={sessions}
         onSave={saveSession}
         onClose={() => { setLive(null); setTab("inicio"); }}
+        voiceOn={voiceOn}
+        onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
       />
     );
   }
@@ -2952,12 +3903,28 @@ export default function App() {
           📵 Sin conexión — tus datos se guardan localmente
         </div>
       )}
+      {toast && (
+        <div style={{
+          position: "sticky", top: 0, zIndex: 50, textAlign: "center", padding: "6px 10px",
+          background: "rgba(0,229,255,0.15)", borderBottom: "1px solid rgba(0,229,255,0.4)",
+          color: C.cyan, fontSize: 12, fontWeight: 700,
+        }}>
+          {toast}
+        </div>
+      )}
       <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease" }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: accent, transition: "color .3s ease" }}>
             F.A.S.E.
           </div>
-          <div style={{ fontSize: 13, fontWeight: 800 }}>Hola, {name}</div>
+          <div style={{ fontSize: 13, fontWeight: 800 }}>
+            Hola, {name}
+            {noEquipment && (
+              <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, color: C.cyan, background: "rgba(0,229,255,0.12)", padding: "2px 6px", borderRadius: 99 }}>
+                Sin equipo
+              </span>
+            )}
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -3001,6 +3968,13 @@ export default function App() {
             <span style={{ fontSize: 12, fontWeight: 800, color: C.orange }}>{streak}</span>
           </div>
           <button
+            onClick={toggleEquipment}
+            aria-label="Alternar modo sin equipo"
+            style={{ fontSize: 16, padding: 4 }}
+          >
+            {noEquipment ? "🎒" : "🏋️"}
+          </button>
+          <button
             onClick={toggleContrast}
             aria-label="Alternar modo alto contraste"
             style={{ fontSize: 16, padding: 4 }}
@@ -3019,7 +3993,10 @@ export default function App() {
         />
       )}
       {tab === "entrenar" && (
-        <Train onStart={setLive} onAccent={(c) => setAccent(c || TAB_ACCENTS.entrenar)} totalSessions={sessions.length} />
+        <Train
+          onStart={setLive} onAccent={(c) => setAccent(c || TAB_ACCENTS.entrenar)} totalSessions={sessions.length}
+          noEquipment={noEquipment} onSaveSpecial={saveSession}
+        />
       )}
       {tab === "progreso" && <Progress sessions={sessions} />}
       {tab === "cuerpo" && <Body onComplete={completeBody} />}
