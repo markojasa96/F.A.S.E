@@ -53,14 +53,14 @@ const LEVELS = [
 
 /* ─── Héroes por racha ─── */
 const HEROES = [
-  { id: "espartano", days: 3, emoji: "🛡️", name: "Espartano", quote: "El guerrero despertó" },
-  { id: "samurai", days: 7, emoji: "⚔️", name: "Samurái", quote: "Disciplina de acero" },
-  { id: "vikingo", days: 14, emoji: "🪓", name: "Vikingo", quote: "La leyenda crece" },
-  { id: "gladiador", days: 30, emoji: "🏛️", name: "Gladiador", quote: "Nadie te detiene" },
-  { id: "centurion", days: 60, emoji: "🦅", name: "Centurión Romano", quote: "Imperio de fuerza" },
-  { id: "khan", days: 90, emoji: "🏹", name: "Mongol Khan", quote: "Conquistador absoluto" },
+  { id: "espartano", days: 3, emoji: "🛡️", name: "Espartano", quote: "El guerrero despertó", color: C.red },
+  { id: "samurai", days: 7, emoji: "⚔️", name: "Samurái", quote: "Disciplina de acero", color: C.cyan },
+  { id: "vikingo", days: 14, emoji: "🪓", name: "Vikingo", quote: "La leyenda crece", color: C.orange },
+  { id: "gladiador", days: 30, emoji: "🏛️", name: "Gladiador", quote: "Nadie te detiene", color: C.yellow },
+  { id: "centurion", days: 60, emoji: "🦅", name: "Centurión Romano", quote: "Imperio de fuerza", color: C.purple },
+  { id: "khan", days: 90, emoji: "🏹", name: "Mongol Khan", quote: "Conquistador absoluto", color: C.green },
 ];
-const EGG = { emoji: "🥚", name: "Huevo", quote: "Tu héroe aún no despierta. Entrena 3 días seguidos." };
+const EGG = { emoji: "🥚", name: "Huevo", quote: "Tu héroe aún no despierta. Entrena 3 días seguidos.", color: C.mut };
 
 /* ─── Disciplinas y enfoques ─── */
 const DISCIPLINES = {
@@ -462,7 +462,158 @@ function genRoutine(discId, focusId, lvlIdx) {
   }));
 }
 
+/* ─── Mapa muscular (zonas por enfoque) ─── */
+const ALL_ZONES = ["pecho", "espalda", "hombros", "brazos", "core", "piernas", "gluteos"];
+const FOCUS_ZONES = {
+  gimnasio: {
+    todo: ALL_ZONES,
+    pecho: ["pecho"],
+    espalda: ["espalda"],
+    hombros: ["hombros"],
+    brazos: ["brazos"],
+    piernas: ["piernas"],
+    gluteos: ["gluteos"],
+    sup: ["pecho", "espalda", "hombros", "brazos"],
+    inf: ["piernas", "gluteos"],
+  },
+  calistenia: {
+    todo: ALL_ZONES,
+    empuje: ["pecho", "hombros", "brazos"],
+    tiron: ["espalda", "brazos"],
+    core: ["core"],
+    piernas: ["piernas", "gluteos"],
+    explosivo: ALL_ZONES,
+  },
+};
+
 /* ═══════════════════ COMPONENTES UI ═══════════════════ */
+
+function MuscleMap({ zones }) {
+  const on = (z) => zones.includes(z);
+  const fill = (z) => (on(z) ? C.orange : "#1A1A2E");
+  const stroke = (z) => (on(z) ? C.red : C.border);
+  const p = (z) => ({ fill: fill(z), stroke: stroke(z), strokeWidth: 1.5, style: { transition: "fill .3s ease, stroke .3s ease" } });
+  return (
+    <svg viewBox="0 0 100 126" style={{ width: 108, height: 136 }} aria-hidden="true">
+      {/* cabeza */}
+      <circle cx="50" cy="11" r="8" fill="#1A1A2E" stroke={C.border} strokeWidth="1.5" />
+      {/* brazos */}
+      <rect x="16" y="34" width="8" height="30" rx="4" {...p("brazos")} />
+      <rect x="76" y="34" width="8" height="30" rx="4" {...p("brazos")} />
+      {/* espalda (dorsales laterales) */}
+      <rect x="27" y="37" width="7" height="22" rx="3.5" {...p("espalda")} />
+      <rect x="66" y="37" width="7" height="22" rx="3.5" {...p("espalda")} />
+      {/* hombros */}
+      <circle cx="31" cy="29" r="6.5" {...p("hombros")} />
+      <circle cx="69" cy="29" r="6.5" {...p("hombros")} />
+      {/* pecho */}
+      <rect x="37" y="24" width="26" height="16" rx="5" {...p("pecho")} />
+      {/* core */}
+      <rect x="39" y="43" width="22" height="18" rx="5" {...p("core")} />
+      {/* glúteos */}
+      <rect x="38" y="64" width="24" height="10" rx="5" {...p("gluteos")} />
+      {/* piernas */}
+      <rect x="37" y="77" width="11" height="42" rx="5" {...p("piernas")} />
+      <rect x="52" y="77" width="11" height="42" rx="5" {...p("piernas")} />
+    </svg>
+  );
+}
+
+function NumPad({ onKey }) {
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 12 }}>
+      {keys.map((k) => (
+        <button
+          key={k}
+          onClick={() => onKey(k)}
+          style={{
+            height: 64, borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`,
+            fontSize: 22, fontWeight: 800, color: k === "⌫" ? C.red : C.text,
+          }}
+        >
+          {k}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* Área de demostración: cuando exista un GIF real, pasar src={url} */
+function ExerciseDemo({ emoji, src }) {
+  return (
+    <div
+      style={{
+        width: "100%", aspectRatio: "16 / 9", maxHeight: 200, borderRadius: 14,
+        background: "#1A1A2E", border: `1px solid ${C.border}`, overflow: "hidden",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12,
+      }}
+    >
+      {src ? (
+        <img src={src} alt="Demostración del ejercicio" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <>
+          <span style={{ fontSize: 40 }}>{emoji}</span>
+          <span style={{ fontSize: 12, color: C.dim, fontWeight: 600 }}>Demostración próximamente</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Heatmap({ sessions, color }) {
+  const days = useMemo(() => {
+    const set = new Set(sessions.map((s) => dayKey(s.ts)));
+    const arr = [];
+    for (let i = 34; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      arr.push(set.has(dayKey(d.getTime())));
+    }
+    return arr;
+  }, [sessions]);
+  const month = new Date().toLocaleDateString("es", { month: "long", year: "numeric" });
+  return (
+    <div className="card" style={{ marginTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: C.mut }}>ACTIVIDAD</span>
+        <span style={{ fontSize: 12, color: C.mut, textTransform: "capitalize" }}>{month}</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginTop: 10 }}>
+        {days.map((active, i) => (
+          <div
+            key={i}
+            style={{
+              aspectRatio: "1", borderRadius: 6,
+              background: active ? color : "#1A1A2E",
+              border: `1px solid ${active ? color : C.border}`,
+              transition: "background .3s ease",
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: C.dim, marginTop: 8, textAlign: "right" }}>Últimos 35 días</div>
+    </div>
+  );
+}
+
+function WeekRing({ done, goal = 4, accent }) {
+  const pct = Math.min(1, done / goal);
+  const r = 15;
+  const circ = 2 * Math.PI * r;
+  const color = pct >= 1 ? C.green : accent;
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" aria-label={`Meta semanal: ${done} de ${goal}`}>
+      <circle cx="20" cy="20" r={r} fill="none" stroke={C.border} strokeWidth="4" />
+      <circle
+        cx="20" cy="20" r={r} fill="none" stroke={color} strokeWidth="4" strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
+        transform="rotate(-90 20 20)" style={{ transition: "stroke-dashoffset .5s ease, stroke .3s ease" }}
+      />
+      <text x="20" y="24" textAnchor="middle" fontSize="11" fontWeight="800" fill={color}>{done}</text>
+    </svg>
+  );
+}
 
 function StatBox({ label, value, accent }) {
   return (
@@ -645,6 +796,9 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain }) {
         <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
       </div>
 
+      {/* Heatmap de actividad */}
+      <Heatmap sessions={sessions} color={hero.color} />
+
       {/* CTA */}
       <button
         className="btn-xl"
@@ -693,11 +847,22 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain }) {
 }
 
 /* ─── ENTRENAR (selección) ─── */
-function Train({ onStart }) {
+function Train({ onStart, onAccent }) {
   const [discId, setDiscId] = useState(null);
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
   const [seed, setSeed] = useState(0);
+
+  const pickDisc = (id) => {
+    setDiscId(id);
+    setFocusId("todo");
+    setLvlIdx(null);
+    onAccent(id.startsWith("futbol") ? C.orange : DISCIPLINES[id].color);
+  };
+  const backToDiscs = () => {
+    setDiscId(null);
+    onAccent(null);
+  };
 
   const disc = discId ? DISCIPLINES[discId] : null;
 
@@ -718,7 +883,7 @@ function Train({ onStart }) {
             <button
               key={id}
               className="card fade-up"
-              onClick={() => { setDiscId(id); setFocusId("todo"); setLvlIdx(null); }}
+              onClick={() => pickDisc(id)}
               style={{
                 display: "flex", alignItems: "center", gap: 14, textAlign: "left",
                 borderLeft: `4px solid ${d.color}`, transition: "transform .15s ease",
@@ -739,7 +904,7 @@ function Train({ onStart }) {
 
   return (
     <div className="screen" key={discId}>
-      <button onClick={() => setDiscId(null)} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+      <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
         ‹ Disciplinas
       </button>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
@@ -763,6 +928,12 @@ function Train({ onStart }) {
           </button>
         ))}
       </div>
+
+      {FOCUS_ZONES[discId] && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+          <MuscleMap zones={FOCUS_ZONES[discId][focusId] || []} />
+        </div>
+      )}
 
       <div className="sec-title">B · Nivel</div>
       <div className="chip-wrap">
@@ -832,6 +1003,7 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
   const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
+  const [field, setField] = useState(() => (plan.exercises[0].type === "peso" ? "weight" : "reps"));
   const restRef = useRef(0);
 
   const ex = plan.exercises[exIdx];
@@ -857,7 +1029,24 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
     return () => clearInterval(t);
   }, [phase]);
 
+  const pressKey = (k) => {
+    const cur = field === "weight" ? weight : reps;
+    let next;
+    if (k === "⌫") {
+      next = cur.slice(0, -1);
+    } else if (k === ".") {
+      if (field !== "weight" || cur.includes(".")) return;
+      next = cur === "" ? "0." : cur + ".";
+    } else {
+      if (cur.replace(".", "").length >= 4) return;
+      next = cur === "0" ? k : cur + k;
+    }
+    if (field === "weight") setWeight(next);
+    else setReps(next);
+  };
+
   const logSet = (ok) => {
+    if (ok && navigator.vibrate) navigator.vibrate(100);
     const entry = { reps: parseInt(reps, 10) || 0, weight: parseFloat(weight) || 0, ok };
     setLogs((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
     setReps("");
@@ -884,11 +1073,14 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
         exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: logs[i] })),
       };
       onSave(record);
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       setPhase("finished");
     } else {
+      const nextEx = plan.exercises[exIdx + 1];
       setExIdx((i) => i + 1);
       setSetNum(0);
       setWeight("");
+      setField(nextEx.type === "peso" ? "weight" : "reps");
       setPhase("work");
     }
   };
@@ -947,32 +1139,53 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
     );
   }
 
-  /* Descanso */
+  /* Descanso — timer gigante visible a distancia */
   if (phase === "rest") {
     return (
-      <div className="screen fade-up" style={{ paddingTop: 60, textAlign: "center" }}>
-        <p style={{ color: C.mut, fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>DESCANSO</p>
+      <div
+        className="fade-up"
+        style={{
+          position: "fixed", inset: 0, zIndex: 60,
+          background: "rgba(7, 7, 12, 0.88)",
+          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          padding: "0 20px calc(20px + env(safe-area-inset-bottom))",
+        }}
+      >
         <div
-          key={restLeft}
-          style={{ fontSize: 84, fontWeight: 900, marginTop: 20, color: restLeft <= 5 ? C.green : C.text, transition: "color .3s" }}
+          style={{
+            minHeight: "60vh", width: "100%", maxWidth: 430,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center",
+          }}
         >
-          {restLeft}
+          <p style={{ color: C.mut, fontSize: 15, fontWeight: 800, letterSpacing: 4 }}>DESCANSO</p>
+          <div
+            style={{
+              fontSize: 110, fontWeight: 900, lineHeight: 1, marginTop: 14,
+              color: restLeft <= 5 ? C.green : C.text, transition: "color .3s",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {restLeft}
+          </div>
+          <p style={{ color: C.dim, fontSize: 14, marginTop: 8 }}>segundos</p>
         </div>
-        <p style={{ color: C.dim, fontSize: 13 }}>segundos</p>
-        <div className="card" style={{ marginTop: 30, textAlign: "left" }}>
-          <p style={{ fontSize: 12, color: C.dim, fontWeight: 700 }}>SIGUIENTE SERIE</p>
-          <p style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{ex.name}</p>
-          <p style={{ fontSize: 13, color: C.mut, marginTop: 2 }}>
-            Serie {setNum + 2} de {ex.sets} · {ex.reps}
-          </p>
+        <div style={{ width: "100%", maxWidth: 430 }}>
+          <div className="card" style={{ textAlign: "left" }}>
+            <p style={{ fontSize: 12, color: C.dim, fontWeight: 700 }}>SIGUIENTE SERIE</p>
+            <p style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{ex.name}</p>
+            <p style={{ fontSize: 13, color: C.mut, marginTop: 2 }}>
+              Serie {setNum + 2} de {ex.sets} · {ex.reps}
+            </p>
+          </div>
+          <button
+            className="btn-xl"
+            onClick={endRest}
+            style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+          >
+            SALTAR DESCANSO ⏭
+          </button>
         </div>
-        <button
-          className="btn-xl"
-          onClick={endRest}
-          style={{ marginTop: 20, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
-        >
-          SALTAR DESCANSO ⏭
-        </button>
       </div>
     );
   }
@@ -1013,6 +1226,7 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
           <span style={{ fontWeight: 800 }}>{ex.reps}</span>
         </p>
         <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>💡 {ex.tip}</p>
+        <ExerciseDemo emoji={plan.discIcon} src={ex.gif} />
       </div>
 
       {/* Series completadas */}
@@ -1041,24 +1255,39 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
         <>
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             {ex.type === "peso" && (
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>PESO (KG)</label>
-                <input
-                  className="input" type="number" inputMode="decimal" placeholder="0"
-                  value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 6 }}
-                />
-              </div>
+              <button
+                onClick={() => setField("weight")}
+                style={{
+                  flex: 1, textAlign: "center", padding: "12px 8px", borderRadius: 14,
+                  background: field === "weight" ? C.card2 : C.surface,
+                  border: `2px solid ${field === "weight" ? plan.discColor : C.border}`,
+                  transition: "border-color .2s ease",
+                }}
+              >
+                <div style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>PESO (KG)</div>
+                <div style={{ fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                  {weight || "0"}
+                </div>
+              </button>
             )}
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
+            <button
+              onClick={() => setField("reps")}
+              style={{
+                flex: 1, textAlign: "center", padding: "12px 8px", borderRadius: 14,
+                background: field === "reps" ? C.card2 : C.surface,
+                border: `2px solid ${field === "reps" ? plan.discColor : C.border}`,
+                transition: "border-color .2s ease",
+              }}
+            >
+              <div style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>
                 {ex.type === "tiempo" ? "TIEMPO (SEG)" : "REPS HECHAS"}
-              </label>
-              <input
-                className="input" type="number" inputMode="numeric" placeholder="0"
-                value={reps} onChange={(e) => setReps(e.target.value)} style={{ marginTop: 6 }}
-              />
-            </div>
+              </div>
+              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                {reps || "0"}
+              </div>
+            </button>
           </div>
+          <NumPad onKey={pressKey} />
           <button
             className="btn-xl"
             onClick={() => logSet(true)}
@@ -1273,10 +1502,95 @@ function Progress({ sessions }) {
 }
 
 /* ─── CUERPO (Acondicionamiento) ─── */
+const PAIN_FACES = [
+  { n: 1, emoji: "😊", label: "Genial" },
+  { n: 2, emoji: "😐", label: "Normal" },
+  { n: 3, emoji: "😕", label: "Regular" },
+  { n: 4, emoji: "😣", label: "Dolorido" },
+  { n: 5, emoji: "😫", label: "Muy mal" },
+];
+const GENTLE_SECTIONS = ["movilidad", "flex"];
+
 function Body({ onComplete }) {
   const [openId, setOpenId] = useState(null);
   const [justDone, setJustDone] = useState(false);
+  const [pain, setPain] = useState(null);
+  const [pendingId, setPendingId] = useState(null);
+  const [blockedId, setBlockedId] = useState(null);
   const section = BODY_SECTIONS.find((b) => b.id === openId);
+
+  const tryOpen = (id) => {
+    if (pain === null) {
+      setPendingId(id);
+    } else if (pain >= 4 && !GENTLE_SECTIONS.includes(id)) {
+      setBlockedId(id);
+    } else {
+      setOpenId(id);
+    }
+  };
+
+  const selectPain = (n) => {
+    setPain(n);
+    if (n >= 4 && !GENTLE_SECTIONS.includes(pendingId)) {
+      setBlockedId(pendingId);
+    } else {
+      setOpenId(pendingId);
+    }
+    setPendingId(null);
+  };
+
+  /* Pantalla: ¿cómo te sientes hoy? */
+  if (pendingId) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div style={{ fontSize: 44 }}>🩺</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Cómo te sientes hoy?</h2>
+        <p className="muted" style={{ marginTop: 6 }}>Sé honesto: tu cuerpo lo agradece</p>
+        <div style={{ display: "flex", gap: 8, marginTop: 24, justifyContent: "center" }}>
+          {PAIN_FACES.map((f) => (
+            <button
+              key={f.n}
+              onClick={() => selectPain(f.n)}
+              className="card"
+              style={{ flex: 1, padding: "14px 4px", maxWidth: 74 }}
+            >
+              <div style={{ fontSize: 28 }}>{f.emoji}</div>
+              <div style={{ fontSize: 10, color: C.mut, marginTop: 6, fontWeight: 700 }}>{f.label}</div>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setPendingId(null)} style={{ color: C.dim, fontSize: 13, marginTop: 24, fontWeight: 600 }}>
+          ‹ Volver
+        </button>
+      </div>
+    );
+  }
+
+  /* Pantalla: rutina bloqueada por dolor alto */
+  if (blockedId) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 50 }}>🛌</div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, marginTop: 14 }}>Hoy mejor descansa activamente</h2>
+        <p style={{ color: C.mut, fontSize: 14, marginTop: 8, lineHeight: 1.5 }}>
+          Solo movilidad suave. Tu cuerpo necesita recuperarse para volver más fuerte.
+        </p>
+        <button
+          className="btn-xl"
+          onClick={() => { setBlockedId(null); setOpenId("movilidad"); }}
+          style={{ marginTop: 24, background: C.cyan, color: "#07070C" }}
+        >
+          🔄 IR A MOVILIDAD SUAVE
+        </button>
+        <button onClick={() => setBlockedId(null)} style={{ color: C.dim, fontSize: 13, marginTop: 16, fontWeight: 600 }}>
+          ‹ Volver
+        </button>
+        <p className="disclaimer">
+          Contenido informativo. Para lesiones graves consulta un especialista.
+        </p>
+      </div>
+    );
+  }
 
   if (section) {
     return (
@@ -1341,7 +1655,7 @@ function Body({ onComplete }) {
           <button
             key={b.id}
             className="card fade-up"
-            onClick={() => setOpenId(b.id)}
+            onClick={() => tryOpen(b.id)}
             style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", borderLeft: `4px solid ${b.color}` }}
           >
             <span style={{ fontSize: 26 }}>{b.icon}</span>
@@ -1369,12 +1683,37 @@ const TABS = [
   { id: "cuerpo", label: "Cuerpo", icon: "🧘" },
 ];
 
+const TAB_ACCENTS = {
+  inicio: C.cyan,
+  entrenar: C.green,
+  progreso: C.purple,
+  cuerpo: "#60A5FA",
+};
+
 export default function App() {
   const [name, setName] = useState(() => store.get("name", ""));
   const [sessions, setSessions] = useState(() => store.get("sessions", []));
   const [heroes, setHeroes] = useState(() => store.get("heroes", []));
   const [tab, setTab] = useState("inicio");
   const [live, setLive] = useState(null);
+  const [accent, setAccent] = useState(TAB_ACCENTS.inicio);
+  const [online, setOnline] = useState(() => navigator.onLine);
+
+  useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
+  const changeTab = (t) => {
+    setTab(t);
+    setAccent(TAB_ACCENTS[t]);
+  };
 
   const streak = useMemo(() => calcStreak(sessions), [sessions]);
 
@@ -1419,32 +1758,48 @@ export default function App() {
     );
   }
 
+  const weekCount = sessions.filter((s) => s.ts >= startOfWeek()).length;
+
   return (
     <>
-      <header className="header">
+      {!online && (
+        <div style={{
+          position: "sticky", top: 0, zIndex: 50, textAlign: "center", padding: "6px 10px",
+          background: "rgba(255,122,47,0.15)", borderBottom: "1px solid rgba(255,122,47,0.4)",
+          color: C.orange, fontSize: 12, fontWeight: 700,
+        }}>
+          📵 Sin conexión — tus datos se guardan localmente
+        </div>
+      )}
+      <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease" }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: C.cyan }}>F.A.S.E.</div>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: accent, transition: "color .3s ease" }}>
+            F.A.S.E.
+          </div>
           <div style={{ fontSize: 15, fontWeight: 800 }}>Hola, {name}</div>
         </div>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6, background: "rgba(255,122,47,0.12)",
-          border: "1px solid rgba(255,122,47,0.35)", borderRadius: 99, padding: "6px 12px",
-        }}>
-          <span className="flame" style={{ fontSize: 15 }}>🔥</span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: C.orange }}>{streak}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <WeekRing done={weekCount} accent={accent} />
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6, background: "rgba(255,122,47,0.12)",
+            border: "1px solid rgba(255,122,47,0.35)", borderRadius: 99, padding: "6px 12px",
+          }}>
+            <span className="flame" style={{ fontSize: 15 }}>🔥</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: C.orange }}>{streak}</span>
+          </div>
         </div>
       </header>
 
       {tab === "inicio" && (
-        <Home name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes} onTrain={() => setTab("entrenar")} />
+        <Home name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes} onTrain={() => changeTab("entrenar")} />
       )}
-      {tab === "entrenar" && <Train onStart={setLive} />}
+      {tab === "entrenar" && <Train onStart={setLive} onAccent={(c) => setAccent(c || TAB_ACCENTS.entrenar)} />}
       {tab === "progreso" && <Progress sessions={sessions} />}
       {tab === "cuerpo" && <Body onComplete={completeBody} />}
 
       <nav className="tabbar">
         {TABS.map((t) => (
-          <button key={t.id} className={`tab ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
+          <button key={t.id} className={`tab ${tab === t.id ? "on" : ""}`} onClick={() => changeTab(t.id)}>
             <span className="ico">{t.icon}</span>
             {t.label}
           </button>
