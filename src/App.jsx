@@ -169,6 +169,23 @@ const EXDB = {
     { n: "Puente de glúteos con disco", t: "peso", f: ["gluteos"], lv: [0, 2], s: 3, r: "12-15", rest: 60, tip: "Empuja con los talones, no arquees la lumbar." },
     { n: "Sentadilla búlgara con mancuernas", t: "peso", f: ["gluteos", "piernas"], lv: [2, 5], s: 3, r: "8 c/pierna", rest: 120, tip: "Pie trasero en el banco, torso levemente inclinado." },
     { n: "Patada de glúteo en polea", t: "peso", f: ["gluteos"], lv: [0, 3], s: 3, r: "12 c/pierna", rest: 60, tip: "Extiende la cadera atrás sin arquear la espalda." },
+    { n: "Press Arnold", t: "peso", f: ["hombros"], lv: [1, 4], s: 3, r: "8-12", rest: 90, tip: "Gira las palmas mientras subes las mancuernas." },
+    { n: "Remo al mentón con barra", t: "peso", f: ["hombros"], lv: [1, 3], s: 3, r: "10-12", rest: 60, tip: "Codos por encima de las muñecas, sube hasta el pecho." },
+    { n: "Encogimientos con mancuernas", t: "peso", f: ["hombros", "espalda"], lv: [1, 5], s: 3, r: "12-15", rest: 60, tip: "Sube los hombros hacia las orejas y pausa arriba." },
+    { n: "Press declinado con barra", t: "peso", f: ["pecho"], lv: [2, 5], s: 3, r: "6-10", rest: 120, tip: "Trabaja el pecho inferior, baja controlado." },
+    { n: "Aperturas en máquina (pec deck)", t: "peso", f: ["pecho"], lv: [0, 3], s: 3, r: "12-15", rest: 60, tip: "Junta los brazos al frente apretando el pecho." },
+    { n: "Press de pecho en máquina", t: "peso", f: ["pecho"], lv: [0, 4], s: 3, r: "10-12", rest: 90, tip: "Ideal para acabar cuando el pecho ya está cansado." },
+    { n: "Remo en máquina", t: "peso", f: ["espalda"], lv: [0, 3], s: 3, r: "10-12", rest: 90, tip: "Pecho apoyado, tira sin encoger los hombros." },
+    { n: "Jalón con brazos rectos", t: "peso", f: ["espalda"], lv: [1, 4], s: 3, r: "12-15", rest: 60, tip: "Brazos casi rectos, siente el dorsal al bajar la barra." },
+    { n: "Buenos días con barra", t: "peso", f: ["espalda", "piernas"], lv: [2, 5], s: 3, r: "8-10", rest: 120, tip: "Barra ligera, cadera atrás y espalda neutra." },
+    { n: "Curl concentrado", t: "peso", f: ["brazos"], lv: [0, 3], s: 3, r: "10-12", rest: 60, tip: "Codo apoyado en el muslo, aprieta arriba." },
+    { n: "Curl predicador", t: "peso", f: ["brazos"], lv: [1, 4], s: 3, r: "8-12", rest: 60, tip: "No extiendas del todo abajo, tensión constante." },
+    { n: "Extensión de tríceps tumbado", t: "peso", f: ["brazos"], lv: [1, 4], s: 3, r: "10-12", rest: 90, tip: "Baja las mancuernas junto a las orejas." },
+    { n: "Extensión de tríceps sobre la cabeza", t: "peso", f: ["brazos"], lv: [0, 4], s: 3, r: "10-12", rest: 60, tip: "Codos apuntando al techo, estira por completo." },
+    { n: "Peso muerto sumo", t: "peso", f: ["piernas", "gluteos"], lv: [2, 5], s: 4, r: "4-6", rest: 210, tip: "Pies muy abiertos, rodillas hacia afuera, torso vertical." },
+    { n: "Zancada inversa con barra", t: "peso", f: ["piernas", "gluteos"], lv: [2, 5], s: 3, r: "8 c/pierna", rest: 90, tip: "Paso atrás controlado, más amable con las rodillas." },
+    { n: "Step-up con mancuernas", t: "peso", f: ["piernas", "gluteos"], lv: [1, 4], s: 3, r: "10 c/pierna", rest: 90, tip: "Empuja con la pierna de arriba, no impulses con la de abajo." },
+    { n: "Abducción de cadera en polea", t: "peso", f: ["gluteos"], lv: [0, 3], s: 3, r: "12 c/pierna", rest: 60, tip: "Pierna recta hacia el lado, sin inclinar el torso." },
   ],
   calistenia: [
     { n: "Flexiones con rodillas", t: "reps", f: ["empuje"], lv: [0, 0], s: 3, r: "8-12", rest: 60, tip: "Cuerpo alineado de rodillas a cabeza, pecho al suelo." },
@@ -210,6 +227,25 @@ const EXDB = {
     { n: "Zancadas con salto", t: "reps", f: ["explosivo", "piernas"], lv: [1, 4], s: 3, r: "8 c/pierna", rest: 90, tip: "Cambia de pierna en el aire y aterriza estable." },
     { n: "Mountain climbers sprint", t: "tiempo", f: ["explosivo", "core"], lv: [0, 2], s: 3, r: "30s", rest: 45, tip: "Rodillas al pecho lo más rápido que puedas." },
     { n: "Burpee con rodillas al pecho", t: "reps", f: ["explosivo"], lv: [3, 5], s: 4, r: "8-12", rest: 90, tip: "En el salto, lleva las rodillas hasta el pecho." },
+    { n: "Pseudo planche push-up", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "5-8", rest: 150, tip: "Manos a la altura de la cadera, inclínate muy adelante." },
+    { n: "Flexiones hindú (dive bomber)", t: "reps", f: ["empuje"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Dibuja una ola con el cuerpo, de V invertida a cobra." },
+    { n: "Flexiones espartanas", t: "reps", f: ["empuje"], lv: [1, 3], s: 3, r: "10-12", rest: 90, tip: "Una mano adelantada y otra atrasada, alterna cada serie." },
+    { n: "Wall walk", t: "reps", f: ["empuje", "core"], lv: [2, 4], s: 3, r: "4-6", rest: 120, tip: "Camina con las manos hacia la pared hasta quedar casi vertical." },
+    { n: "Australian pull-up agarre ancho", t: "reps", f: ["tiron"], lv: [1, 3], s: 3, r: "10-12", rest: 90, tip: "Codos abiertos, tira del pecho hacia la barra baja." },
+    { n: "Negative muscle-up", t: "reps", f: ["tiron"], lv: [3, 5], s: 3, r: "3-5", rest: 180, tip: "Empieza arriba de la barra y baja lo más lento posible." },
+    { n: "Typewriter pull-up", t: "reps", f: ["tiron"], lv: [4, 5], s: 3, r: "4-6", rest: 180, tip: "Arriba de la dominada, desplázate de mano a mano." },
+    { n: "Dominadas comando", t: "reps", f: ["tiron"], lv: [3, 5], s: 3, r: "6-8", rest: 150, tip: "Agarre mixto en línea, alterna la cabeza a cada lado." },
+    { n: "Skin the cat", t: "reps", f: ["tiron", "core"], lv: [3, 5], s: 3, r: "3-5", rest: 120, tip: "Rota el cuerpo entre los brazos con control total." },
+    { n: "Toes to bar", t: "reps", f: ["core"], lv: [3, 5], s: 3, r: "6-10", rest: 90, tip: "Lleva los pies hasta tocar la barra sin balanceo." },
+    { n: "V-ups", t: "reps", f: ["core"], lv: [1, 3], s: 3, r: "10-15", rest: 60, tip: "Manos y pies se encuentran arriba, cuerpo en V." },
+    { n: "Arch body hold", t: "tiempo", f: ["core"], lv: [1, 4], s: 3, r: "20-30s", rest: 60, tip: "Boca abajo, despega pecho y piernas del suelo." },
+    { n: "Superman con pausa", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "12", rest: 45, tip: "Aguanta 2 segundos arriba en cada repetición." },
+    { n: "Puente completo", t: "tiempo", f: ["core", "piernas"], lv: [2, 4], s: 3, r: "15-20s", rest: 90, tip: "Empuja la cadera al cielo, abre bien los hombros." },
+    { n: "Sentadilla cosaca", t: "reps", f: ["piernas"], lv: [2, 4], s: 3, r: "6 c/lado", rest: 90, tip: "Peso a una pierna, la otra estirada al lado." },
+    { n: "Step-up en banco alto", t: "reps", f: ["piernas"], lv: [0, 2], s: 3, r: "10 c/pierna", rest: 60, tip: "Banco a la altura de la rodilla, sube controlado." },
+    { n: "Broad jumps", t: "reps", f: ["explosivo", "piernas"], lv: [1, 4], s: 3, r: "6", rest: 90, tip: "Salta lo más lejos posible y aterriza estable." },
+    { n: "Sprawls", t: "reps", f: ["explosivo"], lv: [0, 2], s: 3, r: "12", rest: 60, tip: "Como burpee sin flexión: cae, extiende y levántate rápido." },
+    { n: "High knees a máxima velocidad", t: "tiempo", f: ["explosivo"], lv: [0, 2], s: 3, r: "20s", rest: 45, tip: "Rodillas a la cadera con braceo rápido." },
   ],
   futbolGym: [
     { n: "Sentadilla con salto (carga ligera)", t: "peso", f: ["velocidad", "salto"], lv: [1, 4], s: 4, r: "5-6", rest: 120, tip: "Mancuernas ligeras, salta con máxima intención." },
@@ -238,6 +274,21 @@ const EXDB = {
     { n: "Remo en máquina (intervalos)", t: "tiempo", f: ["resistencia"], lv: [0, 5], s: 4, r: "250 m", rest: 90, tip: "Empuja con las piernas primero, luego tira con los brazos." },
     { n: "Farmer walk", t: "peso", f: ["resistencia", "estabilidad"], lv: [1, 5], s: 3, r: "30 m", rest: 90, tip: "Mancuernas pesadas, camina erguido sin balancearte." },
     { n: "Step-ups continuos", t: "reps", f: ["resistencia", "fuerza"], lv: [0, 3], s: 3, r: "15 c/pierna", rest: 60, tip: "Ritmo constante: empuja siempre con la pierna de arriba." },
+    { n: "Peso muerto con mancuernas explosivo", t: "peso", f: ["fuerza", "velocidad"], lv: [1, 4], s: 4, r: "6", rest: 120, tip: "Sube rápido con intención, baja en 2 segundos." },
+    { n: "Sentadilla frontal", t: "peso", f: ["fuerza"], lv: [2, 5], s: 4, r: "4-6", rest: 180, tip: "Torso vertical: transfiere directo al salto." },
+    { n: "Zancada lateral con mancuerna", t: "peso", f: ["estabilidad", "fuerza"], lv: [1, 4], s: 3, r: "8 c/lado", rest: 90, tip: "Como un cambio de dirección cargado." },
+    { n: "Salto con giro de 90°", t: "reps", f: ["salto", "estabilidad"], lv: [1, 4], s: 3, r: "5 c/lado", rest: 90, tip: "Gira en el aire y aterriza clavado, sin pasos extra." },
+    { n: "Skater jumps", t: "reps", f: ["salto", "estabilidad"], lv: [1, 4], s: 3, r: "8 c/lado", rest: 90, tip: "Salta lateral de pierna a pierna como un patinador." },
+    { n: "Lanzamiento de balón medicinal al pecho", t: "reps", f: ["velocidad"], lv: [1, 4], s: 4, r: "6", rest: 90, tip: "Lanza contra la pared con toda tu potencia." },
+    { n: "Slam de balón medicinal", t: "reps", f: ["velocidad", "resistencia"], lv: [1, 4], s: 3, r: "10", rest: 90, tip: "Azota el balón al suelo usando todo el cuerpo." },
+    { n: "Rotación explosiva con balón medicinal", t: "reps", f: ["estabilidad"], lv: [1, 4], s: 3, r: "8 c/lado", rest: 90, tip: "Gira desde la cadera, como un disparo potente." },
+    { n: "Hip thrust a una pierna", t: "peso", f: ["fuerza", "estabilidad"], lv: [2, 5], s: 3, r: "8 c/pierna", rest: 120, tip: "Cadera arriba sin que se caiga hacia un lado." },
+    { n: "Remo renegado", t: "peso", f: ["estabilidad"], lv: [2, 5], s: 3, r: "8 c/brazo", rest: 90, tip: "En plancha con mancuernas, rema sin girar la cadera." },
+    { n: "Isométrico de sóleo en pared", t: "tiempo", f: ["fuerza"], lv: [0, 3], s: 3, r: "30s", rest: 60, tip: "Talones arriba con rodillas flexionadas contra la pared." },
+    { n: "Elevaciones de tibial", t: "reps", f: ["fuerza"], lv: [0, 3], s: 3, r: "15", rest: 45, tip: "Espalda en la pared, sube las puntas de los pies." },
+    { n: "Sentadilla en pared con disco", t: "tiempo", f: ["fuerza", "resistencia"], lv: [0, 3], s: 3, r: "40s", rest: 60, tip: "Disco al pecho, muslos paralelos al suelo." },
+    { n: "Escaladores con deslizadores", t: "tiempo", f: ["estabilidad", "resistencia"], lv: [1, 3], s: 3, r: "30s", rest: 60, tip: "Desliza los pies con toallas, cadera estable." },
+    { n: "Cuerdas de batalla", t: "tiempo", f: ["resistencia"], lv: [1, 5], s: 4, r: "20s fuerte", rest: 60, tip: "Olas potentes y constantes con todo el cuerpo." },
   ],
   futbolParque: [
     { n: "Tiros de potencia a portería o pared", t: "reps", f: ["tiro"], lv: [0, 5], s: 4, r: "8 c/pierna", rest: 90, tip: "Pie de apoyo junto al balón, golpea con el empeine firme." },
@@ -262,6 +313,21 @@ const EXDB = {
     { n: "Fartlek", t: "tiempo", f: ["resistencia", "ritmo"], lv: [1, 5], s: 1, r: "20 min", rest: 0, tip: "Alterna 1 minuto fuerte y 2 suaves sin parar." },
     { n: "Intervalos 4x4", t: "tiempo", f: ["resistencia"], lv: [2, 5], s: 4, r: "4 min fuerte", rest: 180, tip: "Al 85-90% de tu máximo; recupera trotando." },
     { n: "Circuito toques + carrera", t: "reps", f: ["resistencia", "regate"], lv: [0, 3], s: 3, r: "3 vueltas", rest: 90, tip: "30 toques al balón y 100 m de carrera, sin pausa." },
+    { n: "Tiro con la pierna mala", t: "reps", f: ["tiro"], lv: [1, 4], s: 3, r: "10", rest: 60, tip: "Empieza cerca de la portería y aléjate al mejorar." },
+    { n: "Volea tras auto-pase", t: "reps", f: ["tiro"], lv: [2, 5], s: 3, r: "8", rest: 90, tip: "Lánzate el balón con las manos y define de volea." },
+    { n: "Toques de primera contra pared alternando pies", t: "reps", f: ["tiro", "regate"], lv: [1, 4], s: 3, r: "20", rest: 60, tip: "Un toque por pie, sin dejar que el balón se pare." },
+    { n: "Control orientado tras rebote", t: "reps", f: ["regate"], lv: [1, 4], s: 3, r: "10", rest: 60, tip: "Recibe de la pared y sal orientado en un toque." },
+    { n: "Croqueta en espacio corto", t: "reps", f: ["regate"], lv: [2, 5], s: 3, r: "10", rest: 60, tip: "Pasa el balón de pie a pie rápido y avanza." },
+    { n: "Ruleta a ritmo", t: "reps", f: ["regate"], lv: [2, 5], s: 3, r: "8", rest: 60, tip: "Gira sobre el balón sin perder velocidad." },
+    { n: "Freno de suela y salida", t: "reps", f: ["regate", "ritmo"], lv: [0, 3], s: 3, r: "10", rest: 60, tip: "Pisa el balón, pausa y explota en otra dirección." },
+    { n: "Conducción a máxima velocidad", t: "reps", f: ["regate", "velocidad"], lv: [1, 4], s: 4, r: "4 x 30 m", rest: 90, tip: "Toques largos pero controlados, cabeza arriba al final." },
+    { n: "Juego de sombra", t: "tiempo", f: ["regate", "ritmo"], lv: [0, 3], s: 3, r: "45s", rest: 60, tip: "Imagina rivales y encadena regates a ritmo de partido." },
+    { n: "Sprint con cambio de dirección a 45°", t: "reps", f: ["velocidad", "ritmo"], lv: [1, 4], s: 4, r: "5", rest: 120, tip: "Planta el pie exterior y corta sin frenar de más." },
+    { n: "Carioca", t: "tiempo", f: ["velocidad"], lv: [0, 2], s: 3, r: "20 m c/lado", rest: 60, tip: "Paso cruzado lateral, caderas sueltas." },
+    { n: "Skipping lateral + sprint", t: "reps", f: ["velocidad"], lv: [0, 3], s: 3, r: "5", rest: 90, tip: "10 m laterales y giro a sprint frontal." },
+    { n: "Saltitos de coordinación sobre líneas", t: "tiempo", f: ["ritmo"], lv: [0, 2], s: 3, r: "30s", rest: 45, tip: "Adelante-atrás y lado a lado, pies veloces." },
+    { n: "Shuttle runs 20 m", t: "reps", f: ["resistencia", "velocidad"], lv: [0, 4], s: 4, r: "6 idas", rest: 90, tip: "Toca la línea en cada ida, ritmo constante." },
+    { n: "Cuesta arriba con balón", t: "reps", f: ["resistencia", "regate"], lv: [2, 5], s: 3, r: "5 subidas", rest: 120, tip: "Conduce cuesta arriba, baja trotando sin balón." },
   ],
 };
 
@@ -415,6 +481,67 @@ function mulberry32(a) {
 }
 
 const todayKey = () => dayKey(Date.now());
+
+/* ─── Audio (Web Audio API, sin librerías) ───
+   El contexto se crea dentro de un gesto del usuario para funcionar en móvil */
+let audioCtx = null;
+function ensureAudio() {
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  } catch {
+    /* sin audio disponible */
+  }
+}
+function beep(freq, dur, vol, delay = 0) {
+  if (!audioCtx) return;
+  try {
+    const t = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  } catch {
+    /* silencioso */
+  }
+}
+/* Triple beep al terminar el descanso: 880 Hz, 150 ms, separados 200 ms */
+const tripleBeep = () => {
+  beep(880, 0.15, 0.3, 0);
+  beep(880, 0.15, 0.3, 0.35);
+  beep(880, 0.15, 0.3, 0.7);
+};
+/* Aviso suave a 3 segundos del final */
+const softBeep = () => beep(440, 0.1, 0.15, 0);
+
+/* ─── GIFs de ejercicios (por nombre en minúsculas) ─── */
+const EXERCISE_GIFS = {
+  "flexiones": "https://media.tenor.com/mRBGI_WkzBQAAAAC/push-up-workout.gif",
+  "dominadas": "https://media.tenor.com/7h8VkMNeQKUAAAAC/pull-ups-workout.gif",
+  "sentadilla con barra": "https://media.tenor.com/aH5JN_jxVpYAAAAC/squat-barbell.gif",
+  "press banca": "https://media.tenor.com/p2d9yVMH6VEAAAAC/bench-press-workout.gif",
+  "peso muerto convencional": "https://media.tenor.com/kYS9YT3KRAEAAAAC/deadlift-workout.gif",
+  "plancha": "https://media.tenor.com/5OBgfFmNSTUAAAAC/plank-exercise.gif",
+  "fondos en paralelas": "https://media.tenor.com/u_WzUkHGGl8AAAAC/dips-workout.gif",
+  "sprint máximo — 30m": "https://media.tenor.com/Z2hS7OLKWZIAAAAC/sprint-run.gif",
+  "burpees": "https://media.tenor.com/d5MKVYB8tSYAAAAC/burpee-workout.gif",
+  "sentadilla con peso corporal": "https://media.tenor.com/1aQ1PaQUeEoAAAAC/squat-bodyweight.gif",
+};
+function gifFor(name) {
+  const n = name.toLowerCase();
+  if (EXERCISE_GIFS[n]) return EXERCISE_GIFS[n];
+  const key = Object.keys(EXERCISE_GIFS).find((k) => n.includes(k));
+  return key ? EXERCISE_GIFS[key] : null;
+}
 
 /* Estado del streak freeze y de la racha rota */
 function computeFreezeInfo(sessions, freezes) {
@@ -600,22 +727,37 @@ function NumPad({ onKey }) {
   );
 }
 
-/* Área de demostración: cuando exista un GIF real, pasar src={url} */
+/* Demostración del ejercicio: GIF con skeleton de carga y fallback silencioso.
+   Montar con key={nombre} para que el estado se reinicie por ejercicio. */
 function ExerciseDemo({ emoji, src }) {
+  const [status, setStatus] = useState(src ? "loading" : "none"); // loading | ok | none
   return (
     <div
       style={{
-        width: "100%", aspectRatio: "16 / 9", maxHeight: 200, borderRadius: 14,
-        background: "#1A1A2E", border: `1px solid ${C.border}`, overflow: "hidden",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12,
+        position: "relative", width: "100%", aspectRatio: "16 / 9", maxHeight: 180,
+        borderRadius: 12, background: "#1A1A2E", border: `1px solid ${C.border}`, overflow: "hidden",
+        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12,
       }}
     >
-      {src ? (
-        <img src={src} alt="Demostración del ejercicio" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {status === "none" ? (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 48 }}>{emoji}</div>
+          <div style={{ fontSize: 12, color: C.dim, fontWeight: 600, marginTop: 4 }}>Demostración próximamente</div>
+        </div>
       ) : (
         <>
-          <span style={{ fontSize: 40 }}>{emoji}</span>
-          <span style={{ fontSize: 12, color: C.dim, fontWeight: 600 }}>Demostración próximamente</span>
+          {status === "loading" && <div className="skeleton" />}
+          <img
+            src={src}
+            alt="Demostración del ejercicio"
+            loading="lazy"
+            onLoad={() => setStatus("ok")}
+            onError={() => setStatus("none")}
+            style={{
+              width: "100%", height: "100%", objectFit: "cover",
+              opacity: status === "ok" ? 1 : 0, transition: "opacity .3s ease",
+            }}
+          />
         </>
       )}
     </div>
@@ -1205,7 +1347,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
     if (phase !== "rest") return undefined;
     const t = setInterval(() => {
       restRef.current -= 1;
+      if (restRef.current === 3) softBeep();
       if (restRef.current <= 0) {
+        tripleBeep();
         setPhase("work");
         setSetNum((n) => n + 1);
       } else {
@@ -1232,6 +1376,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
   };
 
   const logSet = (ok) => {
+    ensureAudio(); // el AudioContext debe nacer en un gesto del usuario (móvil)
     if (ok && navigator.vibrate) navigator.vibrate(100);
     const entry = { reps: parseInt(reps, 10) || 0, weight: parseFloat(weight) || 0, ok };
     setLogs((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
@@ -1405,14 +1550,14 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
       </p>
 
       <div className="card fade-up" key={exIdx} style={{ marginTop: 10, borderLeft: `4px solid ${plan.discColor}` }}>
-        <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25 }}>{ex.name}</h2>
+        <ExerciseDemo key={ex.name} emoji={plan.discIcon} src={ex.gif || gifFor(ex.name)} />
+        <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25, marginTop: 12 }}>{ex.name}</h2>
         <p style={{ marginTop: 8, fontSize: 14 }}>
           <span style={{ color: plan.discColor, fontWeight: 800 }}>{ex.sets} series</span>
           <span style={{ color: C.mut }}> × </span>
           <span style={{ fontWeight: 800 }}>{ex.reps}</span>
         </p>
         <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>💡 {ex.tip}</p>
-        <ExerciseDemo emoji={plan.discIcon} src={ex.gif} />
       </div>
 
       {/* Series completadas */}
@@ -1517,9 +1662,171 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
   );
 }
 
+/* ─── Exportar historial CSV ─── */
+function exportCSV(sessions) {
+  const rows = [["Fecha", "Disciplina", "Nivel", "Duración (min)", "Ejercicio", "Series completadas", "Peso promedio (kg)", "Reps promedio"]];
+  sessions
+    .filter((s) => s.kind === "entreno")
+    .forEach((s) => {
+      const fecha = new Date(s.ts).toLocaleDateString("es");
+      const discLabel = DISCIPLINES[s.disc]?.label || s.disc;
+      const nivel = LEVELS[s.levelIdx]?.name || "";
+      const totalSets = s.exercises.reduce((a, e) => a + e.sets.length, 0);
+      const durMin = Math.round(totalSets * 2.5); // estimación: ~2.5 min por serie
+      s.exercises.forEach((e) => {
+        const ok = e.sets.filter((st) => st.ok).length;
+        const conPeso = e.sets.filter((st) => st.weight > 0);
+        const avgW = conPeso.length ? (conPeso.reduce((a, st) => a + st.weight, 0) / conPeso.length).toFixed(1) : "";
+        const conReps = e.sets.filter((st) => st.reps > 0);
+        const avgR = conReps.length ? (conReps.reduce((a, st) => a + st.reps, 0) / conReps.length).toFixed(1) : "";
+        rows.push([fecha, discLabel, nivel, durMin, e.name, ok, avgW, avgR]);
+      });
+    });
+  const csv = "﻿" + rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `FASE_historial_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ─── Calculadora de 1RM (fórmula Epley) ─── */
+const RM_EXERCISES = ["Sentadilla", "Press banca", "Peso muerto", "Press militar", "Remo con barra"];
+const RM_TABLE = [
+  { pct: 95, label: "Fuerza máxima", reps: "1-2 reps" },
+  { pct: 85, label: "Fuerza", reps: "3-5 reps" },
+  { pct: 75, label: "Hipertrofia pesada", reps: "6-8 reps" },
+  { pct: 65, label: "Hipertrofia", reps: "10-12 reps" },
+  { pct: 55, label: "Resistencia", reps: "15+ reps" },
+];
+const round2p5 = (x) => Math.round(x / 2.5) * 2.5;
+
+function OneRM({ onBack }) {
+  const [exName, setExName] = useState(RM_EXERCISES[0]);
+  const [weight, setWeight] = useState("");
+  const [reps, setReps] = useState("");
+  const [saved, setSaved] = useState(() => store.get("1rm", {}));
+
+  const w = parseFloat(weight);
+  const r = parseInt(reps, 10);
+  const valid = w > 0 && r > 0 && r <= 30;
+  const rm = valid ? round2p5(w * (1 + r / 30)) : null;
+  const stored = saved[exName];
+  const shown = rm ?? (stored ? stored.rm : null);
+
+  const save = () => {
+    if (!rm) return;
+    const next = { ...saved, [exName]: { rm, weight: w, reps: r, ts: Date.now() } };
+    setSaved(next);
+    store.set("1rm", next);
+  };
+
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+        ‹ Progreso
+      </button>
+      <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 8 }}>💪 Mi fuerza</h2>
+      <p className="muted" style={{ marginTop: 2 }}>Calcula tu repetición máxima (1RM) con la fórmula Epley</p>
+
+      <div className="sec-title">Ejercicio</div>
+      <div className="chip-wrap">
+        {RM_EXERCISES.map((e) => (
+          <button
+            key={e}
+            className={`chip ${exName === e ? "on" : ""}`}
+            style={exName === e ? { background: C.cyan } : {}}
+            onClick={() => setExName(e)}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+
+      {stored && (
+        <div className="card" style={{ marginTop: 12, padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: C.mut }}>Tu 1RM guardado</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: C.cyan }}>
+            {stored.rm} kg <span style={{ fontSize: 11, color: C.dim, fontWeight: 600 }}>({fmtDate(stored.ts)})</span>
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>PESO USADO (KG)</label>
+          <input
+            className="input" type="number" inputMode="decimal" placeholder="0"
+            value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 6 }}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>REPS REALIZADAS</label>
+          <input
+            className="input" type="number" inputMode="numeric" placeholder="0"
+            value={reps} onChange={(e) => setReps(e.target.value)} style={{ marginTop: 6 }}
+          />
+        </div>
+      </div>
+
+      {shown !== null && (
+        <div className="card fade-up" style={{ marginTop: 16, textAlign: "center", padding: "22px 16px", borderColor: `${C.cyan}55` }}>
+          <div style={{ fontSize: 12, color: C.mut, fontWeight: 700, letterSpacing: 1.5 }}>1RM ESTIMADO · {exName.toUpperCase()}</div>
+          <div style={{ fontSize: 48, fontWeight: 900, color: C.cyan, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
+            {shown} kg
+          </div>
+          {rm && (
+            <button
+              className="btn-xl"
+              onClick={save}
+              style={{ marginTop: 14, background: C.cyan, color: "#07070C", fontSize: 14, padding: 13 }}
+            >
+              💾 GUARDAR 1RM
+            </button>
+          )}
+        </div>
+      )}
+
+      {shown !== null && (
+        <>
+          <div className="sec-title">Cargas de entrenamiento</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {RM_TABLE.map((row) => (
+              <div key={row.pct} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px" }}>
+                <span style={{
+                  fontSize: 12, fontWeight: 800, color: C.cyan, background: `${C.cyan}18`,
+                  padding: "4px 9px", borderRadius: 99, border: `1px solid ${C.cyan}44`, flexShrink: 0,
+                }}>
+                  {row.pct}%
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{row.label}</div>
+                  <div style={{ fontSize: 11, color: C.mut }}>{row.reps}</div>
+                </div>
+                <span style={{ fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                  {round2p5((shown * row.pct) / 100)} kg
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <p className="disclaimer">
+        Estimación orientativa. El 1RM real depende de tu técnica y experiencia; no lo intentes sin supervisión.
+      </p>
+    </div>
+  );
+}
+
 /* ─── PROGRESO ─── */
 function Progress({ sessions }) {
   const [detail, setDetail] = useState(false);
+  const [show1rm, setShow1rm] = useState(false);
 
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
@@ -1544,6 +1851,8 @@ function Progress({ sessions }) {
     });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 12);
   }, [workouts]);
+
+  if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
 
   if (!detail) {
     return (
@@ -1584,6 +1893,21 @@ function Progress({ sessions }) {
             </div>
           )}
           <div style={{ fontSize: 12, color: C.dim, marginTop: 14 }}>Toca para ver el detalle ›</div>
+        </button>
+
+        <button
+          className="btn-xl"
+          onClick={() => setShow1rm(true)}
+          style={{ marginTop: 12, background: C.cyan, color: "#07070C", fontSize: 15 }}
+        >
+          💪 CALCULAR MI 1RM
+        </button>
+        <button
+          className="btn-xl"
+          onClick={() => exportCSV(sessions)}
+          style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+        >
+          📥 Exportar historial
         </button>
 
         <div className="sec-title">Escalera de niveles</div>
