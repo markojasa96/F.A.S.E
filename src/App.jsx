@@ -43,12 +43,12 @@ const store = {
 
 /* ─── Niveles de entrenamiento ─── */
 const LEVELS = [
-  { name: "Iniciado", emoji: "🔵", color: C.blue },
-  { name: "Guerrero", emoji: "🟢", color: C.green },
-  { name: "Campeón", emoji: "🟡", color: C.yellow },
-  { name: "Élite", emoji: "🟠", color: C.orange },
-  { name: "Leyenda", emoji: "🔴", color: C.red },
-  { name: "THE ONE", emoji: "⚡", color: C.purple },
+  { name: "Iniciado", emoji: "🔵", color: C.blue, desc: "Estoy empezando" },
+  { name: "Guerrero", emoji: "🟢", color: C.green, desc: "Entreno regularmente" },
+  { name: "Campeón", emoji: "🟡", color: C.yellow, desc: "Llevo más de 6 meses" },
+  { name: "Élite", emoji: "🟠", color: C.orange, desc: "Es mi estilo de vida" },
+  { name: "Leyenda", emoji: "🔴", color: C.red, desc: "Entreno como profesional" },
+  { name: "THE ONE", emoji: "⚡", color: C.purple, desc: "Soy el límite" },
 ];
 
 /* ─── Héroes por racha ─── */
@@ -172,7 +172,7 @@ const ATLETISMO_EXDB = {
   "100m": [
     { n: "Salidas de bloque (o posición baja)", t: "tiempo", s: 6, r: "20 m", rest: 120, tip: "Explota bajo y acelera los primeros 10 pasos." },
     { n: "Aceleraciones progresivas", t: "tiempo", s: 5, r: "30 m", rest: 120, tip: "De trote a sprint máximo en la distancia." },
-    { n: "Sprint máximo", t: "tiempo", s: 4, r: "60 m", rest: 180, tip: "Recupera completo entre repeticiones." },
+    { n: "Sprint máximo", t: "tiempo", s: 4, r: "60 m", rest: 180, tip: "Inclinación de 45° al salir. Brazos en 90° que se mueven adelante-atrás sin cruzar el centro. Ataque del pie bajo el centro de masa. Máxima frecuencia de zancada en los primeros 30m." },
     { n: "Skipping A", t: "tiempo", s: 3, r: "20 m", rest: 60, tip: "Rodilla alta, apoyo activo bajo la cadera." },
     { n: "Skipping B", t: "tiempo", s: 3, r: "20 m", rest: 60, tip: "Extiende la pierna adelante antes de bajarla." },
     { n: "Frecuencia de zancada en el sitio", t: "tiempo", s: 3, r: "15s", rest: 60, tip: "Pasos muy rápidos y cortos, casi sin desplazarte." },
@@ -218,19 +218,19 @@ const ATLETISMO_EXDB = {
    t: peso | reps | tiempo · f: enfoques · lv: [nivel mín, nivel máx] 0-5 */
 const EXDB = {
   gimnasio: [
-    { n: "Press banca con barra", t: "peso", f: ["pecho"], lv: [1, 5], s: 4, r: "6-10", rest: 120, tip: "Baja la barra al pecho con control, codos a 45°." },
+    { n: "Press banca con barra", t: "peso", f: ["pecho"], lv: [1, 5], s: 4, r: "6-10", rest: 120, tip: "Agarre ligeramente más ancho que hombros. Escápulas retraídas y pies en el suelo. Baja la barra al pecho medio-bajo. Empuja en trayectoria ligeramente diagonal hacia arriba." },
     { n: "Press banca con mancuernas", t: "peso", f: ["pecho"], lv: [0, 3], s: 3, r: "8-12", rest: 90, tip: "Recorrido completo, junta las mancuernas arriba sin chocarlas." },
     { n: "Press inclinado con mancuernas", t: "peso", f: ["pecho"], lv: [0, 5], s: 3, r: "8-12", rest: 90, tip: "Banco a 30°, no arquees la zona lumbar." },
     { n: "Aperturas con mancuernas", t: "peso", f: ["pecho"], lv: [0, 4], s: 3, r: "10-15", rest: 60, tip: "Codos ligeramente flexionados, siente el estiramiento del pecho." },
     { n: "Cruce de poleas", t: "peso", f: ["pecho"], lv: [1, 5], s: 3, r: "12-15", rest: 60, tip: "Contrae el pecho al cerrar, controla la vuelta." },
     { n: "Press banca con pausa", t: "peso", f: ["pecho"], lv: [3, 5], s: 4, r: "4-6", rest: 180, tip: "Pausa de 1 segundo en el pecho antes de empujar." },
     { n: "Jalón al pecho", t: "peso", f: ["espalda"], lv: [0, 3], s: 3, r: "10-12", rest: 90, tip: "Lleva la barra a la clavícula con el pecho arriba." },
-    { n: "Dominadas", t: "reps", f: ["espalda"], lv: [1, 3], s: 4, r: "5-10", rest: 120, tip: "Barbilla sobre la barra, baja hasta extender los brazos." },
+    { n: "Dominadas", t: "reps", f: ["espalda"], lv: [1, 3], s: 4, r: "5-10", rest: 120, tip: "Agarre prono, manos algo más anchas que hombros. Inicia el movimiento retrayendo escápulas. Sube hasta que la barbilla supere la barra. Baja completamente controlado." },
     { n: "Dominadas lastradas", t: "peso", f: ["espalda"], lv: [3, 5], s: 4, r: "4-6", rest: 150, tip: "Añade peso al cinturón, mantén el control al bajar." },
     { n: "Remo con barra", t: "peso", f: ["espalda"], lv: [1, 5], s: 4, r: "6-10", rest: 120, tip: "Torso a 45°, tira hacia el ombligo sin dar tirones." },
     { n: "Remo con mancuerna a una mano", t: "peso", f: ["espalda"], lv: [0, 4], s: 3, r: "8-12", rest: 90, tip: "Apoya la rodilla en el banco, espalda recta." },
     { n: "Remo en polea baja", t: "peso", f: ["espalda"], lv: [0, 3], s: 3, r: "10-12", rest: 90, tip: "Saca pecho y lleva los codos atrás pegados al cuerpo." },
-    { n: "Peso muerto convencional", t: "peso", f: ["espalda", "piernas"], lv: [2, 5], s: 4, r: "3-6", rest: 210, tip: "Espalda neutra, empuja el suelo con las piernas." },
+    { n: "Peso muerto convencional", t: "peso", f: ["espalda", "piernas"], lv: [2, 5], s: 4, r: "3-6", rest: 210, tip: "Pies a anchura de caderas. Barra sobre mediopié. Agarre justo fuera de las piernas. Espalda neutral, pecho arriba. Empuja el suelo hacia abajo, no jales la barra hacia arriba." },
     { n: "Pullover en polea", t: "peso", f: ["espalda"], lv: [1, 4], s: 3, r: "12-15", rest: 60, tip: "Brazos casi rectos, lleva la barra hasta la cadera." },
     { n: "Press militar con mancuernas", t: "peso", f: ["hombros"], lv: [0, 3], s: 3, r: "8-12", rest: 90, tip: "Sube sin encoger los hombros, abdomen firme." },
     { n: "Press militar de pie con barra", t: "peso", f: ["hombros"], lv: [2, 5], s: 4, r: "5-8", rest: 150, tip: "Aprieta glúteos y abdomen, sin impulso de piernas." },
@@ -246,7 +246,7 @@ const EXDB = {
     { n: "Fondos entre bancos", t: "reps", f: ["brazos", "pecho"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Hombros lejos de las orejas, baja hasta 90°." },
     { n: "Fondos lastrados en paralelas", t: "peso", f: ["brazos", "pecho"], lv: [3, 5], s: 4, r: "6-8", rest: 150, tip: "Inclínate levemente adelante, baja controlado." },
     { n: "Sentadilla goblet", t: "peso", f: ["piernas", "gluteos"], lv: [0, 2], s: 3, r: "10-12", rest: 90, tip: "Mancuerna al pecho, baja entre las rodillas." },
-    { n: "Sentadilla con barra", t: "peso", f: ["piernas", "gluteos"], lv: [1, 5], s: 4, r: "5-8", rest: 180, tip: "Pecho arriba, baja todo lo que tu movilidad permita." },
+    { n: "Sentadilla con barra", t: "peso", f: ["piernas", "gluteos"], lv: [1, 5], s: 4, r: "5-8", rest: 180, tip: "Barra sobre trapecios, pies a anchura de hombros con puntas ligeramente abiertas. Inicia el movimiento sacando las caderas hacia atrás. Rodillas siguen la dirección de los pies. Baja hasta paralelo o más." },
     { n: "Sentadilla frontal", t: "peso", f: ["piernas"], lv: [3, 5], s: 4, r: "4-6", rest: 180, tip: "Codos altos, torso lo más vertical posible." },
     { n: "Prensa de piernas", t: "peso", f: ["piernas"], lv: [0, 4], s: 3, r: "10-12", rest: 120, tip: "No bloquees las rodillas arriba, baja profundo." },
     { n: "Peso muerto rumano", t: "peso", f: ["piernas", "gluteos"], lv: [1, 5], s: 3, r: "8-10", rest: 120, tip: "Cadera atrás, siente el estiramiento en los femorales." },
@@ -278,13 +278,13 @@ const EXDB = {
   ],
   calistenia: [
     { n: "Flexiones con rodillas", t: "reps", f: ["empuje"], lv: [0, 0], s: 3, r: "8-12", rest: 60, tip: "Cuerpo alineado de rodillas a cabeza, pecho al suelo." },
-    { n: "Flexiones", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-20", rest: 60, tip: "Cuerpo en línea recta, codos a 45° del torso." },
+    { n: "Flexiones", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-20", rest: 60, tip: "Manos a la anchura de hombros. Cuerpo en línea recta de cabeza a talones. Baja hasta rozar el pecho con el suelo. Codos a 45° del cuerpo, no abiertos." },
     { n: "Flexiones diamante", t: "reps", f: ["empuje"], lv: [1, 4], s: 3, r: "8-15", rest: 90, tip: "Manos juntas formando un diamante bajo el pecho." },
     { n: "Flexiones declinadas", t: "reps", f: ["empuje"], lv: [2, 4], s: 3, r: "10-15", rest: 90, tip: "Pies elevados en un banco o muro bajo." },
     { n: "Flexiones arqueras", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "6 c/lado", rest: 120, tip: "Un brazo empuja, el otro se extiende recto al lado." },
     { n: "Pike push-ups", t: "reps", f: ["empuje"], lv: [1, 3], s: 3, r: "8-12", rest: 90, tip: "Cadera alta en V invertida, baja la cabeza entre las manos." },
     { n: "Flexiones de pino en pared", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "4-8", rest: 150, tip: "Pies apoyados en la pared, baja la cabeza con control." },
-    { n: "Fondos en banco", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Manos en el borde, baja hasta codos a 90°." },
+    { n: "Fondos entre sillas", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Dos sillas firmes a la anchura de los hombros, baja hasta codos a 90°." },
     { n: "Fondos en paralelas", t: "reps", f: ["empuje"], lv: [2, 4], s: 4, r: "8-12", rest: 120, tip: "Baja hasta que el hombro pase la línea del codo." , bar: true },
     { n: "Flexiones a una mano (progresión)", t: "reps", f: ["empuje"], lv: [4, 5], s: 4, r: "3-5 c/lado", rest: 180, tip: "Piernas muy abiertas, la mano libre en la espalda." },
     { n: "Remo invertido", t: "reps", f: ["tiron"], lv: [0, 2], s: 3, r: "8-12", rest: 90, tip: "Bajo una barra baja o mesa firme, pecho a la barra." , bar: true },
@@ -294,7 +294,7 @@ const EXDB = {
     { n: "Dominadas arqueras", t: "reps", f: ["tiron"], lv: [4, 5], s: 4, r: "4 c/lado", rest: 180, tip: "Sube hacia una mano con el otro brazo casi recto." , bar: true },
     { n: "Muscle-up (progresión)", t: "reps", f: ["tiron", "explosivo"], lv: [4, 5], s: 4, r: "3-5", rest: 180, tip: "Dominada explosiva y transición por encima de la barra." , bar: true },
     { n: "Colgado activo", t: "tiempo", f: ["tiron"], lv: [0, 3], s: 3, r: "20-40s", rest: 60, tip: "Cuelga de la barra hundiendo los hombros hacia abajo." , bar: true },
-    { n: "Plancha", t: "tiempo", f: ["core"], lv: [0, 2], s: 3, r: "30-45s", rest: 45, tip: "Aprieta glúteos y abdomen, no dejes caer la cadera." },
+    { n: "Plancha", t: "tiempo", f: ["core"], lv: [0, 2], s: 3, r: "30-45s", rest: 45, tip: "Codos bajo los hombros. Contrae glúteos y abdomen simultáneamente. No dejes caer las caderas ni las subas. Respira normalmente. Cuello neutro mirando al suelo." },
     { n: "Plancha lateral", t: "tiempo", f: ["core"], lv: [0, 3], s: 3, r: "20-30s c/lado", rest: 45, tip: "Cuerpo en línea, cadera alta todo el tiempo." },
     { n: "Crunch bicicleta", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "15 c/lado", rest: 45, tip: "Codo a la rodilla contraria, lento y controlado." },
     { n: "Elevaciones de piernas tumbado", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Lumbar pegada al suelo, baja las piernas sin tocarlo." },
@@ -612,16 +612,22 @@ const tripleBeep = () => {
 /* Aviso suave a 3 segundos del final */
 const softBeep = () => beep(440, 0.1, 0.15, 0);
 
-/* ─── Ícono animado por grupo de ejercicio (evita depender de URLs externas) ─── */
-const TAG_ICONS = {
-  empuje: "⬇️", tiron: "⬆️", core: "🧘", piernas: "🦵", gluteos: "🍑",
-  explosivo: "💥", velocidad: "🏃", salto: "🤸", fuerza: "🏋️", estabilidad: "🤸",
-  resistencia: "🏃", pecho: "💪", espalda: "🔙", hombros: "🙆", brazos: "💪",
-  tiro: "🥅", regate: "⚽", ritmo: "⚡",
-};
-function iconForTag(tag, fallback) {
-  return TAG_ICONS[tag] || fallback || "💪";
+/* ─── Categoría de movimiento según el nombre del ejercicio (para el SVG animado) ─── */
+function movementCategory(name) {
+  const n = name.toLowerCase();
+  if (/flexion|press|fondo/.test(n)) return "empuje";
+  if (/domin|remo|jalón|jalon|tirón|tiron/.test(n)) return "tiron";
+  if (/sentadill|zancada|squat|pistol/.test(n)) return "sentadilla";
+  if (/plancha|abdomin|core|l-sit|hollow/.test(n)) return "core";
+  if (/sprint|corre|carrera|velocidad/.test(n)) return "sprint";
+  if (/salto|jump|pliom|cajón|cajon/.test(n)) return "salto";
+  return "generic";
 }
+
+const MOVEMENT_COLORS = {
+  empuje: "#FFFFFF", tiron: "#00E5FF", sentadilla: "#22FF88",
+  core: "#FFD600", sprint: "#FF7A2F", salto: "#A855F7", generic: "#8A8AAD",
+};
 
 /* Convierte "30-45s", "20 min", "300 m" en segundos objetivo (o null si no aplica) */
 function parseTargetSeconds(reps) {
@@ -764,6 +770,29 @@ function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
   }));
 }
 
+/* Reconstruye un plan de sesión a partir de un registro del historial (para "Repetir última sesión") */
+function planFromSession(session) {
+  const seed = Date.now();
+  if (session.disc === "atletismo") {
+    const distId = DISTANCES.find((d) => d.label === session.focusLabel)?.id || DISTANCES[0].id;
+    return {
+      discId: "atletismo", discLabel: "Atletismo", discColor: C.purple, discIcon: "🏃",
+      focusLabel: session.focusLabel, lvlIdx: session.levelIdx,
+      exercises: genAtletismoRoutine(distId, session.levelIdx, seed),
+    };
+  }
+  const disc = DISCIPLINES[session.disc];
+  if (!disc) return null;
+  const focusId = disc.focuses.find((f) => f.label === session.focusLabel)?.id || "todo";
+  const noBar = session.disc === "calistenia" && session.calLocation === "casa";
+  return {
+    discId: session.disc, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon,
+    focusLabel: session.focusLabel, lvlIdx: session.levelIdx,
+    exercises: genRoutine(session.disc, focusId, session.levelIdx, seed, { noBar }),
+    calLocation: session.calLocation,
+  };
+}
+
 /* ─── Mapa muscular (zonas por enfoque) ─── */
 const ALL_ZONES = ["pecho", "espalda", "hombros", "brazos", "core", "piernas", "gluteos"];
 const FOCUS_ZONES = {
@@ -831,7 +860,7 @@ function NumPad({ onKey }) {
           onClick={() => onKey(k)}
           style={{
             height: 64, borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`,
-            fontSize: 22, fontWeight: 800, color: k === "⌫" ? C.red : C.text,
+            fontSize: 18, fontWeight: 800, color: k === "⌫" ? C.red : C.text,
           }}
         >
           {k}
@@ -841,19 +870,105 @@ function NumPad({ onKey }) {
   );
 }
 
-/* Visual del ejercicio: ícono animado según el grupo muscular/movimiento.
-   Evita depender de URLs externas que pueden fallar o tener CORS. */
-function ExerciseVisual({ tag, fallbackEmoji }) {
-  const icon = iconForTag(tag, fallbackEmoji);
+/* Figuras de palo SVG animadas según la categoría de movimiento del ejercicio.
+   Evita depender de URLs externas (GIFs) que pueden fallar o tener CORS. */
+function StickFigure({ category, color }) {
+  const strokeProps = { stroke: color, strokeWidth: 4, strokeLinecap: "round", fill: "none" };
+  switch (category) {
+    case "empuje":
+      return (
+        <g className="anim-empuje">
+          <circle cx="30" cy="35" r="7" fill={color} />
+          <path d="M30 42 L100 42" {...strokeProps} />
+          <path d="M45 42 L38 60" {...strokeProps} />
+          <path d="M85 42 L92 60" {...strokeProps} />
+          <path d="M50 44 L65 30 L80 44" {...strokeProps} />
+        </g>
+      );
+    case "tiron":
+      return (
+        <g>
+          <path d="M20 15 L110 15" {...strokeProps} />
+          <g className="anim-tiron">
+            <circle cx="65" cy="30" r="7" fill={color} />
+            <path d="M65 37 L65 65" {...strokeProps} />
+            <path d="M65 42 L45 20" {...strokeProps} />
+            <path d="M65 42 L85 20" {...strokeProps} />
+            <path d="M65 65 L52 85" {...strokeProps} />
+            <path d="M65 65 L78 85" {...strokeProps} />
+          </g>
+        </g>
+      );
+    case "sentadilla":
+      return (
+        <g className="anim-sentadilla">
+          <circle cx="65" cy="20" r="7" fill={color} />
+          <path d="M65 27 L65 55" {...strokeProps} />
+          <path d="M65 32 L50 45" {...strokeProps} />
+          <path d="M65 32 L80 45" {...strokeProps} />
+          <path className="anim-leg" d="M65 55 L52 70 L52 90" {...strokeProps} />
+          <path className="anim-leg" d="M65 55 L78 70 L78 90" {...strokeProps} />
+        </g>
+      );
+    case "core":
+      return (
+        <g>
+          <circle cx="25" cy="45" r="7" fill={color} />
+          <path d="M25 52 L100 60" {...strokeProps} />
+          <path d="M35 50 L45 38" {...strokeProps} />
+          <path className="anim-core" d="M100 60 L112 48" {...strokeProps} />
+        </g>
+      );
+    case "sprint":
+      return (
+        <g>
+          <circle cx="55" cy="18" r="7" fill={color} />
+          <path d="M55 25 L60 50" {...strokeProps} />
+          <path d="M60 30 L78 20" {...strokeProps} />
+          <path d="M60 35 L42 45" {...strokeProps} />
+          <path className="anim-leg1" d="M60 50 L78 62 L88 55" {...strokeProps} />
+          <path className="anim-leg2" d="M60 50 L42 68 L30 78" {...strokeProps} />
+        </g>
+      );
+    case "salto":
+      return (
+        <g className="anim-salto">
+          <circle cx="65" cy="20" r="7" fill={color} />
+          <path d="M65 27 L65 55" {...strokeProps} />
+          <path d="M65 32 L48 15" {...strokeProps} />
+          <path d="M65 32 L82 15" {...strokeProps} />
+          <path d="M65 55 L52 78" {...strokeProps} />
+          <path d="M65 55 L78 78" {...strokeProps} />
+        </g>
+      );
+    default:
+      return (
+        <g className="anim-generic">
+          <circle cx="65" cy="22" r="7" fill={color} />
+          <path d="M65 29 L65 58" {...strokeProps} />
+          <path d="M65 36 L48 48" {...strokeProps} />
+          <path d="M65 36 L82 48" {...strokeProps} />
+          <path d="M65 58 L52 82" {...strokeProps} />
+          <path d="M65 58 L78 82" {...strokeProps} />
+        </g>
+      );
+  }
+}
+
+function ExerciseDemo({ exerciseName }) {
+  const category = movementCategory(exerciseName);
+  const color = MOVEMENT_COLORS[category];
   return (
     <div
       style={{
-        width: "100%", aspectRatio: "16 / 9", maxHeight: 180,
+        width: "100%", maxHeight: 160, aspectRatio: "16 / 9",
         borderRadius: 12, background: "#1A1A2E", border: `1px solid ${C.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12,
+        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden",
       }}
     >
-      <span className="icon-anim" style={{ fontSize: 56 }}>{icon}</span>
+      <svg viewBox="0 0 130 100" style={{ width: "70%", maxWidth: 160 }}>
+        <StickFigure category={category} color={color} />
+      </svg>
     </div>
   );
 }
@@ -975,7 +1090,7 @@ function StreakBar({ streak }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: C.mut }}>RACHA</span>
-        <span style={{ fontSize: 14, fontWeight: 800, color: C.orange }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: C.orange }}>
           {streak} {streak === 1 ? "día" : "días"} 🔥
         </span>
       </div>
@@ -1035,7 +1150,7 @@ function Welcome({ onDone }) {
             <button key={m.id} className="card" onClick={() => chooseMode(m.id)} style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
               <span style={{ fontSize: 30 }}>{m.emoji}</span>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 800 }}>{m.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>{m.label}</div>
                 <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{m.desc}</div>
               </div>
             </button>
@@ -1075,7 +1190,7 @@ function Welcome({ onDone }) {
         >
           F.A.S.E.
         </h1>
-        <p style={{ color: C.mut, fontSize: 14, marginTop: 8 }}>
+        <p style={{ color: C.mut, fontSize: 12, marginTop: 8 }}>
           Formación Atlética y Sistemas de Entrenamiento
         </p>
       </div>
@@ -1105,11 +1220,12 @@ function Welcome({ onDone }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, mode, broken, canFreeze, onFreeze }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze }) {
   const pro = mode === "pro";
   const hero = heroForStreak(streak);
   const nextHero = HEROES.find((h) => h.days > streak);
   const recent = sessions.slice(-5).reverse();
+  const lastEntreno = [...sessions].reverse().find((s) => s.kind === "entreno");
 
   /* Resumen semanal (desde el lunes) */
   const weekList = sessions.filter((s) => s.ts >= startOfWeek());
@@ -1133,7 +1249,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, mode, broken, c
 
   return (
     <div className="screen">
-      <p style={{ fontSize: 22, fontWeight: 800 }}>
+      <p style={{ fontSize: 18, fontWeight: 800 }}>
         Hola, <span style={{ color: C.cyan }}>{name}</span> {!pro && "👋"}
       </p>
       <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
@@ -1200,7 +1316,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, mode, broken, c
       ) : broken ? (
         <div className="card fade-up" style={{ marginTop: 12, textAlign: "center", padding: "20px 16px" }}>
           <div style={{ fontSize: 34 }}>🌅</div>
-          <p style={{ fontSize: 15, fontWeight: 800, marginTop: 8 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>
             Tu racha se rompió en {broken.lost} {broken.lost === 1 ? "día" : "días"}. ¿Empezamos una nueva?
           </p>
           <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
@@ -1230,7 +1346,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, mode, broken, c
             <button
               className="btn-xl"
               onClick={onFreeze}
-              style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.cyan}55`, color: C.cyan, fontSize: 14, padding: 13 }}
+              style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.cyan}55`, color: C.cyan, fontSize: 12, padding: 13 }}
             >
               🧊 Congelar racha (1 disponible al mes)
             </button>
@@ -1278,6 +1394,16 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, mode, broken, c
         ENTRENAR AHORA 💪
       </button>
 
+      {lastEntreno && (
+        <button
+          className="btn-xl"
+          onClick={() => onRepeat(lastEntreno)}
+          style={{ marginTop: 8, background: "transparent", border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
+        >
+          🔄 Repetir: {DISCIPLINES[lastEntreno.disc]?.label || lastEntreno.discLabel || "sesión"} · {LEVELS[lastEntreno.levelIdx]?.name}
+        </button>
+      )}
+
       {/* Historial reciente */}
       <div className="sec-title">Últimas sesiones</div>
       {recent.length === 0 && (
@@ -1294,7 +1420,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, mode, broken, c
             <div key={s.id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
               <span style={{ fontSize: 24 }}>{isBody ? sec?.icon || "🧘" : disc?.icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {isBody ? `Cuerpo · ${sec?.name || ""}` : disc?.label}
                 </div>
                 <div style={{ fontSize: 12, color: C.mut }}>
@@ -1383,7 +1509,7 @@ function Train({ onStart, onAccent, totalSessions }) {
   if (!discId) {
     return (
       <div className="screen">
-        <h2 style={{ fontSize: 22, fontWeight: 800 }}>Entrenar</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800 }}>Entrenar</h2>
         <p className="muted" style={{ marginTop: 2 }}>Elige tu disciplina de hoy</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
           {TRAIN_CARDS.map((d) => (
@@ -1413,11 +1539,11 @@ function Train({ onStart, onAccent, totalSessions }) {
   if (discId === "futbol") {
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
-        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
           ‹ Disciplinas
         </button>
         <div style={{ fontSize: 44, marginTop: 20 }}>⚽</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Dónde entrenas hoy?</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>¿Dónde entrenas hoy?</h2>
         <p className="muted" style={{ marginTop: 6 }}>Elige tu entorno de hoy</p>
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
           {FUTBOL_LOCATIONS.map((o) => (
@@ -1436,7 +1562,7 @@ function Train({ onStart, onAccent, totalSessions }) {
   if (discId === "atletismo") {
     return (
       <div className="screen" key="atletismo">
-        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
           ‹ Disciplinas
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
@@ -1478,15 +1604,20 @@ function Train({ onStart, onAccent, totalSessions }) {
         {distance && (
           <>
             <div className="sec-title">Nivel</div>
-            <div className="chip-wrap">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
               {LEVELS.map((l, i) => (
                 <button
                   key={l.name}
-                  className={`chip ${lvlIdx === i ? "on" : ""}`}
-                  style={lvlIdx === i ? { background: l.color, color: i === 5 ? "#fff" : "#07070C" } : {}}
+                  className="card"
+                  style={{
+                    textAlign: "left", padding: "8px 10px",
+                    border: `1px solid ${lvlIdx === i ? l.color : C.border}`,
+                    background: lvlIdx === i ? `${l.color}18` : C.card,
+                  }}
                   onClick={() => setLvlIdx(i)}
                 >
-                  {l.emoji} {l.name}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: lvlIdx === i ? l.color : C.text }}>{l.emoji} {l.name}</div>
+                  <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{l.desc}</div>
                 </button>
               ))}
             </div>
@@ -1506,7 +1637,7 @@ function Train({ onStart, onAccent, totalSessions }) {
                     {i + 1}
                   </span>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{e.name}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{e.name}</div>
                     <div style={{ fontSize: 12, color: C.mut }}>{e.sets} series × {e.reps}</div>
                   </div>
                 </div>
@@ -1545,11 +1676,11 @@ function Train({ onStart, onAccent, totalSessions }) {
   if (!energy) {
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
-        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
           ‹ Disciplinas
         </button>
         <div style={{ fontSize: 44, marginTop: 20 }}>{disc.icon}</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Cómo tienes la energía hoy?</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>¿Cómo tienes la energía hoy?</h2>
         <p className="muted" style={{ marginTop: 6 }}>La sesión se ajusta a tu día</p>
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
           {ENERGY_OPTIONS.map((o) => (
@@ -1567,11 +1698,11 @@ function Train({ onStart, onAccent, totalSessions }) {
   if (discId === "calistenia" && !calLocation) {
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
-        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
           ‹ Disciplinas
         </button>
         <div style={{ fontSize: 44, marginTop: 20 }}>🤸</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Dónde vas a entrenar hoy?</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>¿Dónde vas a entrenar hoy?</h2>
         <p className="muted" style={{ marginTop: 6 }}>Ajustamos los ejercicios a tu equipo disponible</p>
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
           {CAL_LOCATIONS.map((o) => (
@@ -1588,7 +1719,7 @@ function Train({ onStart, onAccent, totalSessions }) {
 
   return (
     <div className="screen" key={discId}>
-      <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+      <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
         ‹ Disciplinas
       </button>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
@@ -1644,15 +1775,20 @@ function Train({ onStart, onAccent, totalSessions }) {
       )}
 
       <div className="sec-title">B · Nivel</div>
-      <div className="chip-wrap">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         {LEVELS.map((l, i) => (
           <button
             key={l.name}
-            className={`chip ${lvlIdx === i ? "on" : ""}`}
-            style={lvlIdx === i ? { background: l.color, color: i === 5 ? "#fff" : "#07070C" } : {}}
+            className="card"
+            style={{
+              textAlign: "left", padding: "8px 10px",
+              border: `1px solid ${lvlIdx === i ? l.color : C.border}`,
+              background: lvlIdx === i ? `${l.color}18` : C.card,
+            }}
             onClick={() => setLvlIdx(i)}
           >
-            {l.emoji} {l.name}
+            <div style={{ fontSize: 12, fontWeight: 800, color: lvlIdx === i ? l.color : C.text }}>{l.emoji} {l.name}</div>
+            <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{l.desc}</div>
           </button>
         ))}
       </div>
@@ -1670,7 +1806,7 @@ function Train({ onStart, onAccent, totalSessions }) {
                   {i + 1}
                 </span>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>{e.name}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{e.name}</div>
                   <div style={{ fontSize: 12, color: C.mut }}>{e.sets} series × {e.reps}</div>
                 </div>
               </div>
@@ -1686,7 +1822,7 @@ function Train({ onStart, onAccent, totalSessions }) {
             </button>
             <button
               className="btn-xl"
-              onClick={() => onStart({ discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === focusId).label, lvlIdx, exercises: routine })}
+              onClick={() => onStart({ discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === focusId).label, lvlIdx, exercises: routine, calLocation: discId === "calistenia" ? calLocation : undefined })}
               style={{ flex: 2, background: disc.color, color: "#07070C", fontSize: 15 }}
             >
               COMENZAR SESIÓN
@@ -1712,6 +1848,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
   const [field, setField] = useState(() => (plan.exercises[0].type === "peso" ? "weight" : "reps"));
+  const [repsError, setRepsError] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [flashDone, setFlashDone] = useState(false);
   const restRef = useRef(0);
 
   const ex = plan.exercises[exIdx];
@@ -1763,6 +1902,16 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
     else setReps(next);
   };
 
+  const attemptComplete = () => {
+    if (ex.type !== "tiempo" && reps.trim() === "") {
+      setRepsError(true);
+      setField("reps");
+      setTimeout(() => setRepsError(false), 1000);
+      return;
+    }
+    logSet(true);
+  };
+
   const logSet = (ok, repsOverride = null) => {
     ensureAudio(); // el AudioContext debe nacer en un gesto del usuario (móvil)
     if (ok && navigator.vibrate) navigator.vibrate(100);
@@ -1771,6 +1920,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
     setLogs((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
     setReps("");
     if (setNum + 1 >= ex.sets) {
+      setFlashDone(true);
+      setTimeout(() => setFlashDone(false), 300);
       setPhase("exdone");
     } else if (ex.rest > 0) {
       restRef.current = ex.rest;
@@ -1790,6 +1941,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
         disc: plan.discId,
         focusLabel: plan.focusLabel,
         levelIdx: plan.lvlIdx,
+        calLocation: plan.calLocation,
         exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: logs[i] })),
       };
       onSave(record);
@@ -1850,8 +2002,25 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
         </div>
         <button
           className="btn-xl"
+          onClick={async () => {
+            const lvl = LEVELS[plan.lvlIdx]?.name || "";
+            const text = `Completé ${okSets} series en ${plan.discLabel} nivel ${lvl} con F.A.S.E. 💪 f-a-s-e.vercel.app`;
+            try {
+              await navigator.clipboard.writeText(text);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            } catch {
+              /* portapapeles no disponible */
+            }
+          }}
+          style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+        >
+          {copied ? "¡Copiado!" : "📤 Compartir"}
+        </button>
+        <button
+          className="btn-xl"
           onClick={onClose}
-          style={{ marginTop: 20, background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`, color: "#07070C" }}
+          style={{ marginTop: 10, background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`, color: "#07070C" }}
         >
           VOLVER AL INICIO
         </button>
@@ -1878,17 +2047,17 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center",
           }}
         >
-          <p style={{ color: C.mut, fontSize: 15, fontWeight: 800, letterSpacing: 4 }}>DESCANSO</p>
+          <p style={{ color: C.mut, fontSize: 13, fontWeight: 800, letterSpacing: 4 }}>DESCANSO</p>
           <div
             style={{
-              fontSize: 110, fontWeight: 900, lineHeight: 1, marginTop: 14,
+              fontSize: 56, fontWeight: 900, lineHeight: 1, marginTop: 14,
               color: restLeft <= 5 ? C.green : C.text, transition: "color .3s",
               fontVariantNumeric: "tabular-nums",
             }}
           >
             {restLeft}
           </div>
-          <p style={{ color: C.dim, fontSize: 14, marginTop: 8 }}>segundos</p>
+          <p style={{ color: C.dim, fontSize: 12, marginTop: 8 }}>segundos</p>
         </div>
         <div style={{ width: "100%", maxWidth: 430 }}>
           <div className="card" style={{ textAlign: "left" }}>
@@ -1915,7 +2084,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
   return (
     <div className="screen" style={{ paddingBottom: 30 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button onClick={quit} style={{ color: C.dim, fontSize: 14, fontWeight: 600 }}>✕ Salir</button>
+        <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
         <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
           {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
         </span>
@@ -1938,8 +2107,16 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
         Ejercicio {exIdx + 1} de {plan.exercises.length}
       </p>
 
-      <div className="card fade-up" key={exIdx} style={{ marginTop: 10, borderLeft: `4px solid ${plan.discColor}` }}>
-        <ExerciseVisual tag={ex.tag} fallbackEmoji={plan.discIcon} />
+      <div
+        className="card fade-up"
+        key={exIdx}
+        style={{
+          marginTop: 10, borderLeft: `4px solid ${plan.discColor}`,
+          boxShadow: flashDone ? `0 0 0 2px ${C.green}` : "none",
+          transition: "box-shadow .3s ease",
+        }}
+      >
+        <ExerciseDemo exerciseName={ex.name} />
         <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25, marginTop: 12 }}>{ex.name}</h2>
         <p style={{ marginTop: 8, fontSize: 14 }}>
           <span style={{ color: plan.discColor, fontWeight: 800 }}>{ex.sets} series</span>
@@ -1957,7 +2134,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
             <div
               key={i}
               style={{
-                minWidth: 54, padding: "8px 10px", borderRadius: 12, textAlign: "center",
+                minWidth: 46, height: 44, padding: "5px 8px", borderRadius: 11, textAlign: "center",
+                display: "flex", flexDirection: "column", justifyContent: "center",
                 background: log ? (log.ok ? "rgba(34,255,136,0.10)" : "rgba(255,59,92,0.10)") : i === setNum && phase === "work" ? C.card2 : C.surface,
                 border: `1px solid ${log ? (log.ok ? "rgba(34,255,136,0.4)" : "rgba(255,59,92,0.4)") : i === setNum && phase === "work" ? plan.discColor : C.border}`,
               }}
@@ -2002,14 +2180,15 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
                 <div style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>PESO (KG)</div>
                 <div style={{
                   fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums",
-                  color: weight === "" && sug ? C.dim : C.text,
+                  color: weight === "" ? C.dim : C.text,
                 }}>
-                  {weight !== "" ? weight : sug ? sug.weight : "0"}
+                  {weight !== "" ? weight : sug ? sug.weight : "kg"}
                 </div>
               </button>
             )}
             <button
               onClick={() => setField("reps")}
+              className={repsError ? "shake-error" : ""}
               style={{
                 flex: 1, textAlign: "center", padding: "12px 8px", borderRadius: 14,
                 background: field === "reps" ? C.card2 : C.surface,
@@ -2020,8 +2199,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
               <div style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>
                 {ex.type === "tiempo" ? "TIEMPO (SEG)" : "REPS HECHAS"}
               </div>
-              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-                {reps || "0"}
+              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums", color: reps === "" ? C.dim : C.text }}>
+                {reps || "reps"}
               </div>
             </button>
           </div>
@@ -2037,7 +2216,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
           <NumPad onKey={pressKey} />
           <button
             className="btn-xl"
-            onClick={() => logSet(true)}
+            onClick={attemptComplete}
             style={{ marginTop: 14, background: plan.discColor, color: "#07070C" }}
           >
             ✓ SERIE COMPLETADA
@@ -2131,10 +2310,10 @@ function OneRM({ onBack }) {
 
   return (
     <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
         ‹ Progreso
       </button>
-      <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 8 }}>💪 Mi fuerza</h2>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>💪 Mi fuerza</h2>
       <p className="muted" style={{ marginTop: 2 }}>Calcula tu repetición máxima (1RM) con la fórmula Epley</p>
 
       <div className="sec-title">Ejercicio</div>
@@ -2154,7 +2333,7 @@ function OneRM({ onBack }) {
       {stored && (
         <div className="card" style={{ marginTop: 12, padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13, color: C.mut }}>Tu 1RM guardado</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: C.cyan }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: C.cyan }}>
             {stored.rm} kg <span style={{ fontSize: 11, color: C.dim, fontWeight: 600 }}>({fmtDate(stored.ts)})</span>
           </span>
         </div>
@@ -2187,7 +2366,7 @@ function OneRM({ onBack }) {
             <button
               className="btn-xl"
               onClick={save}
-              style={{ marginTop: 14, background: C.cyan, color: "#07070C", fontSize: 14, padding: 13 }}
+              style={{ marginTop: 14, background: C.cyan, color: "#07070C", fontSize: 12, padding: 13 }}
             >
               💾 GUARDAR 1RM
             </button>
@@ -2256,12 +2435,23 @@ function Progress({ sessions }) {
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 12);
   }, [workouts]);
 
+  /* Volumen (kg) de las últimas 8 sesiones de entreno */
+  const volumeChart = useMemo(() => {
+    const last8 = workouts.slice(-8);
+    const vols = last8.map((s) => ({
+      ts: s.ts,
+      vol: Math.round(s.exercises.flatMap((e) => e.sets).filter((st) => st.ok).reduce((a, st) => a + st.weight * st.reps, 0)),
+    }));
+    const max = Math.max(1, ...vols.map((v) => v.vol));
+    return { vols, max };
+  }, [workouts]);
+
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
 
   if (!detail) {
     return (
       <div className="screen">
-        <h2 style={{ fontSize: 22, fontWeight: 800 }}>Progreso</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800 }}>Progreso</h2>
         <p className="muted" style={{ marginTop: 2 }}>Tu nivel global como atleta</p>
 
         <button
@@ -2314,6 +2504,37 @@ function Progress({ sessions }) {
           📥 Exportar historial
         </button>
 
+        {volumeChart.vols.length > 0 && (
+          <>
+            <div className="sec-title">Volumen últimas sesiones</div>
+            <div className="card" style={{ padding: "14px 10px" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80 }}>
+                {volumeChart.vols.map((v, i) => {
+                  const h = v.vol > 0 ? Math.max(4, Math.round((v.vol / volumeChart.max) * 80)) : 4;
+                  return (
+                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", height: 80 }}>
+                      <div
+                        style={{
+                          width: "100%", maxWidth: 22, height: h, borderRadius: 4,
+                          background: v.vol > 0 ? `linear-gradient(180deg, ${C.cyan}, ${C.green})` : C.dim,
+                          transition: "height .4s ease",
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                {volumeChart.vols.map((v, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 9, color: C.dim }}>
+                    {new Date(v.ts).toLocaleDateString("es", { day: "2-digit", month: "2-digit" })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="sec-title">Escalera de niveles</div>
         <div className="card" style={{ display: "flex", justifyContent: "space-between", padding: "14px 12px" }}>
           {LEVELS.map((l, i) => (
@@ -2336,7 +2557,7 @@ function Progress({ sessions }) {
   /* Detalle */
   return (
     <div className="screen">
-      <button onClick={() => setDetail(false)} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+      <button onClick={() => setDetail(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
         ‹ Progreso
       </button>
       <h2 style={{ fontSize: 20, fontWeight: 800, marginTop: 8 }}>
@@ -2353,7 +2574,7 @@ function Progress({ sessions }) {
             <div key={id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
               <span style={{ fontSize: 22 }}>{d.icon}</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{d.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 700 }}>{d.label}</div>
                 <div style={{ fontSize: 12, color: C.mut }}>{count} sesiones</div>
               </div>
               <span style={{
@@ -2470,7 +2691,7 @@ function Body({ onComplete }) {
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
         <div style={{ fontSize: 44 }}>🩺</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Cómo te sientes hoy?</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>¿Cómo te sientes hoy?</h2>
         <p className="muted" style={{ marginTop: 6 }}>Sé honesto: tu cuerpo lo agradece</p>
         <div style={{ display: "flex", gap: 8, marginTop: 24, justifyContent: "center" }}>
           {PAIN_FACES.map((f) => (
@@ -2498,7 +2719,7 @@ function Body({ onComplete }) {
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
         <div className="pop" style={{ fontSize: 50 }}>🛌</div>
         <h2 style={{ fontSize: 20, fontWeight: 800, marginTop: 14 }}>Hoy mejor descansa activamente</h2>
-        <p style={{ color: C.mut, fontSize: 14, marginTop: 8, lineHeight: 1.5 }}>
+        <p style={{ color: C.mut, fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
           Solo movilidad suave. Tu cuerpo necesita recuperarse para volver más fuerte.
         </p>
         <button
@@ -2521,7 +2742,7 @@ function Body({ onComplete }) {
   if (section) {
     return (
       <div className="screen" key={section.id}>
-        <button onClick={() => { setOpenId(null); setJustDone(false); }} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+        <button onClick={() => { setOpenId(null); setJustDone(false); }} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
           ‹ Cuerpo
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
@@ -2541,7 +2762,7 @@ function Body({ onComplete }) {
               }}>
                 {i + 1}
               </span>
-              <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{it.n}</div>
+              <div style={{ flex: 1, fontSize: 12, fontWeight: 600 }}>{it.n}</div>
               <span style={{ fontSize: 12, color: C.mut, fontWeight: 700, flexShrink: 0 }}>{it.d}</span>
             </div>
           ))}
@@ -2572,7 +2793,7 @@ function Body({ onComplete }) {
 
   return (
     <div className="screen">
-      <h2 style={{ fontSize: 22, fontWeight: 800 }}>Cuerpo</h2>
+      <h2 style={{ fontSize: 18, fontWeight: 800 }}>Cuerpo</h2>
       <p className="muted" style={{ marginTop: 2 }}>
         Movilidad, prevención y rehabilitación · Cada sesión suma a tu racha 🔥
       </p>
@@ -2586,7 +2807,7 @@ function Body({ onComplete }) {
           >
             <span style={{ fontSize: 26 }}>{b.icon}</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>{b.name}</div>
+              <div style={{ fontSize: 13, fontWeight: 800 }}>{b.name}</div>
               <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{b.desc} · ~{b.mins} min</div>
             </div>
             <span style={{ color: b.color, fontSize: 20 }}>›</span>
@@ -2626,6 +2847,21 @@ export default function App() {
   const [accent, setAccent] = useState(TAB_ACCENTS.inicio);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [freezes, setFreezes] = useState(() => store.get("freezes", []));
+  const [weeklyGoal, setWeeklyGoal] = useState(() => store.get("weekly_goal", 4));
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [highContrast, setHighContrast] = useState(() => store.get("high_contrast", false));
+
+  useEffect(() => {
+    document.body.classList.toggle("hc", highContrast);
+  }, [highContrast]);
+
+  const toggleContrast = () => {
+    setHighContrast((v) => {
+      const next = !v;
+      store.set("high_contrast", next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const goOnline = () => setOnline(true);
@@ -2721,17 +2957,56 @@ export default function App() {
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: accent, transition: "color .3s ease" }}>
             F.A.S.E.
           </div>
-          <div style={{ fontSize: 15, fontWeight: 800 }}>Hola, {name}</div>
+          <div style={{ fontSize: 13, fontWeight: 800 }}>Hola, {name}</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <WeekRing done={weekCount} accent={accent} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <WeekRing done={weekCount} goal={weeklyGoal} accent={accent} />
+            <button
+              onClick={() => setEditingGoal((v) => !v)}
+              style={{ fontSize: 12, color: C.dim, padding: 4 }}
+              aria-label="Editar meta semanal"
+            >
+              ✏️
+            </button>
+            {editingGoal && (
+              <div
+                className="card fade-up"
+                style={{
+                  position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 50,
+                  display: "flex", gap: 4, padding: 8,
+                }}
+              >
+                {[2, 3, 4, 5, 6].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => { setWeeklyGoal(n); store.set("weekly_goal", n); setEditingGoal(false); }}
+                    style={{
+                      width: 28, height: 28, borderRadius: 8, fontSize: 12, fontWeight: 800,
+                      background: n === weeklyGoal ? C.cyan : C.surface,
+                      color: n === weeklyGoal ? "#07070C" : C.text,
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div style={{
             display: "flex", alignItems: "center", gap: 6, background: "rgba(255,122,47,0.12)",
             border: "1px solid rgba(255,122,47,0.35)", borderRadius: 99, padding: "6px 12px",
           }}>
             <span className="flame" style={{ fontSize: 15 }}>🔥</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: C.orange }}>{streak}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: C.orange }}>{streak}</span>
           </div>
+          <button
+            onClick={toggleContrast}
+            aria-label="Alternar modo alto contraste"
+            style={{ fontSize: 16, padding: 4 }}
+          >
+            {highContrast ? "🌙" : "☀️"}
+          </button>
         </div>
       </header>
 
@@ -2739,6 +3014,7 @@ export default function App() {
         <Home
           name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
           onTrain={() => changeTab("entrenar")} mode={mode}
+          onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
           broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
         />
       )}
