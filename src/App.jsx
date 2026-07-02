@@ -378,8 +378,8 @@ const dayKey = (ts) => {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 };
 
-function calcStreak(sessions) {
-  const days = new Set(sessions.map((s) => dayKey(s.ts)));
+function calcStreak(sessions, frozen = []) {
+  const days = new Set([...sessions.map((s) => dayKey(s.ts)), ...frozen]);
   let streak = 0;
   const d = new Date();
   if (!days.has(dayKey(d.getTime()))) d.setDate(d.getDate() - 1);
@@ -388,6 +388,66 @@ function calcStreak(sessions) {
     d.setDate(d.getDate() - 1);
   }
   return streak;
+}
+
+/* Racha de la última cadena de días (aunque ya esté rota) */
+function lastChainStreak(sessions, frozen = []) {
+  if (!sessions.length) return 0;
+  const days = new Set([...sessions.map((s) => dayKey(s.ts)), ...frozen]);
+  const d = new Date(Math.max(...sessions.map((s) => s.ts)));
+  let n = 0;
+  while (days.has(dayKey(d.getTime()))) {
+    n++;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
+}
+
+/* RNG con semilla: misma semilla → misma rutina; cambia cada 3 sesiones */
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const todayKey = () => dayKey(Date.now());
+
+/* Estado del streak freeze y de la racha rota */
+function computeFreezeInfo(sessions, freezes) {
+  const daySet = new Set([...sessions.map((s) => dayKey(s.ts)), ...freezes]);
+  const trainedToday = daySet.has(dayKey(Date.now()));
+  const trainedYest = daySet.has(dayKey(Date.now() - 86400000));
+  const chainEndedDayBefore = daySet.has(dayKey(Date.now() - 2 * 86400000));
+  const used = store.get("freezes_used", null);
+  const now = new Date();
+  const usedThisMonth = used && used.month === now.getMonth() && used.year === now.getFullYear() && used.count >= 1;
+  const lost = lastChainStreak(sessions, freezes);
+  return {
+    canFreeze: !trainedYest && chainEndedDayBefore && !usedThisMonth && lost > 0,
+    broken: !trainedToday && !trainedYest && lost > 0 ? { lost } : null,
+  };
+}
+
+/* Sugerencia de peso según la última vez que se hizo el ejercicio */
+function weightSuggestion(sessions, exName) {
+  const entries = [];
+  sessions.forEach((s) => {
+    if (s.kind !== "entreno") return;
+    s.exercises.forEach((e) => {
+      if (e.name === exName && e.sets.length) entries.push({ ts: s.ts, sets: e.sets });
+    });
+  });
+  if (!entries.length) return null;
+  entries.sort((a, b) => a.ts - b.ts);
+  const last = entries[entries.length - 1];
+  const maxW = Math.max(...last.sets.map((x) => x.weight || 0));
+  if (maxW <= 0) return null;
+  const allOk = last.sets.every((x) => x.ok);
+  return { weight: allOk ? maxW + 2.5 : maxW, up: allOk };
 }
 
 function heroForStreak(streak) {
@@ -422,8 +482,9 @@ function levelFromCount(count, thresholds) {
   return idx;
 }
 
-/* ─── Generador de rutinas (5-8 ejercicios, con variación) ─── */
-function genRoutine(discId, focusId, lvlIdx) {
+/* ─── Generador de rutinas (5-8 ejercicios, con variación por semilla) ─── */
+function genRoutine(discId, focusId, lvlIdx, seed = 0) {
+  const rnd = mulberry32(seed);
   const db = EXDB[discId];
   const focus = DISCIPLINES[discId].focuses.find((f) => f.id === focusId);
   const matchFocus = (e) => !focus.tags || e.f.some((t) => focus.tags.includes(t));
@@ -433,10 +494,10 @@ function genRoutine(discId, focusId, lvlIdx) {
 
   const target = Math.max(
     5,
-    Math.min(8, Math.min(pool.length, 5 + (lvlIdx >= 2 ? 1 : 0) + (lvlIdx >= 4 ? 1 : 0) + (Math.random() < 0.5 ? 1 : 0)))
+    Math.min(8, Math.min(pool.length, 5 + (lvlIdx >= 2 ? 1 : 0) + (lvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0)))
   );
 
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const shuffled = [...pool].sort(() => rnd() - 0.5);
   const chosen = [];
   const seenTags = new Set();
   for (const e of shuffled) {
@@ -727,11 +788,19 @@ function Welcome({ onDone }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, broken, canFreeze, onFreeze }) {
   const hero = heroForStreak(streak);
   const nextHero = HEROES.find((h) => h.days > streak);
-  const week = sessions.filter((s) => s.ts >= startOfWeek()).length;
   const recent = sessions.slice(-5).reverse();
+
+  /* Resumen semanal (desde el lunes) */
+  const weekList = sessions.filter((s) => s.ts >= startOfWeek());
+  const week = weekList.length;
+  const weekSets = weekList
+    .filter((s) => s.kind === "entreno")
+    .flatMap((s) => s.exercises.flatMap((e) => e.sets))
+    .filter((st) => st.ok);
+  const weekKg = Math.round(weekSets.reduce((a, st) => a + st.weight * st.reps, 0));
 
   return (
     <div className="screen">
@@ -784,10 +853,47 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain }) {
         </div>
       </div>
 
-      {/* Racha */}
-      <div className="card" style={{ marginTop: 12 }}>
-        <StreakBar streak={streak} />
-      </div>
+      {/* Racha (o mensaje motivacional si se rompió) */}
+      {broken ? (
+        <div className="card fade-up" style={{ marginTop: 12, textAlign: "center", padding: "20px 16px" }}>
+          <div style={{ fontSize: 34 }}>🌅</div>
+          <p style={{ fontSize: 15, fontWeight: 800, marginTop: 8 }}>
+            Tu racha se rompió en {broken.lost} {broken.lost === 1 ? "día" : "días"}. ¿Empezamos una nueva?
+          </p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
+            Tus héroes desbloqueados se quedan contigo para siempre.
+          </p>
+          <button
+            className="btn-xl"
+            onClick={onTrain}
+            style={{ marginTop: 14, background: `linear-gradient(90deg, ${C.orange}, ${C.red})`, color: "#fff" }}
+          >
+            🔥 REINICIAR RACHA — ENTRENA AHORA
+          </button>
+          {canFreeze && (
+            <button
+              className="btn-xl"
+              onClick={onFreeze}
+              style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.cyan}55`, color: C.cyan, fontSize: 14 }}
+            >
+              🧊 Congelar racha (1 disponible al mes)
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="card" style={{ marginTop: 12 }}>
+          <StreakBar streak={streak} />
+          {canFreeze && (
+            <button
+              className="btn-xl"
+              onClick={onFreeze}
+              style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.cyan}55`, color: C.cyan, fontSize: 14, padding: 13 }}
+            >
+              🧊 Congelar racha (1 disponible al mes)
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
@@ -798,6 +904,21 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain }) {
 
       {/* Heatmap de actividad */}
       <Heatmap sessions={sessions} color={hero.color} />
+
+      {/* Resumen semanal */}
+      <div className="card" style={{ marginTop: 12, padding: "13px 16px" }}>
+        {week === 0 ? (
+          <p style={{ fontSize: 13, color: C.mut }}>
+            Esta semana aún no empiezas. <span style={{ color: C.text, fontWeight: 700 }}>¿Hoy? 👀</span>
+          </p>
+        ) : (
+          <p style={{ fontSize: 13, color: C.mut, lineHeight: 1.5 }}>
+            Esta semana: <span style={{ color: C.cyan, fontWeight: 800 }}>{week} {week === 1 ? "sesión" : "sesiones"}</span>
+            {" · "}<span style={{ color: C.green, fontWeight: 800 }}>{weekSets.length} series</span> completadas
+            {weekKg > 0 && <>{" · "}<span style={{ color: C.orange, fontWeight: 800 }}>{weekKg} kg</span> levantados</>}
+          </p>
+        )}
+      </div>
 
       {/* CTA */}
       <button
@@ -847,11 +968,27 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain }) {
 }
 
 /* ─── ENTRENAR (selección) ─── */
-function Train({ onStart, onAccent }) {
+const ENERGY_OPTIONS = [
+  { id: "high", emoji: "⚡", label: "Al 100%" },
+  { id: "mid", emoji: "😐", label: "Normal" },
+  { id: "low", emoji: "😴", label: "Cansado" },
+];
+
+function Train({ onStart, onAccent, totalSessions }) {
   const [discId, setDiscId] = useState(null);
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
   const [seed, setSeed] = useState(0);
+  /* La energía elegida se recuerda durante el día */
+  const [energy, setEnergy] = useState(() => {
+    const saved = store.get("energy", null);
+    return saved && saved.day === todayKey() ? saved.value : null;
+  });
+
+  const chooseEnergy = (v) => {
+    setEnergy(v);
+    store.set("energy", { day: todayKey(), value: v });
+  };
 
   const pickDisc = (id) => {
     setDiscId(id);
@@ -868,10 +1005,16 @@ function Train({ onStart, onAccent }) {
 
   const routine = useMemo(() => {
     if (!discId || lvlIdx === null) return null;
-    return genRoutine(discId, focusId, lvlIdx);
-    // seed fuerza regeneración con "Variar ejercicios"
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [discId, focusId, lvlIdx, seed]);
+    /* Con poca energía: un nivel menos y una serie menos por ejercicio */
+    const effLvl = energy === "low" ? Math.max(0, lvlIdx - 1) : lvlIdx;
+    /* Semilla automática: cambia cada 3 sesiones + botón "Variar" */
+    const focusHash = [...(discId + focusId)].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + effLvl * 17 + focusHash;
+    let r = genRoutine(discId, focusId, effLvl, seedVal);
+    if (energy === "low") r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
+    if (energy === "high") r = r.map((e, i) => (i === 0 ? { ...e, sets: Math.min(6, e.sets + 1) } : e));
+    return r;
+  }, [discId, focusId, lvlIdx, seed, energy, totalSessions]);
 
   if (!discId) {
     return (
@@ -902,6 +1045,28 @@ function Train({ onStart, onAccent }) {
     );
   }
 
+  /* Pregunta rápida de energía antes de los selectores */
+  if (!energy) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Disciplinas
+        </button>
+        <div style={{ fontSize: 44, marginTop: 20 }}>{disc.icon}</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Cómo tienes la energía hoy?</h2>
+        <p className="muted" style={{ marginTop: 6 }}>La sesión se ajusta a tu día</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          {ENERGY_OPTIONS.map((o) => (
+            <button key={o.id} onClick={() => chooseEnergy(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
+              <div style={{ fontSize: 30 }}>{o.emoji}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginTop: 8 }}>{o.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="screen" key={discId}>
       <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
@@ -914,6 +1079,19 @@ function Train({ onStart, onAccent }) {
           <p style={{ fontSize: 12, color: C.mut }}>{disc.desc}</p>
         </div>
       </div>
+
+      {energy === "low" && (
+        <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.yellow}44`, background: "rgba(255,214,0,0.06)" }}>
+          <span style={{ fontSize: 13, color: C.yellow, fontWeight: 700 }}>😴 Ajustamos la sesión. Más vale algo que nada.</span>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Un nivel abajo y una serie menos por ejercicio.</div>
+        </div>
+      )}
+      {energy === "high" && (
+        <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.green}44`, background: "rgba(34,255,136,0.06)" }}>
+          <span style={{ fontSize: 13, color: C.green, fontWeight: 700 }}>⚡ ¡Hoy te ves con todo!</span>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Serie extra en el primer ejercicio.</div>
+        </div>
+      )}
 
       <div className="sec-title">A · Enfoque</div>
       <div className="chip-wrap">
@@ -995,7 +1173,7 @@ function Train({ onStart, onAccent }) {
 }
 
 /* ─── SESIÓN ACTIVA ─── */
-function ActiveSession({ plan, streak, onSave, onClose }) {
+function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
   const [phase, setPhase] = useState("work"); // work | rest | exdone | finished
@@ -1009,6 +1187,14 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
   const ex = plan.exercises[exIdx];
   const isLastEx = exIdx === plan.exercises.length - 1;
   const lvl = LEVELS[plan.lvlIdx];
+
+  /* Sugerencias de peso calculadas al iniciar la sesión */
+  const suggestions = useMemo(
+    () => plan.exercises.map((e) => (e.type === "peso" ? weightSuggestion(sessions, e.name) : null)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const sug = suggestions[exIdx];
 
   const endRest = () => {
     setPhase("work");
@@ -1265,8 +1451,11 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
                 }}
               >
                 <div style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>PESO (KG)</div>
-                <div style={{ fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-                  {weight || "0"}
+                <div style={{
+                  fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums",
+                  color: weight === "" && sug ? C.dim : C.text,
+                }}>
+                  {weight !== "" ? weight : sug ? sug.weight : "0"}
                 </div>
               </button>
             )}
@@ -1287,6 +1476,15 @@ function ActiveSession({ plan, streak, onSave, onClose }) {
               </div>
             </button>
           </div>
+          {ex.type === "peso" && (
+            <p style={{ fontSize: 12, color: C.mut, marginTop: 8, textAlign: "center" }}>
+              {sug
+                ? sug.up
+                  ? `💪 Completaste todo la última vez: sugerido ${sug.weight} kg (+2.5)`
+                  : `Sugerido: mantener ${sug.weight} kg y asegurar la técnica`
+                : "Empieza con un peso cómodo"}
+            </p>
+          )}
           <NumPad onKey={pressKey} />
           <button
             className="btn-xl"
@@ -1698,6 +1896,7 @@ export default function App() {
   const [live, setLive] = useState(null);
   const [accent, setAccent] = useState(TAB_ACCENTS.inicio);
   const [online, setOnline] = useState(() => navigator.onLine);
+  const [freezes, setFreezes] = useState(() => store.get("freezes", []));
 
   useEffect(() => {
     const goOnline = () => setOnline(true);
@@ -1715,7 +1914,21 @@ export default function App() {
     setAccent(TAB_ACCENTS[t]);
   };
 
-  const streak = useMemo(() => calcStreak(sessions), [sessions]);
+  const streak = useMemo(() => calcStreak(sessions, freezes), [sessions, freezes]);
+
+  /* Streak freeze: disponible si la cadena terminó anteayer y no se usó este mes */
+  const freezeInfo = useMemo(() => computeFreezeInfo(sessions, freezes), [sessions, freezes]);
+
+  const useFreeze = () => {
+    const now = new Date();
+    const used = store.get("freezes_used", null);
+    if (used && used.month === now.getMonth() && used.year === now.getFullYear() && used.count >= 1) return;
+    const yestK = dayKey(Date.now() - 86400000);
+    const next = [...freezes, yestK];
+    setFreezes(next);
+    store.set("freezes", next);
+    store.set("freezes_used", { month: now.getMonth(), year: now.getFullYear(), count: 1 });
+  };
 
   /* Los héroes se desbloquean y se quedan aunque la racha baje */
   const unlockedHeroes = useMemo(() => {
@@ -1732,7 +1945,7 @@ export default function App() {
     const next = [...sessions, record];
     setSessions(next);
     store.set("sessions", next);
-    const s = calcStreak(next);
+    const s = calcStreak(next, freezes);
     const earned = HEROES.filter((h) => s >= h.days).map((h) => h.id);
     const merged = [...new Set([...heroes, ...earned])];
     if (merged.length !== heroes.length) {
@@ -1752,6 +1965,7 @@ export default function App() {
       <ActiveSession
         plan={live}
         streak={streak}
+        sessions={sessions}
         onSave={saveSession}
         onClose={() => { setLive(null); setTab("inicio"); }}
       />
@@ -1791,9 +2005,15 @@ export default function App() {
       </header>
 
       {tab === "inicio" && (
-        <Home name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes} onTrain={() => changeTab("entrenar")} />
+        <Home
+          name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
+          onTrain={() => changeTab("entrenar")}
+          broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
+        />
       )}
-      {tab === "entrenar" && <Train onStart={setLive} onAccent={(c) => setAccent(c || TAB_ACCENTS.entrenar)} />}
+      {tab === "entrenar" && (
+        <Train onStart={setLive} onAccent={(c) => setAccent(c || TAB_ACCENTS.entrenar)} totalSessions={sessions.length} />
+      )}
       {tab === "progreso" && <Progress sessions={sessions} />}
       {tab === "cuerpo" && <Body onComplete={completeBody} />}
 
