@@ -303,3 +303,13 @@ input[type='number'] {
   animation: flame 1.6s ease-in-out infinite;
   display: inline-block;
 }
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.icon-anim {
+  display: inline-block;
+  animation: iconBounce 1.4s ease-in-out infinite;
+}

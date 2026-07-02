@@ -43,10 +43,10 @@ const store = {
 
 /* ─── Niveles de entrenamiento ─── */
 const LEVELS = [
-  { name: "Novato", emoji: "🔵", color: C.blue },
-  { name: "Amateur", emoji: "🟢", color: C.green },
-  { name: "Destacado", emoji: "🟡", color: C.yellow },
-  { name: "Honorable", emoji: "🟠", color: C.orange },
+  { name: "Iniciado", emoji: "🔵", color: C.blue },
+  { name: "Guerrero", emoji: "🟢", color: C.green },
+  { name: "Campeón", emoji: "🟡", color: C.yellow },
+  { name: "Élite", emoji: "🟠", color: C.orange },
   { name: "Leyenda", emoji: "🔴", color: C.red },
   { name: "THE ONE", emoji: "⚡", color: C.purple },
 ];
@@ -125,6 +125,95 @@ const DISCIPLINES = {
   },
 };
 
+/* Fútbol se presenta como una sola disciplina; internamente usa futbolGym/futbolParque */
+const FUTBOL_META = { label: "Fútbol", icon: "⚽", color: C.orange, desc: "Gimnasio o parque, tú eliges" };
+const FUTBOL_LOCATIONS = [
+  { id: "futbolGym", emoji: "🏋️", label: "Gimnasio", desc: "Fuerza aplicada al campo" },
+  { id: "futbolParque", emoji: "🌳", label: "Parque", desc: "Velocidad y técnica" },
+];
+const CAL_LOCATIONS = [
+  { id: "parque", emoji: "🌳", label: "Parque", desc: "Barras disponibles" },
+  { id: "casa", emoji: "🏠", label: "Casa", desc: "Sin equipo" },
+];
+
+/* ─── Atletismo: distancias con sus propias rutinas ─── */
+const DISTANCES = [
+  { id: "100m", label: "100 m", tip: "Velocidad pura" },
+  { id: "400m", label: "400 m", tip: "Velocidad-resistencia" },
+  { id: "1000m", label: "1000 m", tip: "Medio fondo corto" },
+  { id: "5km", label: "5 km", tip: "Medio fondo" },
+  { id: "10km", label: "10 km", tip: "Fondo" },
+  { id: "maraton", label: "Maratón", tip: "Fondo largo" },
+];
+
+/* Se añade a DISCIPLINES para que Progreso pueda mostrar su desglose,
+   aunque su flujo de selección en Entrenar es especial (ver Train) */
+DISCIPLINES.atletismo = {
+  label: "Atletismo", icon: "🏃", color: C.purple, desc: "Corre y mejora tus tiempos",
+  focuses: DISTANCES.map((d) => ({ id: d.id, label: d.label, tags: null })),
+};
+
+const ATLETISMO_BENCH = {
+  "100m": [
+    { l: "Iniciado", t: ">14s" }, { l: "Guerrero", t: "12s" }, { l: "Campeón", t: "11s" },
+    { l: "Élite", t: "10.5s" }, { l: "Leyenda", t: "10s" }, { l: "THE ONE", t: "<9.8s" },
+  ],
+  "1000m": [
+    { l: "Iniciado", t: ">6:00" }, { l: "Guerrero", t: "5:00" }, { l: "Campeón", t: "4:30" },
+    { l: "Élite", t: "4:00" }, { l: "Leyenda", t: "3:30" }, { l: "THE ONE", t: "<3:00" },
+  ],
+  "5km": [
+    { l: "Iniciado", t: ">35:00" }, { l: "Guerrero", t: "28:00" }, { l: "Campeón", t: "23:00" },
+    { l: "Élite", t: "18:00" }, { l: "Leyenda", t: "15:00" }, { l: "THE ONE", t: "<13:00" },
+  ],
+};
+
+const ATLETISMO_EXDB = {
+  "100m": [
+    { n: "Salidas de bloque (o posición baja)", t: "tiempo", s: 6, r: "20 m", rest: 120, tip: "Explota bajo y acelera los primeros 10 pasos." },
+    { n: "Aceleraciones progresivas", t: "tiempo", s: 5, r: "30 m", rest: 120, tip: "De trote a sprint máximo en la distancia." },
+    { n: "Sprint máximo", t: "tiempo", s: 4, r: "60 m", rest: 180, tip: "Recupera completo entre repeticiones." },
+    { n: "Skipping A", t: "tiempo", s: 3, r: "20 m", rest: 60, tip: "Rodilla alta, apoyo activo bajo la cadera." },
+    { n: "Skipping B", t: "tiempo", s: 3, r: "20 m", rest: 60, tip: "Extiende la pierna adelante antes de bajarla." },
+    { n: "Frecuencia de zancada en el sitio", t: "tiempo", s: 3, r: "15s", rest: 60, tip: "Pasos muy rápidos y cortos, casi sin desplazarte." },
+  ],
+  "400m": [
+    { n: "Repeticiones de 300 m a ritmo de carrera", t: "tiempo", s: 4, r: "300 m", rest: 240, tip: "Ritmo agresivo pero sostenible toda la distancia." },
+    { n: "Series de 200 m rápidas", t: "tiempo", s: 5, r: "200 m", rest: 150, tip: "Controla el primer 100 m para no morir al final." },
+    { n: "Progresivos de 150 m", t: "tiempo", s: 4, r: "150 m", rest: 120, tip: "Acelera cada 50 m: suave, medio, fuerte." },
+    { n: "Cuestas cortas explosivas", t: "tiempo", s: 5, r: "40 m", rest: 120, tip: "Empuje potente con los brazos activos." },
+    { n: "Trote de recuperación entre series", t: "tiempo", s: 1, r: "5 min", rest: 0, tip: "Ritmo muy suave para bajar pulsaciones." },
+  ],
+  "1000m": [
+    { n: "Intervalos 6×200 m", t: "tiempo", s: 6, r: "200 m", rest: 90, tip: "Mismo ritmo en cada repetición, no te vayas fuerte al inicio." },
+    { n: "Tempo run", t: "tiempo", s: 1, r: "15 min", rest: 0, tip: "Ritmo constante moderado, controlado pero exigente." },
+    { n: "Fartlek libre", t: "tiempo", s: 1, r: "20 min", rest: 0, tip: "Alterna ritmos a tu gusto: fuerte y suave." },
+    { n: "Series de colina", t: "tiempo", s: 5, r: "80 m", rest: 120, tip: "Sube fuerte, baja trotando de recuperación." },
+    { n: "Rodaje suave de base", t: "tiempo", s: 1, r: "20 min", rest: 0, tip: "Ritmo cómodo, puedes hablar mientras corres." },
+  ],
+  "5km": [
+    { n: "Intervalos 6×200 m", t: "tiempo", s: 6, r: "200 m", rest: 90, tip: "Trabaja velocidad de base para el ritmo de 5K." },
+    { n: "Tempo run", t: "tiempo", s: 1, r: "20 min", rest: 0, tip: "Ritmo algo incómodo pero sostenible." },
+    { n: "Fartlek libre", t: "tiempo", s: 1, r: "25 min", rest: 0, tip: "Cambios de ritmo espontáneos durante la carrera." },
+    { n: "Series de colina", t: "tiempo", s: 6, r: "100 m", rest: 120, tip: "Construye fuerza específica de carrera." },
+    { n: "Rodaje suave de base", t: "tiempo", s: 1, r: "30 min", rest: 0, tip: "El volumen aeróbico es la base de todo." },
+  ],
+  "10km": [
+    { n: "Rodaje largo (long run)", t: "tiempo", s: 1, r: "50 min", rest: 0, tip: "Ritmo suave y constante, prioriza la duración." },
+    { n: "Ritmo de carrera (pace run)", t: "tiempo", s: 1, r: "25 min", rest: 0, tip: "Corre al ritmo que esperas mantener el día de la carrera." },
+    { n: "Intervalos largos 3×1 km", t: "tiempo", s: 3, r: "1 km", rest: 180, tip: "Ritmo algo más rápido que el objetivo de carrera." },
+    { n: "Carrera continua suave", t: "tiempo", s: 1, r: "35 min", rest: 0, tip: "Base aeróbica: constante y cómoda." },
+    { n: "Recuperación activa trotando", t: "tiempo", s: 1, r: "15 min", rest: 0, tip: "Muy suave, para asimilar el trabajo previo." },
+  ],
+  maraton: [
+    { n: "Rodaje largo (long run)", t: "tiempo", s: 1, r: "90 min", rest: 0, tip: "El entrenamiento más importante de la semana: paciencia." },
+    { n: "Ritmo de carrera (pace run)", t: "tiempo", s: 1, r: "40 min", rest: 0, tip: "Practica el ritmo objetivo de la maratón." },
+    { n: "Intervalos largos 3×1 km", t: "tiempo", s: 3, r: "1 km", rest: 180, tip: "Aporta velocidad sin sacrificar la resistencia de base." },
+    { n: "Carrera continua suave", t: "tiempo", s: 1, r: "50 min", rest: 0, tip: "Kilómetros fáciles que suman resistencia." },
+    { n: "Recuperación activa trotando", t: "tiempo", s: 1, r: "20 min", rest: 0, tip: "Fundamental entre sesiones largas para no lesionarte." },
+  ],
+};
+
 /* ─── Base de ejercicios ───
    t: peso | reps | tiempo · f: enfoques · lv: [nivel mín, nivel máx] 0-5 */
 const EXDB = {
@@ -196,23 +285,23 @@ const EXDB = {
     { n: "Pike push-ups", t: "reps", f: ["empuje"], lv: [1, 3], s: 3, r: "8-12", rest: 90, tip: "Cadera alta en V invertida, baja la cabeza entre las manos." },
     { n: "Flexiones de pino en pared", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "4-8", rest: 150, tip: "Pies apoyados en la pared, baja la cabeza con control." },
     { n: "Fondos en banco", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Manos en el borde, baja hasta codos a 90°." },
-    { n: "Fondos en paralelas", t: "reps", f: ["empuje"], lv: [2, 4], s: 4, r: "8-12", rest: 120, tip: "Baja hasta que el hombro pase la línea del codo." },
+    { n: "Fondos en paralelas", t: "reps", f: ["empuje"], lv: [2, 4], s: 4, r: "8-12", rest: 120, tip: "Baja hasta que el hombro pase la línea del codo." , bar: true },
     { n: "Flexiones a una mano (progresión)", t: "reps", f: ["empuje"], lv: [4, 5], s: 4, r: "3-5 c/lado", rest: 180, tip: "Piernas muy abiertas, la mano libre en la espalda." },
-    { n: "Remo invertido", t: "reps", f: ["tiron"], lv: [0, 2], s: 3, r: "8-12", rest: 90, tip: "Bajo una barra baja o mesa firme, pecho a la barra." },
-    { n: "Dominadas asistidas", t: "reps", f: ["tiron"], lv: [0, 1], s: 3, r: "5-8", rest: 120, tip: "Usa banda elástica, o salta y baja muy lento." },
-    { n: "Dominadas", t: "reps", f: ["tiron"], lv: [2, 4], s: 4, r: "6-10", rest: 120, tip: "Desde brazos extendidos, barbilla sobre la barra." },
-    { n: "Dominadas supinas", t: "reps", f: ["tiron"], lv: [1, 4], s: 3, r: "6-10", rest: 120, tip: "Palmas hacia ti: más trabajo de bíceps." },
-    { n: "Dominadas arqueras", t: "reps", f: ["tiron"], lv: [4, 5], s: 4, r: "4 c/lado", rest: 180, tip: "Sube hacia una mano con el otro brazo casi recto." },
-    { n: "Muscle-up (progresión)", t: "reps", f: ["tiron", "explosivo"], lv: [4, 5], s: 4, r: "3-5", rest: 180, tip: "Dominada explosiva y transición por encima de la barra." },
-    { n: "Colgado activo", t: "tiempo", f: ["tiron"], lv: [0, 3], s: 3, r: "20-40s", rest: 60, tip: "Cuelga de la barra hundiendo los hombros hacia abajo." },
+    { n: "Remo invertido", t: "reps", f: ["tiron"], lv: [0, 2], s: 3, r: "8-12", rest: 90, tip: "Bajo una barra baja o mesa firme, pecho a la barra." , bar: true },
+    { n: "Dominadas asistidas", t: "reps", f: ["tiron"], lv: [0, 1], s: 3, r: "5-8", rest: 120, tip: "Usa banda elástica, o salta y baja muy lento." , bar: true },
+    { n: "Dominadas", t: "reps", f: ["tiron"], lv: [2, 4], s: 4, r: "6-10", rest: 120, tip: "Desde brazos extendidos, barbilla sobre la barra." , bar: true },
+    { n: "Dominadas supinas", t: "reps", f: ["tiron"], lv: [1, 4], s: 3, r: "6-10", rest: 120, tip: "Palmas hacia ti: más trabajo de bíceps." , bar: true },
+    { n: "Dominadas arqueras", t: "reps", f: ["tiron"], lv: [4, 5], s: 4, r: "4 c/lado", rest: 180, tip: "Sube hacia una mano con el otro brazo casi recto." , bar: true },
+    { n: "Muscle-up (progresión)", t: "reps", f: ["tiron", "explosivo"], lv: [4, 5], s: 4, r: "3-5", rest: 180, tip: "Dominada explosiva y transición por encima de la barra." , bar: true },
+    { n: "Colgado activo", t: "tiempo", f: ["tiron"], lv: [0, 3], s: 3, r: "20-40s", rest: 60, tip: "Cuelga de la barra hundiendo los hombros hacia abajo." , bar: true },
     { n: "Plancha", t: "tiempo", f: ["core"], lv: [0, 2], s: 3, r: "30-45s", rest: 45, tip: "Aprieta glúteos y abdomen, no dejes caer la cadera." },
     { n: "Plancha lateral", t: "tiempo", f: ["core"], lv: [0, 3], s: 3, r: "20-30s c/lado", rest: 45, tip: "Cuerpo en línea, cadera alta todo el tiempo." },
     { n: "Crunch bicicleta", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "15 c/lado", rest: 45, tip: "Codo a la rodilla contraria, lento y controlado." },
     { n: "Elevaciones de piernas tumbado", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Lumbar pegada al suelo, baja las piernas sin tocarlo." },
-    { n: "Elevaciones de piernas colgado", t: "reps", f: ["core"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Sin balanceo, sube las piernas rectas o las rodillas." },
+    { n: "Elevaciones de piernas colgado", t: "reps", f: ["core"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Sin balanceo, sube las piernas rectas o las rodillas." , bar: true },
     { n: "Hollow body hold", t: "tiempo", f: ["core"], lv: [1, 4], s: 3, r: "20-40s", rest: 60, tip: "Forma de banana: lumbar al suelo, brazos y piernas extendidos." },
-    { n: "L-sit (progresión)", t: "tiempo", f: ["core"], lv: [3, 5], s: 4, r: "10-20s", rest: 90, tip: "En paralelas o en el suelo, piernas rectas al frente." },
-    { n: "Dragon flag (progresión)", t: "reps", f: ["core"], lv: [4, 5], s: 3, r: "5-8", rest: 120, tip: "Sujétate de un poste y baja el cuerpo recto sin quebrar la cadera." },
+    { n: "L-sit (progresión)", t: "tiempo", f: ["core"], lv: [3, 5], s: 4, r: "10-20s", rest: 90, tip: "En paralelas o en el suelo, piernas rectas al frente." , bar: true },
+    { n: "Dragon flag (progresión)", t: "reps", f: ["core"], lv: [4, 5], s: 3, r: "5-8", rest: 120, tip: "Sujétate de un poste y baja el cuerpo recto sin quebrar la cadera." , bar: true },
     { n: "Sentadillas", t: "reps", f: ["piernas"], lv: [0, 1], s: 3, r: "15-25", rest: 60, tip: "Baja profundo con los talones en el suelo." },
     { n: "Zancadas alternadas", t: "reps", f: ["piernas"], lv: [0, 2], s: 3, r: "10 c/pierna", rest: 60, tip: "Paso largo y torso vertical." },
     { n: "Sentadilla búlgara", t: "reps", f: ["piernas"], lv: [1, 4], s: 3, r: "10 c/pierna", rest: 90, tip: "Pie trasero apoyado en banco o muro bajo." },
@@ -231,12 +320,12 @@ const EXDB = {
     { n: "Flexiones hindú (dive bomber)", t: "reps", f: ["empuje"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Dibuja una ola con el cuerpo, de V invertida a cobra." },
     { n: "Flexiones espartanas", t: "reps", f: ["empuje"], lv: [1, 3], s: 3, r: "10-12", rest: 90, tip: "Una mano adelantada y otra atrasada, alterna cada serie." },
     { n: "Wall walk", t: "reps", f: ["empuje", "core"], lv: [2, 4], s: 3, r: "4-6", rest: 120, tip: "Camina con las manos hacia la pared hasta quedar casi vertical." },
-    { n: "Australian pull-up agarre ancho", t: "reps", f: ["tiron"], lv: [1, 3], s: 3, r: "10-12", rest: 90, tip: "Codos abiertos, tira del pecho hacia la barra baja." },
-    { n: "Negative muscle-up", t: "reps", f: ["tiron"], lv: [3, 5], s: 3, r: "3-5", rest: 180, tip: "Empieza arriba de la barra y baja lo más lento posible." },
-    { n: "Typewriter pull-up", t: "reps", f: ["tiron"], lv: [4, 5], s: 3, r: "4-6", rest: 180, tip: "Arriba de la dominada, desplázate de mano a mano." },
-    { n: "Dominadas comando", t: "reps", f: ["tiron"], lv: [3, 5], s: 3, r: "6-8", rest: 150, tip: "Agarre mixto en línea, alterna la cabeza a cada lado." },
-    { n: "Skin the cat", t: "reps", f: ["tiron", "core"], lv: [3, 5], s: 3, r: "3-5", rest: 120, tip: "Rota el cuerpo entre los brazos con control total." },
-    { n: "Toes to bar", t: "reps", f: ["core"], lv: [3, 5], s: 3, r: "6-10", rest: 90, tip: "Lleva los pies hasta tocar la barra sin balanceo." },
+    { n: "Australian pull-up agarre ancho", t: "reps", f: ["tiron"], lv: [1, 3], s: 3, r: "10-12", rest: 90, tip: "Codos abiertos, tira del pecho hacia la barra baja." , bar: true },
+    { n: "Negative muscle-up", t: "reps", f: ["tiron"], lv: [3, 5], s: 3, r: "3-5", rest: 180, tip: "Empieza arriba de la barra y baja lo más lento posible." , bar: true },
+    { n: "Typewriter pull-up", t: "reps", f: ["tiron"], lv: [4, 5], s: 3, r: "4-6", rest: 180, tip: "Arriba de la dominada, desplázate de mano a mano." , bar: true },
+    { n: "Dominadas comando", t: "reps", f: ["tiron"], lv: [3, 5], s: 3, r: "6-8", rest: 150, tip: "Agarre mixto en línea, alterna la cabeza a cada lado." , bar: true },
+    { n: "Skin the cat", t: "reps", f: ["tiron", "core"], lv: [3, 5], s: 3, r: "3-5", rest: 120, tip: "Rota el cuerpo entre los brazos con control total." , bar: true },
+    { n: "Toes to bar", t: "reps", f: ["core"], lv: [3, 5], s: 3, r: "6-10", rest: 90, tip: "Lleva los pies hasta tocar la barra sin balanceo." , bar: true },
     { n: "V-ups", t: "reps", f: ["core"], lv: [1, 3], s: 3, r: "10-15", rest: 60, tip: "Manos y pies se encuentran arriba, cuerpo en V." },
     { n: "Arch body hold", t: "tiempo", f: ["core"], lv: [1, 4], s: 3, r: "20-30s", rest: 60, tip: "Boca abajo, despega pecho y piernas del suelo." },
     { n: "Superman con pausa", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "12", rest: 45, tip: "Aguanta 2 segundos arriba en cada repetición." },
@@ -523,24 +612,25 @@ const tripleBeep = () => {
 /* Aviso suave a 3 segundos del final */
 const softBeep = () => beep(440, 0.1, 0.15, 0);
 
-/* ─── GIFs de ejercicios (por nombre en minúsculas) ─── */
-const EXERCISE_GIFS = {
-  "flexiones": "https://media.tenor.com/mRBGI_WkzBQAAAAC/push-up-workout.gif",
-  "dominadas": "https://media.tenor.com/7h8VkMNeQKUAAAAC/pull-ups-workout.gif",
-  "sentadilla con barra": "https://media.tenor.com/aH5JN_jxVpYAAAAC/squat-barbell.gif",
-  "press banca": "https://media.tenor.com/p2d9yVMH6VEAAAAC/bench-press-workout.gif",
-  "peso muerto convencional": "https://media.tenor.com/kYS9YT3KRAEAAAAC/deadlift-workout.gif",
-  "plancha": "https://media.tenor.com/5OBgfFmNSTUAAAAC/plank-exercise.gif",
-  "fondos en paralelas": "https://media.tenor.com/u_WzUkHGGl8AAAAC/dips-workout.gif",
-  "sprint máximo — 30m": "https://media.tenor.com/Z2hS7OLKWZIAAAAC/sprint-run.gif",
-  "burpees": "https://media.tenor.com/d5MKVYB8tSYAAAAC/burpee-workout.gif",
-  "sentadilla con peso corporal": "https://media.tenor.com/1aQ1PaQUeEoAAAAC/squat-bodyweight.gif",
+/* ─── Ícono animado por grupo de ejercicio (evita depender de URLs externas) ─── */
+const TAG_ICONS = {
+  empuje: "⬇️", tiron: "⬆️", core: "🧘", piernas: "🦵", gluteos: "🍑",
+  explosivo: "💥", velocidad: "🏃", salto: "🤸", fuerza: "🏋️", estabilidad: "🤸",
+  resistencia: "🏃", pecho: "💪", espalda: "🔙", hombros: "🙆", brazos: "💪",
+  tiro: "🥅", regate: "⚽", ritmo: "⚡",
 };
-function gifFor(name) {
-  const n = name.toLowerCase();
-  if (EXERCISE_GIFS[n]) return EXERCISE_GIFS[n];
-  const key = Object.keys(EXERCISE_GIFS).find((k) => n.includes(k));
-  return key ? EXERCISE_GIFS[key] : null;
+function iconForTag(tag, fallback) {
+  return TAG_ICONS[tag] || fallback || "💪";
+}
+
+/* Convierte "30-45s", "20 min", "300 m" en segundos objetivo (o null si no aplica) */
+function parseTargetSeconds(reps) {
+  if (!reps) return null;
+  const min = reps.match(/(\d+)\s*min/);
+  if (min) return parseInt(min[1], 10) * 60;
+  const sec = reps.match(/(\d+)(?:-(\d+))?\s*s(?:eg)?\b/);
+  if (sec) return parseInt(sec[2] || sec[1], 10);
+  return null;
 }
 
 /* Estado del streak freeze y de la racha rota */
@@ -610,13 +700,18 @@ function levelFromCount(count, thresholds) {
 }
 
 /* ─── Generador de rutinas (5-8 ejercicios, con variación por semilla) ─── */
-function genRoutine(discId, focusId, lvlIdx, seed = 0) {
+function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const rnd = mulberry32(seed);
   const db = EXDB[discId];
   const focus = DISCIPLINES[discId].focuses.find((f) => f.id === focusId);
   const matchFocus = (e) => !focus.tags || e.f.some((t) => focus.tags.includes(t));
+  const matchBar = (e) => !opts.noBar || !e.bar;
 
-  let pool = db.filter((e) => matchFocus(e) && e.lv[0] <= lvlIdx && lvlIdx <= e.lv[1]);
+  let pool = db.filter((e) => matchFocus(e) && matchBar(e) && e.lv[0] <= lvlIdx && lvlIdx <= e.lv[1]);
+  if (pool.length < 5) pool = db.filter((e) => matchFocus(e) && matchBar(e));
+  /* Si el enfoque elegido no tiene alternativas sin barra, prioriza respetar
+     el equipo disponible (casa) antes que el enfoque exacto. */
+  if (pool.length < 5) pool = db.filter(matchBar);
   if (pool.length < 5) pool = db.filter(matchFocus);
 
   const target = Math.max(
@@ -647,6 +742,25 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0) {
     reps: e.r,
     rest: e.rest,
     tip: e.tip,
+    tag: e.f ? e.f[0] : null,
+  }));
+}
+
+/* Generador de rutinas de Atletismo (no usa enfoque, la distancia ya filtra) */
+function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
+  const rnd = mulberry32(seed);
+  const pool = ATLETISMO_EXDB[distance] || [];
+  const target = Math.min(pool.length, 5 + (rnd() < 0.5 ? 1 : 0));
+  const shuffled = [...pool].sort(() => rnd() - 0.5).slice(0, target);
+  const extraSets = lvlIdx >= 3 ? 1 : 0;
+  return shuffled.map((e) => ({
+    name: e.n,
+    type: e.t,
+    sets: e.s === 1 ? 1 : Math.min(6, e.s + extraSets),
+    reps: e.r,
+    rest: e.rest,
+    tip: e.tip,
+    tag: "velocidad",
   }));
 }
 
@@ -727,38 +841,66 @@ function NumPad({ onKey }) {
   );
 }
 
-/* Demostración del ejercicio: GIF con skeleton de carga y fallback silencioso.
-   Montar con key={nombre} para que el estado se reinicie por ejercicio. */
-function ExerciseDemo({ emoji, src }) {
-  const [status, setStatus] = useState(src ? "loading" : "none"); // loading | ok | none
+/* Visual del ejercicio: ícono animado según el grupo muscular/movimiento.
+   Evita depender de URLs externas que pueden fallar o tener CORS. */
+function ExerciseVisual({ tag, fallbackEmoji }) {
+  const icon = iconForTag(tag, fallbackEmoji);
   return (
     <div
       style={{
-        position: "relative", width: "100%", aspectRatio: "16 / 9", maxHeight: 180,
-        borderRadius: 12, background: "#1A1A2E", border: `1px solid ${C.border}`, overflow: "hidden",
+        width: "100%", aspectRatio: "16 / 9", maxHeight: 180,
+        borderRadius: 12, background: "#1A1A2E", border: `1px solid ${C.border}`,
         display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12,
       }}
     >
-      {status === "none" ? (
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 48 }}>{emoji}</div>
-          <div style={{ fontSize: 12, color: C.dim, fontWeight: 600, marginTop: 4 }}>Demostración próximamente</div>
-        </div>
+      <span className="icon-anim" style={{ fontSize: 56 }}>{icon}</span>
+    </div>
+  );
+}
+
+/* Cronómetro integrado para ejercicios de tipo "tiempo" */
+function Stopwatch({ target, onStop }) {
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const ss = String(elapsed % 60).padStart(2, "0");
+  const nearEnd = target && elapsed >= target - 5 && elapsed < target;
+  const color = running ? (nearEnd ? C.orange : C.green) : C.text;
+
+  const stop = () => {
+    setRunning(false);
+    onStop(elapsed);
+  };
+
+  return (
+    <div style={{ textAlign: "center", marginTop: 16 }}>
+      <div style={{ fontSize: 48, fontWeight: 900, color, fontVariantNumeric: "tabular-nums", transition: "color .3s ease" }}>
+        {mm}:{ss}
+      </div>
+      {target && <div style={{ fontSize: 12, color: C.dim, marginTop: 2 }}>Objetivo: ~{target}s</div>}
+      {!running ? (
+        <button
+          className="btn-xl"
+          onClick={() => { ensureAudio(); setRunning(true); }}
+          style={{ marginTop: 16, background: C.green, color: "#07070C" }}
+        >
+          ▶ INICIAR
+        </button>
       ) : (
-        <>
-          {status === "loading" && <div className="skeleton" />}
-          <img
-            src={src}
-            alt="Demostración del ejercicio"
-            loading="lazy"
-            onLoad={() => setStatus("ok")}
-            onError={() => setStatus("none")}
-            style={{
-              width: "100%", height: "100%", objectFit: "cover",
-              opacity: status === "ok" ? 1 : 0, transition: "opacity .3s ease",
-            }}
-          />
-        </>
+        <button
+          className="btn-xl"
+          onClick={stop}
+          style={{ marginTop: 16, background: C.orange, color: "#07070C" }}
+        >
+          ⏹ DETENER
+        </button>
       )}
     </div>
   );
@@ -867,12 +1009,45 @@ function StreakBar({ streak }) {
 }
 
 /* ─── Pantalla de bienvenida ─── */
+const MODE_OPTIONS = [
+  { id: "guiado", emoji: "🎮", label: "Con guía y retos", desc: "Gamificación activa: héroes, rachas visuales y mensajes" },
+  { id: "pro", emoji: "⚙️", label: "Control total", desc: "Datos puros, sin distracciones" },
+];
+
 function Welcome({ onDone }) {
+  const [step, setStep] = useState(1);
   const [value, setValue] = useState("");
-  const submit = () => {
-    const n = value.trim();
-    if (n) onDone(n);
+  const goToMode = () => {
+    if (value.trim()) setStep(2);
   };
+  const chooseMode = (mode) => onDone(value.trim(), mode);
+
+  if (step === 2) {
+    return (
+      <div className="fade-up" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center", padding: 28, gap: 12 }}>
+        <div style={{ textAlign: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 40 }}>👋</div>
+          <p style={{ color: C.text, fontSize: 18, fontWeight: 700, marginTop: 8 }}>Hola, {value.trim()}</p>
+        </div>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Cómo prefieres entrenar?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+          {MODE_OPTIONS.map((m) => (
+            <button key={m.id} className="card" onClick={() => chooseMode(m.id)} style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
+              <span style={{ fontSize: 30 }}>{m.emoji}</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800 }}>{m.label}</div>
+                <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{m.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setStep(1)} style={{ color: C.dim, fontSize: 13, marginTop: 12, fontWeight: 600 }}>
+          ‹ Volver
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className="fade-up"
@@ -911,16 +1086,16 @@ function Welcome({ onDone }) {
         value={value}
         maxLength={24}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
+        onKeyDown={(e) => e.key === "Enter" && goToMode()}
         autoFocus
       />
       <button
         className="btn-xl"
         disabled={!value.trim()}
-        onClick={submit}
+        onClick={goToMode}
         style={{ background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, color: "#07070C", marginTop: 8 }}
       >
-        COMENZAR
+        CONTINUAR
       </button>
       <p style={{ color: C.dim, fontSize: 12, textAlign: "center", marginTop: 8 }}>
         Sin cuentas ni correos. Todo se guarda solo en tu dispositivo.
@@ -930,7 +1105,8 @@ function Welcome({ onDone }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, broken, canFreeze, onFreeze }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, mode, broken, canFreeze, onFreeze }) {
+  const pro = mode === "pro";
   const hero = heroForStreak(streak);
   const nextHero = HEROES.find((h) => h.days > streak);
   const recent = sessions.slice(-5).reverse();
@@ -944,59 +1120,84 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, broken, canFree
     .filter((st) => st.ok);
   const weekKg = Math.round(weekSets.reduce((a, st) => a + st.weight * st.reps, 0));
 
+  /* Resumen limpio para modo Control total */
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+  const activeDaysMonth = new Set(sessions.filter((s) => s.ts >= monthStart.getTime()).map((s) => dayKey(s.ts))).size;
+  const totalVolume = Math.round(
+    sessions
+      .filter((s) => s.kind === "entreno")
+      .flatMap((s) => s.exercises.flatMap((e) => e.sets))
+      .filter((st) => st.ok)
+      .reduce((a, st) => a + st.weight * st.reps, 0)
+  );
+
   return (
     <div className="screen">
       <p style={{ fontSize: 22, fontWeight: 800 }}>
-        Hola, <span style={{ color: C.cyan }}>{name}</span> 👋
+        Hola, <span style={{ color: C.cyan }}>{name}</span> {!pro && "👋"}
       </p>
-      <p className="muted" style={{ marginTop: 2 }}>Tu momento es ahora.</p>
+      <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
 
-      {/* Héroe */}
-      <div className="card" style={{ marginTop: 16, textAlign: "center", padding: "22px 16px", overflow: "hidden", position: "relative" }}>
-        <div
-          style={{
-            position: "absolute", inset: 0, pointerEvents: "none",
-            background: `radial-gradient(circle at 50% 0%, ${hero === EGG ? "rgba(138,138,173,0.10)" : "rgba(255,122,47,0.12)"}, transparent 70%)`,
-            animation: "glowPulse 3s ease-in-out infinite",
-          }}
-        />
-        <div className="pop" style={{ fontSize: 62 }} key={hero.name}>{hero.emoji}</div>
-        <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>{hero.name}</div>
-        <div style={{ color: C.mut, fontSize: 13, marginTop: 3, fontStyle: "italic" }}>“{hero.quote}”</div>
-        {nextHero && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}` }}>
-              <div
-                style={{
-                  height: "100%",
-                  width: `${Math.min(100, (streak / nextHero.days) * 100)}%`,
-                  background: `linear-gradient(90deg, ${C.orange}, ${C.yellow})`,
-                  borderRadius: 99,
-                  transition: "width .5s ease",
-                }}
-              />
-            </div>
-            <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
-              Próximo héroe: {nextHero.name} a los {nextHero.days} días de racha
-            </div>
-          </div>
-        )}
-        {/* Colección */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16 }}>
-          {HEROES.map((h) => {
-            const has = unlockedHeroes.includes(h.id);
-            return (
-              <div key={h.id} style={{ textAlign: "center", opacity: has ? 1 : 0.35 }} title={h.name}>
-                <div style={{ fontSize: 20, filter: has ? "none" : "grayscale(1)" }}>{has ? h.emoji : "🔒"}</div>
-                <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
-              </div>
-            );
-          })}
+      {pro ? (
+        /* Modo Control total: estadísticas limpias, sin héroes ni animaciones */
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <StatBox label="Sesiones" value={sessions.length} />
+          <StatBox label="Volumen total" value={`${totalVolume} kg`} />
+          <StatBox label="Días activos (mes)" value={activeDaysMonth} />
         </div>
-      </div>
+      ) : (
+        /* Héroe */
+        <div className="card" style={{ marginTop: 16, textAlign: "center", padding: "22px 16px", overflow: "hidden", position: "relative" }}>
+          <div
+            style={{
+              position: "absolute", inset: 0, pointerEvents: "none",
+              background: `radial-gradient(circle at 50% 0%, ${hero === EGG ? "rgba(138,138,173,0.10)" : "rgba(255,122,47,0.12)"}, transparent 70%)`,
+              animation: "glowPulse 3s ease-in-out infinite",
+            }}
+          />
+          <div className="pop" style={{ fontSize: 62 }} key={hero.name}>{hero.emoji}</div>
+          <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>{hero.name}</div>
+          <div style={{ color: C.mut, fontSize: 13, marginTop: 3, fontStyle: "italic" }}>“{hero.quote}”</div>
+          {nextHero && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${Math.min(100, (streak / nextHero.days) * 100)}%`,
+                    background: `linear-gradient(90deg, ${C.orange}, ${C.yellow})`,
+                    borderRadius: 99,
+                    transition: "width .5s ease",
+                  }}
+                />
+              </div>
+              <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
+                Próximo héroe: {nextHero.name} a los {nextHero.days} días de racha
+              </div>
+            </div>
+          )}
+          {/* Colección */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16 }}>
+            {HEROES.map((h) => {
+              const has = unlockedHeroes.includes(h.id);
+              return (
+                <div key={h.id} style={{ textAlign: "center", opacity: has ? 1 : 0.35 }} title={h.name}>
+                  <div style={{ fontSize: 20, filter: has ? "none" : "grayscale(1)" }}>{has ? h.emoji : "🔒"}</div>
+                  <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Racha (o mensaje motivacional si se rompió) */}
-      {broken ? (
+      {pro ? (
+        <div className="card" style={{ marginTop: 12, padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: C.mut, fontWeight: 700 }}>Racha</span>
+          <span style={{ fontSize: 18, fontWeight: 800 }}>{streak} {streak === 1 ? "día" : "días"}</span>
+        </div>
+      ) : broken ? (
         <div className="card fade-up" style={{ marginTop: 12, textAlign: "center", padding: "20px 16px" }}>
           <div style={{ fontSize: 34 }}>🌅</div>
           <p style={{ fontSize: 15, fontWeight: 800, marginTop: 8 }}>
@@ -1116,11 +1317,20 @@ const ENERGY_OPTIONS = [
   { id: "low", emoji: "😴", label: "Cansado" },
 ];
 
+const TRAIN_CARDS = [
+  { id: "calistenia", ...DISCIPLINES.calistenia },
+  { id: "gimnasio", ...DISCIPLINES.gimnasio },
+  { id: "futbol", ...FUTBOL_META },
+  { id: "atletismo", ...DISCIPLINES.atletismo },
+];
+
 function Train({ onStart, onAccent, totalSessions }) {
-  const [discId, setDiscId] = useState(null);
+  const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
   const [seed, setSeed] = useState(0);
+  const [calLocation, setCalLocation] = useState(null);
+  const [distance, setDistance] = useState(null);
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -1136,39 +1346,51 @@ function Train({ onStart, onAccent, totalSessions }) {
     setDiscId(id);
     setFocusId("todo");
     setLvlIdx(null);
-    onAccent(id.startsWith("futbol") ? C.orange : DISCIPLINES[id].color);
+    setCalLocation(null);
+    setDistance(null);
+    if (id === "futbol") onAccent(C.orange);
+    else if (id === "atletismo") onAccent(C.purple);
+    else onAccent(DISCIPLINES[id].color);
   };
   const backToDiscs = () => {
     setDiscId(null);
     onAccent(null);
   };
 
-  const disc = discId ? DISCIPLINES[discId] : null;
+  const isConcreteDisc = discId && discId !== "futbol" && discId !== "atletismo";
+  const disc = isConcreteDisc ? DISCIPLINES[discId] : null;
 
   const routine = useMemo(() => {
-    if (!discId || lvlIdx === null) return null;
+    if (!isConcreteDisc || lvlIdx === null) return null;
     /* Con poca energía: un nivel menos y una serie menos por ejercicio */
     const effLvl = energy === "low" ? Math.max(0, lvlIdx - 1) : lvlIdx;
     /* Semilla automática: cambia cada 3 sesiones + botón "Variar" */
     const focusHash = [...(discId + focusId)].reduce((a, c) => a + c.charCodeAt(0), 0);
     const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + effLvl * 17 + focusHash;
-    let r = genRoutine(discId, focusId, effLvl, seedVal);
+    let r = genRoutine(discId, focusId, effLvl, seedVal, { noBar: discId === "calistenia" && calLocation === "casa" });
     if (energy === "low") r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
     if (energy === "high") r = r.map((e, i) => (i === 0 ? { ...e, sets: Math.min(6, e.sets + 1) } : e));
     return r;
-  }, [discId, focusId, lvlIdx, seed, energy, totalSessions]);
+  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation]);
 
+  const atletRoutine = useMemo(() => {
+    if (discId !== "atletismo" || !distance || lvlIdx === null) return null;
+    const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + lvlIdx * 17;
+    return genAtletismoRoutine(distance, lvlIdx, seedVal);
+  }, [discId, distance, lvlIdx, seed, totalSessions]);
+
+  /* ── Pantalla 1: lista de disciplinas ── */
   if (!discId) {
     return (
       <div className="screen">
         <h2 style={{ fontSize: 22, fontWeight: 800 }}>Entrenar</h2>
         <p className="muted" style={{ marginTop: 2 }}>Elige tu disciplina de hoy</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-          {Object.entries(DISCIPLINES).map(([id, d]) => (
+          {TRAIN_CARDS.map((d) => (
             <button
-              key={id}
+              key={d.id}
               className="card fade-up"
-              onClick={() => pickDisc(id)}
+              onClick={() => pickDisc(d.id)}
               style={{
                 display: "flex", alignItems: "center", gap: 14, textAlign: "left",
                 borderLeft: `4px solid ${d.color}`, transition: "transform .15s ease",
@@ -1187,7 +1409,139 @@ function Train({ onStart, onAccent, totalSessions }) {
     );
   }
 
-  /* Pregunta rápida de energía antes de los selectores */
+  /* ── Fútbol: preguntar Gimnasio o Parque ── */
+  if (discId === "futbol") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Disciplinas
+        </button>
+        <div style={{ fontSize: 44, marginTop: 20 }}>⚽</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Dónde entrenas hoy?</h2>
+        <p className="muted" style={{ marginTop: 6 }}>Elige tu entorno de hoy</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          {FUTBOL_LOCATIONS.map((o) => (
+            <button key={o.id} onClick={() => setDiscId(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
+              <div style={{ fontSize: 30 }}>{o.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>{o.label}</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>{o.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Atletismo: flujo propio con distancia + nivel + referencias ── */
+  if (discId === "atletismo") {
+    return (
+      <div className="screen" key="atletismo">
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+          ‹ Disciplinas
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+          <span style={{ fontSize: 30 }}>🏃</span>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: C.purple }}>Atletismo</h2>
+            <p style={{ fontSize: 12, color: C.mut }}>Elige tu distancia objetivo</p>
+          </div>
+        </div>
+
+        <div className="sec-title">Distancia</div>
+        <div className="chip-wrap">
+          {DISTANCES.map((d) => (
+            <button
+              key={d.id}
+              className={`chip ${distance === d.id ? "on" : ""}`}
+              style={distance === d.id ? { background: C.purple, color: "#fff" } : {}}
+              onClick={() => setDistance(d.id)}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+
+        {distance && ATLETISMO_BENCH[distance] && (
+          <>
+            <div className="sec-title">Referencias de nivel · {DISTANCES.find((d) => d.id === distance)?.label}</div>
+            <div className="card" style={{ padding: "10px 14px" }}>
+              {ATLETISMO_BENCH[distance].map((row) => (
+                <div key={row.l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: 13, color: C.mut }}>{row.l}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>{row.t}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {distance && (
+          <>
+            <div className="sec-title">Nivel</div>
+            <div className="chip-wrap">
+              {LEVELS.map((l, i) => (
+                <button
+                  key={l.name}
+                  className={`chip ${lvlIdx === i ? "on" : ""}`}
+                  style={lvlIdx === i ? { background: l.color, color: i === 5 ? "#fff" : "#07070C" } : {}}
+                  onClick={() => setLvlIdx(i)}
+                >
+                  {l.emoji} {l.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {atletRoutine ? (
+          <>
+            <div className="sec-title">Tu rutina · {atletRoutine.length} ejercicios</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {atletRoutine.map((e, i) => (
+                <div key={`${e.name}-${i}`} className="card fade-up" style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{
+                    width: 26, height: 26, borderRadius: 8, background: C.surface, border: `1px solid ${C.border}`,
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: C.purple, flexShrink: 0,
+                  }}>
+                    {i + 1}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{e.name}</div>
+                    <div style={{ fontSize: 12, color: C.mut }}>{e.sets} series × {e.reps}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button
+                className="btn-xl"
+                onClick={() => setSeed((s) => s + 1)}
+                style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+              >
+                🔄 Variar
+              </button>
+              <button
+                className="btn-xl"
+                onClick={() => onStart({
+                  discId: "atletismo", discLabel: "Atletismo", discColor: C.purple, discIcon: "🏃",
+                  focusLabel: DISTANCES.find((d) => d.id === distance)?.label, lvlIdx, exercises: atletRoutine,
+                })}
+                style={{ flex: 2, background: C.purple, color: "#fff", fontSize: 15 }}
+              >
+                COMENZAR SESIÓN
+              </button>
+            </div>
+          </>
+        ) : distance ? (
+          <div className="card" style={{ marginTop: 20, textAlign: "center", color: C.dim, fontSize: 13 }}>
+            Elige tu nivel para generar la rutina ⚡
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  /* ── Pregunta rápida de energía antes de los selectores ── */
   if (!energy) {
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
@@ -1209,6 +1563,29 @@ function Train({ onStart, onAccent, totalSessions }) {
     );
   }
 
+  /* ── Calistenia: preguntar Parque o Casa antes del enfoque ── */
+  if (discId === "calistenia" && !calLocation) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Disciplinas
+        </button>
+        <div style={{ fontSize: 44, marginTop: 20 }}>🤸</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>¿Dónde vas a entrenar hoy?</h2>
+        <p className="muted" style={{ marginTop: 6 }}>Ajustamos los ejercicios a tu equipo disponible</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          {CAL_LOCATIONS.map((o) => (
+            <button key={o.id} onClick={() => setCalLocation(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
+              <div style={{ fontSize: 30 }}>{o.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>{o.label}</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>{o.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="screen" key={discId}>
       <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
@@ -1221,6 +1598,17 @@ function Train({ onStart, onAccent, totalSessions }) {
           <p style={{ fontSize: 12, color: C.mut }}>{disc.desc}</p>
         </div>
       </div>
+
+      {discId === "calistenia" && (
+        <div className="card" style={{ marginTop: 12, padding: "10px 14px" }}>
+          <span style={{ fontSize: 12, color: C.mut }}>
+            {calLocation === "casa" ? "🏠 Entrenando en casa — sin ejercicios de barra" : "🌳 Entrenando en el parque — barras disponibles"}
+          </span>
+          <button onClick={() => setCalLocation(null)} style={{ float: "right", color: C.cyan, fontSize: 12, fontWeight: 700 }}>
+            Cambiar
+          </button>
+        </div>
+      )}
 
       {energy === "low" && (
         <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.yellow}44`, background: "rgba(255,214,0,0.06)" }}>
@@ -1375,10 +1763,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
     else setReps(next);
   };
 
-  const logSet = (ok) => {
+  const logSet = (ok, repsOverride = null) => {
     ensureAudio(); // el AudioContext debe nacer en un gesto del usuario (móvil)
     if (ok && navigator.vibrate) navigator.vibrate(100);
-    const entry = { reps: parseInt(reps, 10) || 0, weight: parseFloat(weight) || 0, ok };
+    const repsVal = repsOverride !== null ? repsOverride : parseInt(reps, 10) || 0;
+    const entry = { reps: repsVal, weight: parseFloat(weight) || 0, ok };
     setLogs((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
     setReps("");
     if (setNum + 1 >= ex.sets) {
@@ -1550,7 +1939,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
       </p>
 
       <div className="card fade-up" key={exIdx} style={{ marginTop: 10, borderLeft: `4px solid ${plan.discColor}` }}>
-        <ExerciseDemo key={ex.name} emoji={plan.discIcon} src={ex.gif || gifFor(ex.name)} />
+        <ExerciseVisual tag={ex.tag} fallbackEmoji={plan.discIcon} />
         <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25, marginTop: 12 }}>{ex.name}</h2>
         <p style={{ marginTop: 8, fontSize: 14 }}>
           <span style={{ color: plan.discColor, fontWeight: 800 }}>{ex.sets} series</span>
@@ -1582,7 +1971,22 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose }) {
         })}
       </div>
 
-      {phase === "work" ? (
+      {phase === "work" && ex.type === "tiempo" ? (
+        <>
+          <Stopwatch
+            key={`${exIdx}-${setNum}`}
+            target={parseTargetSeconds(ex.reps)}
+            onStop={(secs) => logSet(true, secs)}
+          />
+          <button
+            className="btn-xl"
+            onClick={() => logSet(false, 0)}
+            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 14 }}
+          >
+            No pude 😤
+          </button>
+        </>
+      ) : phase === "work" ? (
         <>
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             {ex.type === "peso" && (
@@ -2214,6 +2618,7 @@ const TAB_ACCENTS = {
 
 export default function App() {
   const [name, setName] = useState(() => store.get("name", ""));
+  const [mode, setMode] = useState(() => store.get("mode", "guiado"));
   const [sessions, setSessions] = useState(() => store.get("sessions", []));
   const [heroes, setHeroes] = useState(() => store.get("heroes", []));
   const [tab, setTab] = useState("inicio");
@@ -2260,9 +2665,11 @@ export default function App() {
     return [...new Set([...heroes, ...earned])];
   }, [heroes, streak]);
 
-  const saveName = (n) => {
+  const saveName = (n, m) => {
     setName(n);
     store.set("name", n);
+    setMode(m);
+    store.set("mode", m);
   };
 
   const saveSession = (record) => {
@@ -2331,7 +2738,7 @@ export default function App() {
       {tab === "inicio" && (
         <Home
           name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
-          onTrain={() => changeTab("entrenar")}
+          onTrain={() => changeTab("entrenar")} mode={mode}
           broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
         />
       )}
