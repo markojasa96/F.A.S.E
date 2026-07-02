@@ -1,27 +1,28 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 
-/* ══════════════════════════════════════════════════
-   F.A.S.E. v2 — Formación Atlética y Sistemas de Entrenamiento
-   ══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   F.A.S.E. v3 — Formación Atlética y Sistemas de Entrenamiento
+   ═══════════════════════════════════════════════════════════ */
 
 const C = {
   bg: "#07070C",
-  surface: "#101018",
-  card: "#181822",
-  cardHover: "#1F1F2C",
-  border: "#26263A",
-  cyan: "#00E5FF",
-  green: "#22FF88",
-  orange: "#FF7A2F",
-  red: "#FF3B5C",
-  yellow: "#FFD600",
-  purple: "#A855F7",
+  surface: "#0E0E16",
+  card: "#13131D",
+  card2: "#1A1A28",
+  border: "#23233A",
   text: "#F2F2F8",
   mut: "#8A8AAD",
-  dim: "#4E4E70",
+  dim: "#55557A",
+  green: "#22FF88",
+  cyan: "#00E5FF",
+  orange: "#FF7A2F",
+  yellow: "#FFD600",
+  red: "#FF3B5C",
+  purple: "#A855F7",
+  blue: "#3B82F6",
 };
 
-/* ─── STORAGE (seguro: funciona en Vercel, no rompe en previews) ─── */
+/* ─── Storage seguro (prefijo fase_) ─── */
 const store = {
   get(key, fallback) {
     try {
@@ -34,1332 +35,1421 @@ const store = {
   set(key, value) {
     try {
       window.localStorage.setItem("fase_" + key, JSON.stringify(value));
-    } catch {}
+    } catch {
+      /* sin storage disponible */
+    }
   },
 };
 
-/* ─── DATOS DE ENTRENAMIENTOS ─── */
-const WORKOUTS = {
+/* ─── Niveles de entrenamiento ─── */
+const LEVELS = [
+  { name: "Novato", emoji: "🔵", color: C.blue },
+  { name: "Amateur", emoji: "🟢", color: C.green },
+  { name: "Destacado", emoji: "🟡", color: C.yellow },
+  { name: "Honorable", emoji: "🟠", color: C.orange },
+  { name: "Leyenda", emoji: "🔴", color: C.red },
+  { name: "THE ONE", emoji: "⚡", color: C.purple },
+];
+
+/* ─── Héroes por racha ─── */
+const HEROES = [
+  { id: "espartano", days: 3, emoji: "🛡️", name: "Espartano", quote: "El guerrero despertó" },
+  { id: "samurai", days: 7, emoji: "⚔️", name: "Samurái", quote: "Disciplina de acero" },
+  { id: "vikingo", days: 14, emoji: "🪓", name: "Vikingo", quote: "La leyenda crece" },
+  { id: "gladiador", days: 30, emoji: "🏛️", name: "Gladiador", quote: "Nadie te detiene" },
+  { id: "centurion", days: 60, emoji: "🦅", name: "Centurión Romano", quote: "Imperio de fuerza" },
+  { id: "khan", days: 90, emoji: "🏹", name: "Mongol Khan", quote: "Conquistador absoluto" },
+];
+const EGG = { emoji: "🥚", name: "Huevo", quote: "Tu héroe aún no despierta. Entrena 3 días seguidos." };
+
+/* ─── Disciplinas y enfoques ─── */
+const DISCIPLINES = {
   calistenia: {
     label: "Calistenia",
     icon: "🤸",
     color: C.green,
-    desc: "Parque o casa · Peso corporal",
-    levels: {
-      principiante: [
-        { name: "Flexiones (rodillas si es necesario)", sets: 3, reps: "8-12", rest: 60, type: "reps" },
-        { name: "Sentadillas con peso corporal", sets: 3, reps: "15", rest: 60, type: "reps" },
-        { name: "Plancha", sets: 3, reps: "20-30s", rest: 45, type: "reps" },
-        { name: "Remo invertido en barra baja", sets: 3, reps: "6-10", rest: 90, type: "reps" },
-        { name: "Zancadas alternadas", sets: 3, reps: "10 c/pierna", rest: 60, type: "reps" },
-      ],
-      intermedio: [
-        { name: "Flexiones", sets: 4, reps: "15-20", rest: 60, type: "reps" },
-        { name: "Dominadas", sets: 4, reps: "5-8", rest: 120, type: "reps" },
-        { name: "Fondos en paralelas", sets: 4, reps: "8-12", rest: 90, type: "reps" },
-        { name: "Sentadilla búlgara", sets: 3, reps: "10 c/pierna", rest: 90, type: "reps" },
-        { name: "Plancha con toque de hombro", sets: 3, reps: "30-45s", rest: 60, type: "reps" },
-        { name: "Elevaciones de piernas colgado", sets: 3, reps: "8-12", rest: 60, type: "reps" },
-      ],
-      avanzado: [
-        { name: "Flexiones arqueras", sets: 4, reps: "8 c/lado", rest: 90, type: "reps" },
-        { name: "Dominadas lastradas o explosivas", sets: 5, reps: "5-6", rest: 150, type: "peso" },
-        { name: "Fondos lastrados", sets: 4, reps: "8-10", rest: 120, type: "peso" },
-        { name: "Pistol squats", sets: 4, reps: "5 c/pierna", rest: 120, type: "reps" },
-        { name: "Muscle-up (progresión)", sets: 4, reps: "3-5", rest: 180, type: "reps" },
-        { name: "L-sit", sets: 3, reps: "15-20s", rest: 90, type: "reps" },
-      ],
-    },
+    desc: "Parque o casa · Sin equipo",
+    focuses: [
+      { id: "todo", label: "Todo", tags: null },
+      { id: "empuje", label: "Empuje", tags: ["empuje"] },
+      { id: "tiron", label: "Tirón", tags: ["tiron"] },
+      { id: "core", label: "Core", tags: ["core"] },
+      { id: "piernas", label: "Piernas", tags: ["piernas"] },
+      { id: "explosivo", label: "Full body explosivo", tags: ["explosivo"] },
+    ],
   },
   gimnasio: {
     label: "Gimnasio",
     icon: "🏋️",
     color: C.cyan,
     desc: "Fuerza · Barras y mancuernas",
-    levels: {
-      principiante: [
-        { name: "Sentadilla con barra (o goblet)", sets: 3, reps: "8-10", rest: 120, type: "peso" },
-        { name: "Press banca (o mancuernas)", sets: 3, reps: "8-10", rest: 120, type: "peso" },
-        { name: "Jalón al pecho", sets: 3, reps: "10-12", rest: 90, type: "peso" },
-        { name: "Press militar con mancuernas", sets: 3, reps: "10", rest: 90, type: "peso" },
-        { name: "Curl de bíceps", sets: 2, reps: "12", rest: 60, type: "peso" },
-        { name: "Extensión de tríceps en polea", sets: 2, reps: "12", rest: 60, type: "peso" },
-      ],
-      intermedio: [
-        { name: "Sentadilla con barra", sets: 4, reps: "6-8", rest: 150, type: "peso" },
-        { name: "Press banca", sets: 4, reps: "6-8", rest: 150, type: "peso" },
-        { name: "Peso muerto rumano", sets: 3, reps: "8", rest: 150, type: "peso" },
-        { name: "Remo con barra", sets: 4, reps: "8-10", rest: 120, type: "peso" },
-        { name: "Press militar de pie", sets: 3, reps: "8", rest: 120, type: "peso" },
-        { name: "Hip thrust", sets: 3, reps: "10", rest: 90, type: "peso" },
-      ],
-      avanzado: [
-        { name: "Sentadilla con barra (pesada)", sets: 5, reps: "3-5", rest: 210, type: "peso" },
-        { name: "Press banca (pesado)", sets: 5, reps: "3-5", rest: 210, type: "peso" },
-        { name: "Peso muerto convencional", sets: 4, reps: "3-5", rest: 240, type: "peso" },
-        { name: "Remo Pendlay", sets: 4, reps: "6", rest: 150, type: "peso" },
-        { name: "Push press", sets: 4, reps: "5", rest: 150, type: "peso" },
-        { name: "Zancada con barra", sets: 3, reps: "8 c/pierna", rest: 120, type: "peso" },
-      ],
-    },
+    focuses: [
+      { id: "todo", label: "Todo el cuerpo", tags: null },
+      { id: "pecho", label: "Pecho", tags: ["pecho"] },
+      { id: "espalda", label: "Espalda", tags: ["espalda"] },
+      { id: "hombros", label: "Hombros", tags: ["hombros"] },
+      { id: "brazos", label: "Brazos", tags: ["brazos"] },
+      { id: "piernas", label: "Piernas", tags: ["piernas"] },
+      { id: "gluteos", label: "Glúteos", tags: ["gluteos"] },
+      { id: "sup", label: "Parte superior", tags: ["pecho", "espalda", "hombros", "brazos"] },
+      { id: "inf", label: "Parte inferior", tags: ["piernas", "gluteos"] },
+    ],
   },
   futbolGym: {
     label: "Fútbol — Gimnasio",
     icon: "⚽",
     color: C.orange,
     desc: "1 hora · Fuerza aplicada al campo",
-    levels: {
-      principiante: [
-        { name: "Sentadilla goblet", sets: 3, reps: "10", rest: 90, type: "peso" },
-        { name: "Zancada caminando con mancuernas", sets: 3, reps: "8 c/pierna", rest: 90, type: "peso" },
-        { name: "Curl femoral (o nórdico asistido)", sets: 3, reps: "10", rest: 90, type: "peso" },
-        { name: "Elevación de talones (pantorrilla)", sets: 3, reps: "15", rest: 60, type: "peso" },
-        { name: "Plancha lateral", sets: 3, reps: "20s c/lado", rest: 45, type: "reps" },
-      ],
-      intermedio: [
-        { name: "Sentadilla con salto (con barra ligera)", sets: 4, reps: "6", rest: 120, type: "peso" },
-        { name: "Hip thrust", sets: 4, reps: "8", rest: 120, type: "peso" },
-        { name: "Curl nórdico", sets: 3, reps: "6", rest: 120, type: "reps" },
-        { name: "Peso muerto a una pierna", sets: 3, reps: "8 c/pierna", rest: 90, type: "peso" },
-        { name: "Press Pallof (anti-rotación)", sets: 3, reps: "10 c/lado", rest: 60, type: "peso" },
-        { name: "Salto al cajón", sets: 4, reps: "5", rest: 90, type: "reps" },
-      ],
-      avanzado: [
-        { name: "Sentadilla pesada (velocidad en subida)", sets: 5, reps: "4", rest: 180, type: "peso" },
-        { name: "Trap bar jump (o salto cargado)", sets: 4, reps: "4", rest: 150, type: "peso" },
-        { name: "Hip thrust pesado", sets: 4, reps: "6", rest: 150, type: "peso" },
-        { name: "Curl nórdico completo", sets: 4, reps: "6", rest: 120, type: "reps" },
-        { name: "Aductores en polea o copenhagen", sets: 3, reps: "10 c/lado", rest: 90, type: "reps" },
-        { name: "Pliometría lateral (skater jumps)", sets: 4, reps: "6 c/lado", rest: 90, type: "reps" },
-      ],
-    },
+    focuses: [
+      { id: "todo", label: "Todo", tags: null },
+      { id: "velocidad", label: "Velocidad explosiva", tags: ["velocidad"] },
+      { id: "salto", label: "Salto", tags: ["salto"] },
+      { id: "fuerza", label: "Fuerza de pierna", tags: ["fuerza"] },
+      { id: "estabilidad", label: "Estabilidad", tags: ["estabilidad"] },
+      { id: "resistencia", label: "Resistencia", tags: ["resistencia"] },
+    ],
   },
   futbolParque: {
     label: "Fútbol — Parque",
-    icon: "🏃",
+    icon: "🥅",
     color: C.yellow,
-    desc: "1 hora · Velocidad, técnica y calistenia",
-    levels: {
-      principiante: [
-        { name: "Trote suave + movilidad", sets: 1, reps: "10 min", rest: 0, type: "reps" },
-        { name: "Sprint al 70% — 20m", sets: 6, reps: "1", rest: 60, type: "reps" },
-        { name: "Control de balón contra pared", sets: 4, reps: "2 min", rest: 45, type: "reps" },
-        { name: "Skipping alto", sets: 3, reps: "20m", rest: 45, type: "reps" },
-        { name: "Flexiones + sentadillas (circuito)", sets: 3, reps: "10+15", rest: 60, type: "reps" },
-      ],
-      intermedio: [
-        { name: "Sprint máximo — 30m", sets: 6, reps: "1", rest: 90, type: "reps" },
-        { name: "Cambios de dirección 5-10-5", sets: 5, reps: "1", rest: 75, type: "reps" },
-        { name: "Pase a un toque contra pared", sets: 4, reps: "3 min", rest: 45, type: "reps" },
-        { name: "Dominadas en barras del parque", sets: 3, reps: "6-10", rest: 90, type: "reps" },
-        { name: "Saltos de valla imaginaria laterales", sets: 4, reps: "8", rest: 60, type: "reps" },
-        { name: "Conducción con cambios de ritmo", sets: 4, reps: "30m", rest: 60, type: "reps" },
-      ],
-      avanzado: [
-        { name: "Sprint máximo — 40m (cronometrado)", sets: 6, reps: "1", rest: 120, type: "reps" },
-        { name: "Repeated Sprint Ability: 7x30m", sets: 1, reps: "7 sprints/20s", rest: 240, type: "reps" },
-        { name: "Tiro a portería tras conducción", sets: 5, reps: "4 tiros", rest: 90, type: "reps" },
-        { name: "Muscle-up o dominadas explosivas", sets: 4, reps: "4-6", rest: 120, type: "reps" },
-        { name: "Pliometría: triple salto horizontal", sets: 4, reps: "3", rest: 90, type: "reps" },
-        { name: "Juego de pies en escalera + sprint", sets: 5, reps: "1", rest: 75, type: "reps" },
-      ],
-    },
-  },
-};
-
-/* ─── ACONDICIONAMIENTO ─── */
-const COND = {
-  movilidad: {
-    label: "Movilidad diaria",
-    icon: "🧘",
-    color: C.purple,
-    items: [
-      { name: "Círculos de tobillo", detail: "10 por dirección, cada pie. Despacio y controlado." },
-      { name: "Rotaciones de cadera 90/90", detail: "8 por lado. Mantén la espalda recta." },
-      { name: "Gato-camello", detail: "10 repeticiones lentas. Sincroniza con respiración." },
-      { name: "Sentadilla profunda sostenida", detail: "30-60 segundos. Talones al piso." },
-      { name: "Apertura torácica contra pared", detail: "8 por lado. Brazo a 90 grados." },
-    ],
-  },
-  tobillos: {
-    label: "Tobillos — Rehabilitación",
-    icon: "🦶",
-    color: C.orange,
-    items: [
-      { name: "Fase 1 (dolor en reposo): bombeos de tobillo", detail: "3x15, sin dolor. Activa circulación sentado." },
-      { name: "Fase 1: letras del alfabeto con el pie", detail: "2 sets completos. Control fino, parar ante dolor agudo." },
-      { name: "Fase 2 (sin dolor en reposo): equilibrio a una pierna", detail: "4x30s. Progresa a ojos cerrados." },
-      { name: "Fase 2: elevación de talones excéntrica", detail: "3x12. Sube con dos piernas, baja con una en 3 segundos." },
-      { name: "Fase 3 (estable): saltos suaves a una pierna", detail: "3x8. Solo cuando no haya dolor en fases anteriores." },
-    ],
-  },
-  prevencion: {
-    label: "Prevención de lesiones",
-    icon: "🛡️",
-    color: C.cyan,
-    items: [
-      { name: "Curl nórdico (isquios)", detail: "Reduce lesión de isquiotibiales. 2x6 dos veces por semana." },
-      { name: "Copenhagen plank (aductores)", detail: "Clave para futbolistas. 2x20s por lado." },
-      { name: "Equilibrio monopodal con perturbación", detail: "Lanza un balón contra pared parado en una pierna." },
-      { name: "Aterrizajes controlados", detail: "Salta y aterriza suave, rodillas alineadas. 3x5." },
+    desc: "1 hora · Velocidad y técnica con balón",
+    focuses: [
+      { id: "todo", label: "Todo", tags: null },
+      { id: "tiro", label: "Tiro", tags: ["tiro"] },
+      { id: "regate", label: "Regate", tags: ["regate"] },
+      { id: "ritmo", label: "Cambio de ritmo", tags: ["ritmo"] },
+      { id: "velocidad", label: "Velocidad", tags: ["velocidad"] },
+      { id: "resistencia", label: "Resistencia aeróbica", tags: ["resistencia"] },
     ],
   },
 };
 
-/* ─── TIPS DE NUTRICIÓN ─── */
-const NUTRI = {
-  musculo: {
-    label: "Ganar músculo",
-    icon: "💪",
-    color: C.cyan,
-    tips: [
-      "Come en ligero superávit: 300-500 kcal sobre tu mantenimiento.",
-      "Proteína: 1.6-2.2g por kg de peso corporal al día (huevo, pollo, atún, frijoles, leche).",
-      "Desayuno con proteína siempre: huevos con avena es de lo más eficiente y barato.",
-      "Come carbohidratos alrededor del entrenamiento: arroz, papa, tortilla, fruta.",
-      "Duerme 7-9 horas: el músculo crece durmiendo, no entrenando.",
-    ],
-  },
-  grasa: {
-    label: "Perder grasa",
-    icon: "🔥",
-    color: C.orange,
-    tips: [
-      "Déficit moderado: 300-500 kcal bajo mantenimiento. Agresivo = rebote.",
-      "Mantén proteína alta (2g/kg) para no perder músculo mientras bajas.",
-      "Llena la mitad del plato con verduras: volumen y saciedad con pocas calorías.",
-      "Evita calorías líquidas: refrescos y jugos son el enemigo silencioso.",
-      "No elimines grupos completos de comida: ajusta cantidades, no prohibas.",
-    ],
-  },
-  rendimiento: {
-    label: "Rendimiento deportivo",
-    icon: "⚡",
-    color: C.green,
-    tips: [
-      "Hidratación: 35ml por kg de peso al día, más en días de entrenamiento intenso.",
-      "Comida pre-entreno 1-2h antes: carbohidrato + algo de proteína (plátano + yogur).",
-      "Post-entreno dentro de 2 horas: proteína + carbohidrato para recuperar.",
-      "El día antes de partido: carga de carbohidratos (pasta, arroz), cena normal.",
-      "Cafeína 30-45 min antes de entrenar puede mejorar rendimiento (si la toleras).",
-    ],
-  },
-  general: {
-    label: "Salud general",
-    icon: "🥗",
-    color: C.purple,
-    tips: [
-      "Regla simple de plato: 1/2 verduras, 1/4 proteína, 1/4 carbohidrato.",
-      "Come fruta entera en lugar de jugo: fibra y saciedad reales.",
-      "Cocina en casa lo más posible: control total de lo que entra.",
-      "Un día flexible a la semana no arruina nada: la constancia semanal es lo que cuenta.",
-      "Si un producto tiene más de 5 ingredientes que no reconoces, piénsalo dos veces.",
-    ],
-  },
+/* ─── Base de ejercicios ───
+   t: peso | reps | tiempo · f: enfoques · lv: [nivel mín, nivel máx] 0-5 */
+const EXDB = {
+  gimnasio: [
+    { n: "Press banca con barra", t: "peso", f: ["pecho"], lv: [1, 5], s: 4, r: "6-10", rest: 120, tip: "Baja la barra al pecho con control, codos a 45°." },
+    { n: "Press banca con mancuernas", t: "peso", f: ["pecho"], lv: [0, 3], s: 3, r: "8-12", rest: 90, tip: "Recorrido completo, junta las mancuernas arriba sin chocarlas." },
+    { n: "Press inclinado con mancuernas", t: "peso", f: ["pecho"], lv: [0, 5], s: 3, r: "8-12", rest: 90, tip: "Banco a 30°, no arquees la zona lumbar." },
+    { n: "Aperturas con mancuernas", t: "peso", f: ["pecho"], lv: [0, 4], s: 3, r: "10-15", rest: 60, tip: "Codos ligeramente flexionados, siente el estiramiento del pecho." },
+    { n: "Cruce de poleas", t: "peso", f: ["pecho"], lv: [1, 5], s: 3, r: "12-15", rest: 60, tip: "Contrae el pecho al cerrar, controla la vuelta." },
+    { n: "Press banca con pausa", t: "peso", f: ["pecho"], lv: [3, 5], s: 4, r: "4-6", rest: 180, tip: "Pausa de 1 segundo en el pecho antes de empujar." },
+    { n: "Jalón al pecho", t: "peso", f: ["espalda"], lv: [0, 3], s: 3, r: "10-12", rest: 90, tip: "Lleva la barra a la clavícula con el pecho arriba." },
+    { n: "Dominadas", t: "reps", f: ["espalda"], lv: [1, 3], s: 4, r: "5-10", rest: 120, tip: "Barbilla sobre la barra, baja hasta extender los brazos." },
+    { n: "Dominadas lastradas", t: "peso", f: ["espalda"], lv: [3, 5], s: 4, r: "4-6", rest: 150, tip: "Añade peso al cinturón, mantén el control al bajar." },
+    { n: "Remo con barra", t: "peso", f: ["espalda"], lv: [1, 5], s: 4, r: "6-10", rest: 120, tip: "Torso a 45°, tira hacia el ombligo sin dar tirones." },
+    { n: "Remo con mancuerna a una mano", t: "peso", f: ["espalda"], lv: [0, 4], s: 3, r: "8-12", rest: 90, tip: "Apoya la rodilla en el banco, espalda recta." },
+    { n: "Remo en polea baja", t: "peso", f: ["espalda"], lv: [0, 3], s: 3, r: "10-12", rest: 90, tip: "Saca pecho y lleva los codos atrás pegados al cuerpo." },
+    { n: "Peso muerto convencional", t: "peso", f: ["espalda", "piernas"], lv: [2, 5], s: 4, r: "3-6", rest: 210, tip: "Espalda neutra, empuja el suelo con las piernas." },
+    { n: "Pullover en polea", t: "peso", f: ["espalda"], lv: [1, 4], s: 3, r: "12-15", rest: 60, tip: "Brazos casi rectos, lleva la barra hasta la cadera." },
+    { n: "Press militar con mancuernas", t: "peso", f: ["hombros"], lv: [0, 3], s: 3, r: "8-12", rest: 90, tip: "Sube sin encoger los hombros, abdomen firme." },
+    { n: "Press militar de pie con barra", t: "peso", f: ["hombros"], lv: [2, 5], s: 4, r: "5-8", rest: 150, tip: "Aprieta glúteos y abdomen, sin impulso de piernas." },
+    { n: "Elevaciones laterales", t: "peso", f: ["hombros"], lv: [0, 5], s: 3, r: "12-15", rest: 60, tip: "Sube hasta la altura del hombro sin balancear el cuerpo." },
+    { n: "Pájaros (deltoide posterior)", t: "peso", f: ["hombros"], lv: [0, 5], s: 3, r: "12-15", rest: 60, tip: "Inclínate hacia adelante y abre los brazos como alas." },
+    { n: "Push press", t: "peso", f: ["hombros"], lv: [3, 5], s: 4, r: "4-6", rest: 150, tip: "Pequeño impulso de piernas y bloquea arriba." },
+    { n: "Face pull", t: "peso", f: ["hombros"], lv: [1, 5], s: 3, r: "15", rest: 60, tip: "Tira de la cuerda hacia la cara con los codos altos." },
+    { n: "Curl de bíceps con mancuernas", t: "peso", f: ["brazos"], lv: [0, 3], s: 3, r: "10-12", rest: 60, tip: "Codos pegados al cuerpo, baja lento." },
+    { n: "Curl con barra", t: "peso", f: ["brazos"], lv: [1, 5], s: 3, r: "8-10", rest: 90, tip: "No balancees la espalda, controla la bajada." },
+    { n: "Curl martillo", t: "peso", f: ["brazos"], lv: [0, 4], s: 3, r: "10-12", rest: 60, tip: "Agarre neutro, trabaja también el antebrazo." },
+    { n: "Extensión de tríceps en polea", t: "peso", f: ["brazos"], lv: [0, 3], s: 3, r: "12-15", rest: 60, tip: "Codos fijos al costado, extiende hasta bloquear." },
+    { n: "Press francés", t: "peso", f: ["brazos"], lv: [1, 5], s: 3, r: "8-12", rest: 90, tip: "Baja la barra hacia la frente con los codos quietos." },
+    { n: "Fondos entre bancos", t: "reps", f: ["brazos", "pecho"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Hombros lejos de las orejas, baja hasta 90°." },
+    { n: "Fondos lastrados en paralelas", t: "peso", f: ["brazos", "pecho"], lv: [3, 5], s: 4, r: "6-8", rest: 150, tip: "Inclínate levemente adelante, baja controlado." },
+    { n: "Sentadilla goblet", t: "peso", f: ["piernas", "gluteos"], lv: [0, 2], s: 3, r: "10-12", rest: 90, tip: "Mancuerna al pecho, baja entre las rodillas." },
+    { n: "Sentadilla con barra", t: "peso", f: ["piernas", "gluteos"], lv: [1, 5], s: 4, r: "5-8", rest: 180, tip: "Pecho arriba, baja todo lo que tu movilidad permita." },
+    { n: "Sentadilla frontal", t: "peso", f: ["piernas"], lv: [3, 5], s: 4, r: "4-6", rest: 180, tip: "Codos altos, torso lo más vertical posible." },
+    { n: "Prensa de piernas", t: "peso", f: ["piernas"], lv: [0, 4], s: 3, r: "10-12", rest: 120, tip: "No bloquees las rodillas arriba, baja profundo." },
+    { n: "Peso muerto rumano", t: "peso", f: ["piernas", "gluteos"], lv: [1, 5], s: 3, r: "8-10", rest: 120, tip: "Cadera atrás, siente el estiramiento en los femorales." },
+    { n: "Zancadas con mancuernas", t: "peso", f: ["piernas", "gluteos"], lv: [0, 4], s: 3, r: "8 c/pierna", rest: 90, tip: "Paso largo, rodilla trasera casi al suelo." },
+    { n: "Curl femoral", t: "peso", f: ["piernas"], lv: [0, 4], s: 3, r: "10-12", rest: 60, tip: "Sube con fuerza, baja en 3 segundos." },
+    { n: "Extensión de cuádriceps", t: "peso", f: ["piernas"], lv: [0, 3], s: 3, r: "12-15", rest: 60, tip: "Aprieta el cuádriceps 1 segundo arriba." },
+    { n: "Elevación de talones con peso", t: "peso", f: ["piernas"], lv: [0, 5], s: 4, r: "12-15", rest: 45, tip: "Pausa arriba y estira abajo por completo." },
+    { n: "Hip thrust con barra", t: "peso", f: ["gluteos"], lv: [1, 5], s: 4, r: "8-10", rest: 120, tip: "Barbilla al pecho, aprieta glúteos 2 segundos arriba." },
+    { n: "Puente de glúteos con disco", t: "peso", f: ["gluteos"], lv: [0, 2], s: 3, r: "12-15", rest: 60, tip: "Empuja con los talones, no arquees la lumbar." },
+    { n: "Sentadilla búlgara con mancuernas", t: "peso", f: ["gluteos", "piernas"], lv: [2, 5], s: 3, r: "8 c/pierna", rest: 120, tip: "Pie trasero en el banco, torso levemente inclinado." },
+    { n: "Patada de glúteo en polea", t: "peso", f: ["gluteos"], lv: [0, 3], s: 3, r: "12 c/pierna", rest: 60, tip: "Extiende la cadera atrás sin arquear la espalda." },
+  ],
+  calistenia: [
+    { n: "Flexiones con rodillas", t: "reps", f: ["empuje"], lv: [0, 0], s: 3, r: "8-12", rest: 60, tip: "Cuerpo alineado de rodillas a cabeza, pecho al suelo." },
+    { n: "Flexiones", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-20", rest: 60, tip: "Cuerpo en línea recta, codos a 45° del torso." },
+    { n: "Flexiones diamante", t: "reps", f: ["empuje"], lv: [1, 4], s: 3, r: "8-15", rest: 90, tip: "Manos juntas formando un diamante bajo el pecho." },
+    { n: "Flexiones declinadas", t: "reps", f: ["empuje"], lv: [2, 4], s: 3, r: "10-15", rest: 90, tip: "Pies elevados en un banco o muro bajo." },
+    { n: "Flexiones arqueras", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "6 c/lado", rest: 120, tip: "Un brazo empuja, el otro se extiende recto al lado." },
+    { n: "Pike push-ups", t: "reps", f: ["empuje"], lv: [1, 3], s: 3, r: "8-12", rest: 90, tip: "Cadera alta en V invertida, baja la cabeza entre las manos." },
+    { n: "Flexiones de pino en pared", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "4-8", rest: 150, tip: "Pies apoyados en la pared, baja la cabeza con control." },
+    { n: "Fondos en banco", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Manos en el borde, baja hasta codos a 90°." },
+    { n: "Fondos en paralelas", t: "reps", f: ["empuje"], lv: [2, 4], s: 4, r: "8-12", rest: 120, tip: "Baja hasta que el hombro pase la línea del codo." },
+    { n: "Flexiones a una mano (progresión)", t: "reps", f: ["empuje"], lv: [4, 5], s: 4, r: "3-5 c/lado", rest: 180, tip: "Piernas muy abiertas, la mano libre en la espalda." },
+    { n: "Remo invertido", t: "reps", f: ["tiron"], lv: [0, 2], s: 3, r: "8-12", rest: 90, tip: "Bajo una barra baja o mesa firme, pecho a la barra." },
+    { n: "Dominadas asistidas", t: "reps", f: ["tiron"], lv: [0, 1], s: 3, r: "5-8", rest: 120, tip: "Usa banda elástica, o salta y baja muy lento." },
+    { n: "Dominadas", t: "reps", f: ["tiron"], lv: [2, 4], s: 4, r: "6-10", rest: 120, tip: "Desde brazos extendidos, barbilla sobre la barra." },
+    { n: "Dominadas supinas", t: "reps", f: ["tiron"], lv: [1, 4], s: 3, r: "6-10", rest: 120, tip: "Palmas hacia ti: más trabajo de bíceps." },
+    { n: "Dominadas arqueras", t: "reps", f: ["tiron"], lv: [4, 5], s: 4, r: "4 c/lado", rest: 180, tip: "Sube hacia una mano con el otro brazo casi recto." },
+    { n: "Muscle-up (progresión)", t: "reps", f: ["tiron", "explosivo"], lv: [4, 5], s: 4, r: "3-5", rest: 180, tip: "Dominada explosiva y transición por encima de la barra." },
+    { n: "Colgado activo", t: "tiempo", f: ["tiron"], lv: [0, 3], s: 3, r: "20-40s", rest: 60, tip: "Cuelga de la barra hundiendo los hombros hacia abajo." },
+    { n: "Plancha", t: "tiempo", f: ["core"], lv: [0, 2], s: 3, r: "30-45s", rest: 45, tip: "Aprieta glúteos y abdomen, no dejes caer la cadera." },
+    { n: "Plancha lateral", t: "tiempo", f: ["core"], lv: [0, 3], s: 3, r: "20-30s c/lado", rest: 45, tip: "Cuerpo en línea, cadera alta todo el tiempo." },
+    { n: "Crunch bicicleta", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "15 c/lado", rest: 45, tip: "Codo a la rodilla contraria, lento y controlado." },
+    { n: "Elevaciones de piernas tumbado", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "10-15", rest: 60, tip: "Lumbar pegada al suelo, baja las piernas sin tocarlo." },
+    { n: "Elevaciones de piernas colgado", t: "reps", f: ["core"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Sin balanceo, sube las piernas rectas o las rodillas." },
+    { n: "Hollow body hold", t: "tiempo", f: ["core"], lv: [1, 4], s: 3, r: "20-40s", rest: 60, tip: "Forma de banana: lumbar al suelo, brazos y piernas extendidos." },
+    { n: "L-sit (progresión)", t: "tiempo", f: ["core"], lv: [3, 5], s: 4, r: "10-20s", rest: 90, tip: "En paralelas o en el suelo, piernas rectas al frente." },
+    { n: "Dragon flag (progresión)", t: "reps", f: ["core"], lv: [4, 5], s: 3, r: "5-8", rest: 120, tip: "Sujétate de un poste y baja el cuerpo recto sin quebrar la cadera." },
+    { n: "Sentadillas", t: "reps", f: ["piernas"], lv: [0, 1], s: 3, r: "15-25", rest: 60, tip: "Baja profundo con los talones en el suelo." },
+    { n: "Zancadas alternadas", t: "reps", f: ["piernas"], lv: [0, 2], s: 3, r: "10 c/pierna", rest: 60, tip: "Paso largo y torso vertical." },
+    { n: "Sentadilla búlgara", t: "reps", f: ["piernas"], lv: [1, 4], s: 3, r: "10 c/pierna", rest: 90, tip: "Pie trasero apoyado en banco o muro bajo." },
+    { n: "Sentadilla sissy", t: "reps", f: ["piernas"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Rodillas adelante y talones arriba; sujétate si hace falta." },
+    { n: "Pistol squat asistida", t: "reps", f: ["piernas"], lv: [2, 4], s: 3, r: "5 c/pierna", rest: 120, tip: "Sujétate de un poste y baja a una pierna." },
+    { n: "Pistol squat", t: "reps", f: ["piernas"], lv: [4, 5], s: 4, r: "5 c/pierna", rest: 120, tip: "Una pierna extendida al frente, baja completo." },
+    { n: "Puente de glúteos a una pierna", t: "reps", f: ["piernas"], lv: [1, 3], s: 3, r: "12 c/pierna", rest: 60, tip: "Empuja con el talón y aguanta la cadera arriba 2 segundos." },
+    { n: "Elevación de talones a una pierna", t: "reps", f: ["piernas"], lv: [0, 4], s: 3, r: "15 c/pierna", rest: 45, tip: "En un escalón: estira abajo y pausa arriba." },
+    { n: "Burpees", t: "reps", f: ["explosivo"], lv: [0, 3], s: 3, r: "10-15", rest: 60, tip: "Pecho al suelo y salto con palmada arriba." },
+    { n: "Sentadillas con salto", t: "reps", f: ["explosivo", "piernas"], lv: [0, 3], s: 3, r: "10-12", rest: 60, tip: "Aterriza suave con las rodillas flexionadas." },
+    { n: "Flexiones con aplauso", t: "reps", f: ["explosivo", "empuje"], lv: [2, 5], s: 4, r: "6-10", rest: 120, tip: "Empuja explosivo, aplaude y amortigua la caída." },
+    { n: "Zancadas con salto", t: "reps", f: ["explosivo", "piernas"], lv: [1, 4], s: 3, r: "8 c/pierna", rest: 90, tip: "Cambia de pierna en el aire y aterriza estable." },
+    { n: "Mountain climbers sprint", t: "tiempo", f: ["explosivo", "core"], lv: [0, 2], s: 3, r: "30s", rest: 45, tip: "Rodillas al pecho lo más rápido que puedas." },
+    { n: "Burpee con rodillas al pecho", t: "reps", f: ["explosivo"], lv: [3, 5], s: 4, r: "8-12", rest: 90, tip: "En el salto, lleva las rodillas hasta el pecho." },
+  ],
+  futbolGym: [
+    { n: "Sentadilla con salto (carga ligera)", t: "peso", f: ["velocidad", "salto"], lv: [1, 4], s: 4, r: "5-6", rest: 120, tip: "Mancuernas ligeras, salta con máxima intención." },
+    { n: "Subida explosiva al cajón", t: "reps", f: ["velocidad"], lv: [0, 3], s: 3, r: "6 c/pierna", rest: 90, tip: "Sube con potencia, baja con control." },
+    { n: "Sprint en cinta (intervalos)", t: "tiempo", f: ["velocidad", "resistencia"], lv: [0, 5], s: 4, r: "20s fuerte / 40s suave", rest: 60, tip: "Acelera progresivo con braceo firme." },
+    { n: "Swing con mancuerna", t: "peso", f: ["velocidad", "fuerza"], lv: [1, 4], s: 4, r: "12-15", rest: 90, tip: "El impulso nace de la cadera, no de los brazos." },
+    { n: "Empuje de trineo (o caminata con carga)", t: "peso", f: ["velocidad", "resistencia"], lv: [2, 5], s: 4, r: "20 m", rest: 120, tip: "Zancadas potentes con el torso inclinado adelante." },
+    { n: "Salto al cajón", t: "reps", f: ["salto"], lv: [0, 4], s: 4, r: "5", rest: 90, tip: "Aterriza suave y en silencio; baja caminando." },
+    { n: "Salto vertical con contramovimiento", t: "reps", f: ["salto"], lv: [0, 3], s: 3, r: "6", rest: 90, tip: "Baja rápido y explota hacia arriba usando los brazos." },
+    { n: "Saltos a una pierna (bounds)", t: "reps", f: ["salto", "velocidad"], lv: [2, 5], s: 3, r: "5 c/pierna", rest: 120, tip: "Busca distancia con aterrizaje estable en cada salto." },
+    { n: "Saltos de tobillo (pogo)", t: "reps", f: ["salto"], lv: [0, 2], s: 3, r: "15", rest: 60, tip: "Rodillas casi rectas, rebota con los tobillos." },
+    { n: "Salto profundo desde escalón", t: "reps", f: ["salto"], lv: [3, 5], s: 3, r: "5", rest: 150, tip: "Cae del escalón y salta al instante: contacto mínimo con el suelo." },
+    { n: "Sentadilla con barra", t: "peso", f: ["fuerza"], lv: [1, 5], s: 4, r: "5-8", rest: 180, tip: "La base de la potencia de pierna. Técnica primero." },
+    { n: "Peso muerto rumano", t: "peso", f: ["fuerza"], lv: [1, 5], s: 3, r: "8-10", rest: 120, tip: "Femorales fuertes previenen desgarros al sprintar." },
+    { n: "Hip thrust", t: "peso", f: ["fuerza", "velocidad"], lv: [1, 5], s: 4, r: "8-10", rest: 120, tip: "El glúteo es tu motor de aceleración." },
+    { n: "Sentadilla búlgara con mancuernas", t: "peso", f: ["fuerza", "estabilidad"], lv: [1, 4], s: 3, r: "8 c/pierna", rest: 120, tip: "Fuerza a una pierna: así se corre en el campo." },
+    { n: "Curl nórdico asistido", t: "reps", f: ["fuerza"], lv: [2, 5], s: 3, r: "4-6", rest: 120, tip: "Baja lo más lento posible para proteger los femorales." },
+    { n: "Prensa a una pierna", t: "peso", f: ["fuerza"], lv: [0, 4], s: 3, r: "10 c/pierna", rest: 90, tip: "Rango completo sin despegar la cadera del asiento." },
+    { n: "Elevación de talones con peso", t: "peso", f: ["fuerza", "salto"], lv: [0, 5], s: 4, r: "12-15", rest: 60, tip: "Pantorrillas fuertes = más sprint y más salto." },
+    { n: "Plancha lateral con elevación de pierna", t: "tiempo", f: ["estabilidad"], lv: [0, 3], s: 3, r: "20s c/lado", rest: 45, tip: "Cadera alta y pierna superior elevada." },
+    { n: "Peso muerto a una pierna con mancuerna", t: "peso", f: ["estabilidad", "fuerza"], lv: [1, 4], s: 3, r: "8 c/pierna", rest: 90, tip: "Cadera cuadrada: equilibrio antes que peso." },
+    { n: "Pallof press en polea", t: "peso", f: ["estabilidad"], lv: [1, 4], s: 3, r: "10 c/lado", rest: 60, tip: "Resiste la rotación con los brazos extendidos al frente." },
+    { n: "Sentadilla a una pierna al banco", t: "reps", f: ["estabilidad", "fuerza"], lv: [0, 3], s: 3, r: "8 c/pierna", rest: 90, tip: "Baja al banco sin dejarte caer, rodilla alineada." },
+    { n: "Plancha con arrastre de mancuerna", t: "reps", f: ["estabilidad"], lv: [1, 4], s: 3, r: "10", rest: 60, tip: "La cadera no gira mientras cruzas la mancuerna." },
+    { n: "Bicicleta estática (intervalos)", t: "tiempo", f: ["resistencia"], lv: [0, 5], s: 4, r: "30s fuerte / 60s suave", rest: 60, tip: "Piernas rápidas y respiración con ritmo." },
+    { n: "Remo en máquina (intervalos)", t: "tiempo", f: ["resistencia"], lv: [0, 5], s: 4, r: "250 m", rest: 90, tip: "Empuja con las piernas primero, luego tira con los brazos." },
+    { n: "Farmer walk", t: "peso", f: ["resistencia", "estabilidad"], lv: [1, 5], s: 3, r: "30 m", rest: 90, tip: "Mancuernas pesadas, camina erguido sin balancearte." },
+    { n: "Step-ups continuos", t: "reps", f: ["resistencia", "fuerza"], lv: [0, 3], s: 3, r: "15 c/pierna", rest: 60, tip: "Ritmo constante: empuja siempre con la pierna de arriba." },
+  ],
+  futbolParque: [
+    { n: "Tiros de potencia a portería o pared", t: "reps", f: ["tiro"], lv: [0, 5], s: 4, r: "8 c/pierna", rest: 90, tip: "Pie de apoyo junto al balón, golpea con el empeine firme." },
+    { n: "Tiro tras conducción", t: "reps", f: ["tiro", "regate"], lv: [1, 4], s: 3, r: "8", rest: 90, tip: "Conduce 10 m, levanta la vista y define." },
+    { n: "Tiro de primera contra pared", t: "reps", f: ["tiro"], lv: [1, 5], s: 3, r: "10", rest: 90, tip: "Pásala a la pared y remata el rebote sin controlar." },
+    { n: "Precisión a las esquinas", t: "reps", f: ["tiro"], lv: [0, 5], s: 3, r: "10", rest: 60, tip: "Marca objetivos (botellas o zonas) y apunta con el interior." },
+    { n: "Vaselinas y tiro colocado", t: "reps", f: ["tiro"], lv: [2, 5], s: 3, r: "8", rest: 60, tip: "Menos fuerza y más precisión: acaricia el balón." },
+    { n: "Slalom entre conos", t: "reps", f: ["regate"], lv: [0, 4], s: 4, r: "6 pasadas", rest: 60, tip: "Toques cortos con ambos pies, balón siempre pegado." },
+    { n: "Toques rápidos entre dos conos", t: "tiempo", f: ["regate"], lv: [0, 3], s: 3, r: "30s", rest: 45, tip: "Suela e interior, lo más rápido que puedas." },
+    { n: "Recortes en V", t: "reps", f: ["regate", "ritmo"], lv: [1, 4], s: 3, r: "10", rest: 60, tip: "Arrastra el balón atrás y sal en diagonal explosivo." },
+    { n: "Elásticas y bicicletas", t: "reps", f: ["regate"], lv: [2, 5], s: 3, r: "10 c/pie", rest: 60, tip: "Primero lento y perfecto, luego a velocidad de partido." },
+    { n: "Conducción con la pierna mala", t: "reps", f: ["regate"], lv: [0, 2], s: 3, r: "5 pasadas", rest: 60, tip: "Solo la pierna no dominante, en recta y en curvas." },
+    { n: "Aceleraciones de 10 m desde trote", t: "reps", f: ["ritmo", "velocidad"], lv: [0, 4], s: 4, r: "6", rest: 90, tip: "Trota suave y explota al pasar el cono." },
+    { n: "Cambio de ritmo con balón", t: "reps", f: ["ritmo", "regate"], lv: [1, 5], s: 4, r: "6", rest: 90, tip: "Conduce lento, toque largo y sprint tras el balón." },
+    { n: "Skipping alto + sprint", t: "reps", f: ["ritmo"], lv: [0, 3], s: 3, r: "5", rest: 90, tip: "10 m de rodillas altas y 15 m de sprint." },
+    { n: "Ida y vuelta 5-10-5", t: "reps", f: ["ritmo", "velocidad"], lv: [1, 5], s: 4, r: "4", rest: 120, tip: "Frena bajando la cadera, gira y explota." },
+    { n: "Sprints de 30 m", t: "reps", f: ["velocidad"], lv: [0, 5], s: 5, r: "4-6", rest: 120, tip: "Recupera completo entre sprints: calidad, no cantidad." },
+    { n: "Sprints en cuesta", t: "reps", f: ["velocidad"], lv: [2, 5], s: 4, r: "5", rest: 150, tip: "Cuesta corta y empinada; baja caminando." },
+    { n: "Escalera de agilidad (o líneas en el suelo)", t: "tiempo", f: ["velocidad", "regate"], lv: [0, 3], s: 3, r: "30s", rest: 60, tip: "Pies rápidos y mirada al frente." },
+    { n: "Sprint con salida desde el suelo", t: "reps", f: ["velocidad"], lv: [1, 4], s: 4, r: "4", rest: 120, tip: "Túmbate boca abajo, levántate y sprinta 20 m." },
+    { n: "Carrera continua", t: "tiempo", f: ["resistencia"], lv: [0, 3], s: 1, r: "20-30 min", rest: 0, tip: "Ritmo cómodo: deberías poder hablar mientras corres." },
+    { n: "Fartlek", t: "tiempo", f: ["resistencia", "ritmo"], lv: [1, 5], s: 1, r: "20 min", rest: 0, tip: "Alterna 1 minuto fuerte y 2 suaves sin parar." },
+    { n: "Intervalos 4x4", t: "tiempo", f: ["resistencia"], lv: [2, 5], s: 4, r: "4 min fuerte", rest: 180, tip: "Al 85-90% de tu máximo; recupera trotando." },
+    { n: "Circuito toques + carrera", t: "reps", f: ["resistencia", "regate"], lv: [0, 3], s: 3, r: "3 vueltas", rest: 90, tip: "30 toques al balón y 100 m de carrera, sin pausa." },
+  ],
 };
 
-/* ─── COMPARATIVAS DE NIVEL ─── */
-const BENCHMARKS = [
+/* ─── Secciones de Cuerpo (acondicionamiento) ─── */
+const BODY_SECTIONS = [
   {
-    exercise: "Press banca",
-    match: ["press banca"],
-    unit: "kg",
-    icon: "🏋️",
-    levels: [
-      { label: "Principiante", value: 40 },
-      { label: "Promedio gym", value: 80 },
-      { label: "Avanzado", value: 130 },
-      { label: "Élite nacional", value: 180 },
-      { label: "Bilbo García (leyenda)", value: 232 },
+    id: "movilidad", name: "Movilidad general", icon: "🔄", color: C.cyan, mins: 10,
+    desc: "Rutina diaria de 10 minutos",
+    items: [
+      { n: "Gato-vaca", d: "45s" },
+      { n: "Círculos de cadera", d: "30s c/lado" },
+      { n: "Zancada con rotación de torso", d: "5 c/lado" },
+      { n: "Rotaciones torácicas de rodillas", d: "8 c/lado" },
+      { n: "Sentadilla profunda sostenida", d: "60s" },
+      { n: "Círculos de brazos y hombros", d: "30s" },
+      { n: "Balanceos de pierna", d: "12 c/pierna" },
     ],
   },
   {
-    exercise: "Sentadilla",
-    match: ["sentadilla con barra", "sentadilla pesada", "sentadilla goblet"],
-    unit: "kg",
-    icon: "🦵",
-    levels: [
-      { label: "Principiante", value: 50 },
-      { label: "Promedio gym", value: 100 },
-      { label: "Avanzado", value: 160 },
-      { label: "Élite nacional", value: 250 },
-      { label: "Récord mundial raw", value: 490 },
+    id: "flex", name: "Elasticidad y flexibilidad", icon: "🧘", color: C.purple, mins: 15,
+    desc: "Estiramientos profundos",
+    items: [
+      { n: "Isquiotibiales de pie", d: "60s c/pierna" },
+      { n: "Flexor de cadera en zancada", d: "60s c/lado" },
+      { n: "Postura de la paloma", d: "60s c/lado" },
+      { n: "Mariposa sentado", d: "60s" },
+      { n: "Torsión espinal tumbado", d: "45s c/lado" },
+      { n: "Postura del niño", d: "60s" },
+      { n: "Pecho en marco de puerta", d: "45s" },
     ],
   },
   {
-    exercise: "Peso muerto",
-    match: ["peso muerto"],
-    unit: "kg",
-    icon: "⛓️",
-    levels: [
-      { label: "Principiante", value: 60 },
-      { label: "Promedio gym", value: 120 },
-      { label: "Avanzado", value: 190 },
-      { label: "Élite nacional", value: 300 },
-      { label: "Hafthor (récord)", value: 501 },
+    id: "tobillos", name: "Tobillos", icon: "🦶", color: C.green, mins: 12,
+    desc: "Fases de rehabilitación y fuerza",
+    items: [
+      { n: "Fase 1 · Alfabeto con el pie", d: "1 vez c/pie" },
+      { n: "Fase 1 · Círculos de tobillo", d: "15 c/dirección" },
+      { n: "Fase 2 · Elevaciones de talón sentado", d: "15" },
+      { n: "Fase 2 · Flexión dorsal con banda o manual", d: "12" },
+      { n: "Fase 3 · Equilibrio a una pierna", d: "30s c/pie" },
+      { n: "Fase 3 · Equilibrio con ojos cerrados", d: "15s c/pie" },
+      { n: "Fase 4 · Saltos suaves a dos pies", d: "2x10" },
     ],
   },
   {
-    exercise: "Dominadas",
-    match: ["dominadas"],
-    unit: "reps",
-    icon: "🦍",
-    levels: [
-      { label: "Principiante", value: 3 },
-      { label: "Nivel gato 🐈 (ágil)", value: 8 },
-      { label: "Nivel lobo 🐺 (fuerte)", value: 15 },
-      { label: "Nivel pantera 🐆", value: 25 },
-      { label: "Nivel gorila 🦍 (élite)", value: 40 },
+    id: "hombros", name: "Hombros", icon: "💪", color: C.orange, mins: 10,
+    desc: "Movilidad y prevención",
+    items: [
+      { n: "Dislocaciones con palo o toalla", d: "12" },
+      { n: "Rotaciones externas con banda o botella", d: "15 c/brazo" },
+      { n: "Deslizamientos en pared", d: "12" },
+      { n: "Y-T-W en el suelo", d: "8 c/letra" },
+      { n: "Colgado pasivo de barra", d: "30s" },
+      { n: "Círculos de brazos con pausa atrás", d: "10 c/dirección" },
     ],
   },
   {
-    exercise: "Flexiones",
-    match: ["flexiones"],
-    unit: "reps",
-    icon: "💥",
-    levels: [
-      { label: "Principiante", value: 10 },
-      { label: "Promedio", value: 25 },
-      { label: "Atleta", value: 45 },
-      { label: "Calistenia avanzada", value: 70 },
-      { label: "Bestia total", value: 100 },
+    id: "munecas", name: "Muñecas", icon: "✋", color: C.yellow, mins: 8,
+    desc: "Movilidad y fortalecimiento",
+    items: [
+      { n: "Círculos de muñeca", d: "20 c/dirección" },
+      { n: "Estiramiento de flexores (palma arriba)", d: "30s c/mano" },
+      { n: "Estiramiento de extensores (palma abajo)", d: "30s c/mano" },
+      { n: "Apoyo progresivo en el suelo", d: "45s" },
+      { n: "Elevaciones con botella o peso ligero", d: "15 c/mano" },
+      { n: "Rebotes suaves en cuadrupedia", d: "20" },
     ],
   },
   {
-    exercise: "Sprint 30m",
-    match: ["sprint máximo — 30m", "sprint máximo — 40m"],
-    unit: "nivel",
-    icon: "🚀",
-    levels: [
-      { label: "Amateur (~4.8s)", value: 1 },
-      { label: "Semi-pro (~4.3s)", value: 2 },
-      { label: "Profesional (~4.0s)", value: 3 },
-      { label: "CR7 en su prime (~3.7s)", value: 4 },
-      { label: "Usain Bolt (~3.6s)", value: 5 },
+    id: "rodillas", name: "Rodillas", icon: "🦵", color: C.blue, mins: 12,
+    desc: "Estabilidad y prevención",
+    items: [
+      { n: "Sentadilla española isométrica", d: "30s x3" },
+      { n: "Step-down controlado en escalón", d: "10 c/pierna" },
+      { n: "Extensión terminal de rodilla (banda o isométrico)", d: "15 c/pierna" },
+      { n: "Sentadilla sissy asistida suave", d: "8" },
+      { n: "Wall sit", d: "45s" },
+      { n: "Elevación de pierna recta tumbado", d: "12 c/pierna" },
+    ],
+  },
+  {
+    id: "prevencion", name: "Prevención de lesiones", icon: "🛡️", color: C.red, mins: 12,
+    desc: "Rutina general anti-lesiones",
+    items: [
+      { n: "Puente de glúteos con pausa", d: "15" },
+      { n: "Curl femoral con deslizamiento de talones", d: "10" },
+      { n: "Caminata lateral en media sentadilla", d: "10 pasos c/lado" },
+      { n: "Elevación lateral de cadera (plancha corta)", d: "10 c/lado" },
+      { n: "Plancha frontal", d: "40s" },
+      { n: "Respiración diafragmática profunda", d: "10 respiraciones" },
     ],
   },
 ];
 
-/* ─── MASCOTA ─── */
-function getMascot(streak) {
-  if (streak === 0) return { emoji: "😴", name: "FASE está dormido", msg: "Entrena hoy para despertarlo", color: C.dim };
-  if (streak < 3) return { emoji: "🐺", name: "FASE despertó", msg: `${streak} día${streak > 1 ? "s" : ""} de racha — no lo abandones`, color: C.cyan };
-  if (streak < 7) return { emoji: "🐺🔥", name: "FASE está encendido", msg: `${streak} días seguidos — se empieza a formar el hábito`, color: C.orange };
-  if (streak < 14) return { emoji: "🔥🐺🔥", name: "FASE está imparable", msg: `${streak} días — esto ya es disciplina`, color: C.orange };
-  return { emoji: "⚡🐺⚡", name: "FASE es leyenda", msg: `${streak} días — nivel élite de constancia`, color: C.yellow };
-}
+/* ─── Comparativas motivacionales (sin nombres reales) ─── */
+const COMPARATIVES = [
+  { icon: "🏋️", text: "El humano más fuerte del mundo ha levantado 501 kg del suelo.", stat: "maxWeight" },
+  { icon: "⚡", text: "El más rápido del mundo corre los 100 m en 9.58 segundos.", stat: null },
+  { icon: "🦘", text: "El mejor saltador del mundo supera una barra a 2.45 m de altura.", stat: null },
+  { icon: "🦍", text: "Un gorila adulto podría hacer dominadas cargando más de 200 kg.", stat: "maxReps" },
+];
 
-/* ─── HELPERS ─── */
-const todayKey = () => new Date().toISOString().slice(0, 10);
+/* ─── Rangos por ejercicio ─── */
+const EXRANKS = [
+  { min: 15, name: "Leyenda", color: C.red },
+  { min: 8, name: "Campeón", color: C.yellow },
+  { min: 3, name: "Guerrero", color: C.green },
+  { min: 0, name: "Novato", color: C.mut },
+];
 
-function calcStreak(history) {
-  if (!history.length) return 0;
-  const days = [...new Set(history.map((h) => h.date))].sort().reverse();
-  const today = todayKey();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  if (days[0] !== today && days[0] !== yesterday) return 0;
-  let streak = 1;
-  for (let i = 0; i < days.length - 1; i++) {
-    const d1 = new Date(days[i]);
-    const d2 = new Date(days[i + 1]);
-    if ((d1 - d2) / 86400000 === 1) streak++;
-    else break;
+/* ─── Utilidades ─── */
+const dayKey = (ts) => {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+};
+
+function calcStreak(sessions) {
+  const days = new Set(sessions.map((s) => dayKey(s.ts)));
+  let streak = 0;
+  const d = new Date();
+  if (!days.has(dayKey(d.getTime()))) d.setDate(d.getDate() - 1);
+  while (days.has(dayKey(d.getTime()))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
   }
   return streak;
 }
 
-function getPRs(history) {
-  const prs = {};
-  history.forEach((session) => {
-    session.exercises.forEach((ex) => {
-      ex.sets.forEach((s) => {
-        if (!s.done) return;
-        const w = parseFloat(s.weight) || 0;
-        const r = parseInt(s.reps) || 0;
-        if (!prs[ex.name] || w > prs[ex.name].weight || (w === prs[ex.name].weight && r > prs[ex.name].reps)) {
-          prs[ex.name] = { weight: w, reps: r };
-        }
-      });
-    });
+function heroForStreak(streak) {
+  let hero = null;
+  for (const h of HEROES) if (streak >= h.days) hero = h;
+  return hero || EGG;
+}
+
+function startOfWeek() {
+  const d = new Date();
+  const day = (d.getDay() + 6) % 7; // lunes = 0
+  d.setDate(d.getDate() - day);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function fmtDate(ts) {
+  const today = dayKey(Date.now());
+  const yest = dayKey(Date.now() - 86400000);
+  const k = dayKey(ts);
+  if (k === today) return "Hoy";
+  if (k === yest) return "Ayer";
+  const d = new Date(ts);
+  return d.toLocaleDateString("es", { day: "numeric", month: "short" });
+}
+
+function levelFromCount(count, thresholds) {
+  let idx = 0;
+  thresholds.forEach((t, i) => {
+    if (count >= t) idx = i;
   });
-  return prs;
+  return idx;
 }
 
-/* ══════════════ COMPONENTES BASE ══════════════ */
+/* ─── Generador de rutinas (5-8 ejercicios, con variación) ─── */
+function genRoutine(discId, focusId, lvlIdx) {
+  const db = EXDB[discId];
+  const focus = DISCIPLINES[discId].focuses.find((f) => f.id === focusId);
+  const matchFocus = (e) => !focus.tags || e.f.some((t) => focus.tags.includes(t));
 
-function Btn({ children, onClick, color = C.cyan, filled = false, style = {}, small = false }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: small ? "8px 14px" : "13px 18px",
-        borderRadius: 12,
-        border: `1px solid ${filled ? "transparent" : color + "55"}`,
-        background: filled ? color : color + "18",
-        color: filled ? "#000" : color,
-        fontWeight: 700,
-        fontSize: small ? 12 : 14,
-        cursor: "pointer",
-        transition: "transform 0.1s, opacity 0.15s",
-        ...style,
-      }}
-      onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-      onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-    >
-      {children}
-    </button>
+  let pool = db.filter((e) => matchFocus(e) && e.lv[0] <= lvlIdx && lvlIdx <= e.lv[1]);
+  if (pool.length < 5) pool = db.filter(matchFocus);
+
+  const target = Math.max(
+    5,
+    Math.min(8, Math.min(pool.length, 5 + (lvlIdx >= 2 ? 1 : 0) + (lvlIdx >= 4 ? 1 : 0) + (Math.random() < 0.5 ? 1 : 0)))
   );
-}
 
-function Card({ children, style = {}, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: C.card,
-        border: `1px solid ${C.border}`,
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        cursor: onClick ? "pointer" : "default",
-        transition: "border-color 0.15s",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Disclaimer({ text }) {
-  return (
-    <div
-      style={{
-        background: C.yellow + "10",
-        border: `1px solid ${C.yellow}30`,
-        borderRadius: 12,
-        padding: "10px 14px",
-        marginBottom: 16,
-        display: "flex",
-        gap: 10,
-        alignItems: "flex-start",
-      }}
-    >
-      <span style={{ fontSize: 16 }}>⚠️</span>
-      <span style={{ color: C.mut, fontSize: 12, lineHeight: 1.5 }}>{text}</span>
-    </div>
-  );
-}
-
-/* ══════════════ TEMPORIZADOR DE DESCANSO ══════════════ */
-function RestTimer({ seconds, onDone }) {
-  const [left, setLeft] = useState(seconds);
-  useEffect(() => {
-    if (left <= 0) {
-      onDone();
-      return;
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const chosen = [];
+  const seenTags = new Set();
+  for (const e of shuffled) {
+    if (chosen.length >= target) break;
+    if (!seenTags.has(e.f[0])) {
+      chosen.push(e);
+      seenTags.add(e.f[0]);
     }
-    const t = setTimeout(() => setLeft(left - 1), 1000);
-    return () => clearTimeout(t);
-  }, [left]);
-  const pct = (left / seconds) * 100;
+  }
+  for (const e of shuffled) {
+    if (chosen.length >= target) break;
+    if (!chosen.includes(e)) chosen.push(e);
+  }
+
+  const extraSets = lvlIdx >= 3 ? 1 : 0;
+  return chosen.map((e) => ({
+    name: e.n,
+    type: e.t,
+    sets: e.s === 1 ? 1 : Math.min(5, e.s + extraSets),
+    reps: e.r,
+    rest: e.rest,
+    tip: e.tip,
+  }));
+}
+
+/* ═══════════════════ COMPONENTES UI ═══════════════════ */
+
+function StatBox({ label, value, accent }) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 90,
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "calc(100% - 32px)",
-        maxWidth: 400,
-        background: C.surface,
-        border: `1px solid ${C.cyan}55`,
-        borderRadius: 16,
-        padding: 16,
-        zIndex: 50,
-        boxShadow: "0 8px 40px rgba(0,229,255,0.15)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <span style={{ color: C.mut, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>⏱ DESCANSO</span>
-        <span style={{ color: C.cyan, fontSize: 28, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
-          {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
-        </span>
-      </div>
-      <div style={{ background: C.border, borderRadius: 99, height: 6, overflow: "hidden", marginBottom: 12 }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: C.cyan, transition: "width 1s linear" }} />
-      </div>
-      <Btn onClick={onDone} color={C.cyan} small style={{ width: "100%" }}>
-        Saltar descanso →
-      </Btn>
+    <div className="card" style={{ flex: 1, textAlign: "center", padding: "14px 8px" }}>
+      <div style={{ fontSize: 24, fontWeight: 800, color: accent || C.text }}>{value}</div>
+      <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
 
-/* ══════════════ SESIÓN ACTIVA ══════════════ */
-function ActiveSession({ workout, level, category, onFinish, onCancel, prs }) {
-  const exercises = workout.levels[level];
-  const [log, setLog] = useState(
-    exercises.map((ex) => ({
-      name: ex.name,
-      target: ex,
-      sets: Array.from({ length: ex.sets }, () => ({ weight: "", reps: "", done: false, failed: false })),
-    }))
-  );
-  const [restTimer, setRestTimer] = useState(null);
-  const startTime = useRef(Date.now());
-
-  const updateSet = (exIdx, setIdx, field, value) => {
-    setLog((prev) => {
-      const next = prev.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s })) }));
-      next[exIdx].sets[setIdx][field] = value;
-      return next;
-    });
-  };
-
-  const completeSet = (exIdx, setIdx, failed = false) => {
-    setLog((prev) => {
-      const next = prev.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s })) }));
-      next[exIdx].sets[setIdx].done = !failed;
-      next[exIdx].sets[setIdx].failed = failed;
-      return next;
-    });
-    const rest = exercises[exIdx].rest;
-    if (rest > 0 && !failed) setRestTimer(rest);
-  };
-
-  const totalSets = log.reduce((s, e) => s + e.sets.length, 0);
-  const doneSets = log.reduce((s, e) => s + e.sets.filter((x) => x.done || x.failed).length, 0);
-
-  const finish = () => {
-    const durationMin = Math.max(1, Math.round((Date.now() - startTime.current) / 60000));
-    onFinish({
-      date: todayKey(),
-      timestamp: Date.now(),
-      workoutName: workout.label,
-      category,
-      level,
-      durationMin,
-      exercises: log.map((e) => ({ name: e.name, sets: e.sets.filter((s) => s.done || s.failed) })),
-    });
-  };
-
-  return (
-    <div style={{ paddingBottom: 100 }}>
-      {/* Header sesión */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div>
-          <div style={{ color: workout.color, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>
-            {workout.icon} SESIÓN ACTIVA
-          </div>
-          <div style={{ color: C.text, fontSize: 20, fontWeight: 800 }}>{workout.label}</div>
-        </div>
-        <button onClick={onCancel} style={{ background: "none", border: "none", color: C.dim, fontSize: 13, cursor: "pointer" }}>
-          ✕ Salir
-        </button>
-      </div>
-
-      {/* Progreso */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-          <span style={{ color: C.mut, fontSize: 11 }}>
-            {doneSets} de {totalSets} series
-          </span>
-          <span style={{ color: workout.color, fontSize: 11, fontWeight: 700 }}>{Math.round((doneSets / totalSets) * 100)}%</span>
-        </div>
-        <div style={{ background: C.border, borderRadius: 99, height: 6, overflow: "hidden" }}>
-          <div
-            style={{ width: `${(doneSets / totalSets) * 100}%`, height: "100%", background: workout.color, transition: "width 0.4s" }}
-          />
-        </div>
-      </div>
-
-      {/* Ejercicios */}
-      {log.map((ex, exIdx) => {
-        const pr = prs[ex.name];
-        const isWeight = ex.target.type === "peso";
-        return (
-          <Card key={exIdx}>
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>{ex.name}</div>
-              <div style={{ color: C.mut, fontSize: 12, marginTop: 2 }}>
-                Meta: {ex.target.sets} series × {ex.target.reps}
-                {ex.target.rest > 0 && ` · ${ex.target.rest}s descanso`}
-              </div>
-              {pr && (
-                <div style={{ color: C.yellow, fontSize: 11, marginTop: 3 }}>
-                  🏆 Tu récord: {pr.weight > 0 ? `${pr.weight}kg × ` : ""}{pr.reps} reps
-                </div>
-              )}
-            </div>
-
-            {ex.sets.map((set, setIdx) => (
-              <div
-                key={setIdx}
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                  marginTop: 10,
-                  opacity: set.done || set.failed ? 0.85 : 1,
-                }}
-              >
-                <div
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 8,
-                    background: set.done ? C.green + "25" : set.failed ? C.red + "25" : C.border,
-                    color: set.done ? C.green : set.failed ? C.red : C.mut,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 12,
-                    fontWeight: 800,
-                    flexShrink: 0,
-                  }}
-                >
-                  {set.done ? "✓" : set.failed ? "✗" : setIdx + 1}
-                </div>
-
-                {isWeight && (
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="kg"
-                    value={set.weight}
-                    onChange={(e) => updateSet(exIdx, setIdx, "weight", e.target.value)}
-                    style={{
-                      width: 64,
-                      background: C.surface,
-                      border: `1px solid ${C.border}`,
-                      borderRadius: 8,
-                      padding: "8px 10px",
-                      color: C.text,
-                      fontSize: 14,
-                      fontWeight: 700,
-                      textAlign: "center",
-                    }}
-                  />
-                )}
-
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="reps"
-                  value={set.reps}
-                  onChange={(e) => updateSet(exIdx, setIdx, "reps", e.target.value)}
-                  style={{
-                    width: 64,
-                    background: C.surface,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: 8,
-                    padding: "8px 10px",
-                    color: C.text,
-                    fontSize: 14,
-                    fontWeight: 700,
-                    textAlign: "center",
-                  }}
-                />
-
-                {!set.done && !set.failed ? (
-                  <>
-                    <Btn small color={C.green} onClick={() => completeSet(exIdx, setIdx)} style={{ flex: 1 }}>
-                      ✓ Hecha
-                    </Btn>
-                    <Btn small color={C.red} onClick={() => completeSet(exIdx, setIdx, true)}>
-                      Fallé
-                    </Btn>
-                  </>
-                ) : (
-                  <span
-                    style={{
-                      flex: 1,
-                      textAlign: "right",
-                      color: set.done ? C.green : C.red,
-                      fontSize: 12,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {set.done ? "Completada" : "No completada"}
-                  </span>
-                )}
-              </div>
-            ))}
-          </Card>
-        );
-      })}
-
-      {/* Terminar */}
-      <Btn filled color={workout.color} onClick={finish} style={{ width: "100%", padding: 16, fontSize: 16 }}>
-        🏁 TERMINAR SESIÓN
-      </Btn>
-
-      {restTimer && <RestTimer seconds={restTimer} onDone={() => setRestTimer(null)} />}
-    </div>
-  );
-}
-
-/* ══════════════ PANTALLA: INICIO ══════════════ */
-function HomeScreen({ history, streak, goTrain }) {
-  const mascot = getMascot(streak);
-  const thisWeek = history.filter((h) => {
-    const d = new Date(h.date);
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() + 1);
-    weekStart.setHours(0, 0, 0, 0);
-    return d >= weekStart;
-  });
-  const totalVolume = history.reduce(
-    (sum, s) =>
-      sum +
-      s.exercises.reduce(
-        (es, e) => es + e.sets.reduce((ss, set) => ss + (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0), 0),
-        0
-      ),
-    0
-  );
-  const recent = [...history].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
-
+function StreakBar({ streak }) {
+  const filled = Math.min(streak, 7);
   return (
     <div>
-      {/* Mascota + Racha */}
-      <div
-        style={{
-          background: `linear-gradient(135deg, ${mascot.color}18 0%, transparent 70%)`,
-          border: `1px solid ${mascot.color}33`,
-          borderRadius: 20,
-          padding: 20,
-          marginBottom: 14,
-          textAlign: "center",
-        }}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: C.mut }}>RACHA</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: C.orange }}>
+          {streak} {streak === 1 ? "día" : "días"} 🔥
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 18,
+              background: i < filled ? "rgba(255,122,47,0.14)" : C.surface,
+              border: `1px solid ${i < filled ? "rgba(255,122,47,0.45)" : C.border}`,
+              transition: "all .3s ease",
+            }}
+          >
+            {i < filled ? (
+              <span className={i === filled - 1 ? "flame" : ""}>🔥</span>
+            ) : (
+              <span style={{ opacity: 0.2 }}>·</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Pantalla de bienvenida ─── */
+function Welcome({ onDone }) {
+  const [value, setValue] = useState("");
+  const submit = () => {
+    const n = value.trim();
+    if (n) onDone(n);
+  };
+  return (
+    <div
+      className="fade-up"
+      style={{
+        minHeight: "100svh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: 28,
+        gap: 12,
+      }}
+    >
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div className="pop" style={{ fontSize: 64, marginBottom: 12 }}>⚡</div>
+        <h1
+          style={{
+            fontSize: 44,
+            fontWeight: 900,
+            letterSpacing: 4,
+            background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`,
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            color: "transparent",
+          }}
+        >
+          F.A.S.E.
+        </h1>
+        <p style={{ color: C.mut, fontSize: 14, marginTop: 8 }}>
+          Formación Atlética y Sistemas de Entrenamiento
+        </p>
+      </div>
+      <p style={{ color: C.text, fontSize: 16, fontWeight: 600 }}>¿Cómo te llamas?</p>
+      <input
+        className="input"
+        placeholder="Tu nombre"
+        value={value}
+        maxLength={24}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        autoFocus
+      />
+      <button
+        className="btn-xl"
+        disabled={!value.trim()}
+        onClick={submit}
+        style={{ background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, color: "#07070C", marginTop: 8 }}
       >
-        <div style={{ fontSize: 56, marginBottom: 6, filter: streak === 0 ? "grayscale(0.8)" : "none" }}>{mascot.emoji}</div>
-        <div style={{ color: C.text, fontWeight: 800, fontSize: 17 }}>{mascot.name}</div>
-        <div style={{ color: C.mut, fontSize: 13, marginTop: 4 }}>{mascot.msg}</div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 14 }}>
-          {Array.from({ length: 7 }).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - (6 - i));
-            const key = d.toISOString().slice(0, 10);
-            const trained = history.some((h) => h.date === key);
-            return (
+        COMENZAR
+      </button>
+      <p style={{ color: C.dim, fontSize: 12, textAlign: "center", marginTop: 8 }}>
+        Sin cuentas ni correos. Todo se guarda solo en tu dispositivo.
+      </p>
+    </div>
+  );
+}
+
+/* ─── INICIO ─── */
+function Home({ name, sessions, streak, unlockedHeroes, onTrain }) {
+  const hero = heroForStreak(streak);
+  const nextHero = HEROES.find((h) => h.days > streak);
+  const week = sessions.filter((s) => s.ts >= startOfWeek()).length;
+  const recent = sessions.slice(-5).reverse();
+
+  return (
+    <div className="screen">
+      <p style={{ fontSize: 22, fontWeight: 800 }}>
+        Hola, <span style={{ color: C.cyan }}>{name}</span> 👋
+      </p>
+      <p className="muted" style={{ marginTop: 2 }}>Tu momento es ahora.</p>
+
+      {/* Héroe */}
+      <div className="card" style={{ marginTop: 16, textAlign: "center", padding: "22px 16px", overflow: "hidden", position: "relative" }}>
+        <div
+          style={{
+            position: "absolute", inset: 0, pointerEvents: "none",
+            background: `radial-gradient(circle at 50% 0%, ${hero === EGG ? "rgba(138,138,173,0.10)" : "rgba(255,122,47,0.12)"}, transparent 70%)`,
+            animation: "glowPulse 3s ease-in-out infinite",
+          }}
+        />
+        <div className="pop" style={{ fontSize: 62 }} key={hero.name}>{hero.emoji}</div>
+        <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>{hero.name}</div>
+        <div style={{ color: C.mut, fontSize: 13, marginTop: 3, fontStyle: "italic" }}>“{hero.quote}”</div>
+        {nextHero && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}` }}>
               <div
-                key={i}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: trained ? C.orange + "30" : C.surface,
-                  border: `1px solid ${trained ? C.orange : C.border}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 14,
+                  height: "100%",
+                  width: `${Math.min(100, (streak / nextHero.days) * 100)}%`,
+                  background: `linear-gradient(90deg, ${C.orange}, ${C.yellow})`,
+                  borderRadius: 99,
+                  transition: "width .5s ease",
                 }}
-              >
-                {trained ? "🔥" : ""}
+              />
+            </div>
+            <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
+              Próximo héroe: {nextHero.name} a los {nextHero.days} días de racha
+            </div>
+          </div>
+        )}
+        {/* Colección */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16 }}>
+          {HEROES.map((h) => {
+            const has = unlockedHeroes.includes(h.id);
+            return (
+              <div key={h.id} style={{ textAlign: "center", opacity: has ? 1 : 0.35 }} title={h.name}>
+                <div style={{ fontSize: 20, filter: has ? "none" : "grayscale(1)" }}>{has ? h.emoji : "🔒"}</div>
+                <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        {[
-          { label: "RACHA", value: streak, unit: "días", color: C.orange },
-          { label: "SEMANA", value: thisWeek.length, unit: "sesiones", color: C.green },
-          { label: "TOTAL", value: history.length, unit: "entrenos", color: C.cyan },
-        ].map((s, i) => (
-          <div
-            key={i}
-            style={{
-              flex: 1,
-              background: C.card,
-              border: `1px solid ${C.border}`,
-              borderRadius: 14,
-              padding: "12px 10px",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ color: s.color, fontSize: 24, fontWeight: 900 }}>{s.value}</div>
-            <div style={{ color: C.mut, fontSize: 10, letterSpacing: 1, marginTop: 2 }}>
-              {s.label} <span style={{ color: C.dim }}>({s.unit})</span>
-            </div>
-          </div>
-        ))}
+      {/* Racha */}
+      <div className="card" style={{ marginTop: 12 }}>
+        <StreakBar streak={streak} />
       </div>
 
-      {totalVolume > 0 && (
-        <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ color: C.mut, fontSize: 13 }}>💪 Peso total levantado</span>
-          <span style={{ color: C.cyan, fontWeight: 800, fontSize: 16 }}>{Math.round(totalVolume).toLocaleString()} kg</span>
-        </Card>
-      )}
+      {/* Stats */}
+      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+        <StatBox label="Racha actual" value={streak} accent={C.orange} />
+        <StatBox label="Esta semana" value={week} accent={C.cyan} />
+        <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
+      </div>
 
       {/* CTA */}
-      <Btn filled color={C.cyan} onClick={goTrain} style={{ width: "100%", padding: 16, fontSize: 16, marginBottom: 18 }}>
-        ⚡ ENTRENAR AHORA
-      </Btn>
+      <button
+        className="btn-xl"
+        onClick={onTrain}
+        style={{
+          marginTop: 16,
+          background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`,
+          color: "#07070C",
+          fontSize: 18,
+          boxShadow: "0 8px 30px rgba(34,255,136,0.25)",
+        }}
+      >
+        ENTRENAR AHORA 💪
+      </button>
 
       {/* Historial reciente */}
-      <div style={{ color: C.text, fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Historial reciente</div>
-      {recent.length === 0 ? (
-        <Card style={{ textAlign: "center", padding: 24 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
-          <div style={{ color: C.mut, fontSize: 13 }}>
-            Aún no tienes entrenamientos registrados.
-            <br />
-            Tu primera sesión aparecerá aquí.
-          </div>
-        </Card>
-      ) : (
-        recent.map((s, i) => {
-          const w = Object.values(WORKOUTS).find((x) => x.label === s.workoutName);
+      <div className="sec-title">Últimas sesiones</div>
+      {recent.length === 0 && (
+        <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13 }}>
+          Aún no hay sesiones. ¡Hoy es el día perfecto para la primera! 🚀
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {recent.map((s) => {
+          const isBody = s.kind === "cuerpo";
+          const disc = isBody ? null : DISCIPLINES[s.disc];
+          const sec = isBody ? BODY_SECTIONS.find((b) => b.id === s.section) : null;
           return (
-            <Card key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 24 }}>{w?.icon || "🏋️"}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{s.workoutName}</div>
-                <div style={{ color: C.mut, fontSize: 11 }}>
-                  {s.date} · {s.level} · {s.durationMin} min
+            <div key={s.id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
+              <span style={{ fontSize: 24 }}>{isBody ? sec?.icon || "🧘" : disc?.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {isBody ? `Cuerpo · ${sec?.name || ""}` : disc?.label}
+                </div>
+                <div style={{ fontSize: 12, color: C.mut }}>
+                  {isBody ? "Acondicionamiento" : `${s.focusLabel} · ${LEVELS[s.levelIdx].emoji} ${LEVELS[s.levelIdx].name}`}
                 </div>
               </div>
-              <div style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>
-                {s.exercises.reduce((a, e) => a + e.sets.filter((x) => x.done).length, 0)} series ✓
-              </div>
-            </Card>
+              <span style={{ fontSize: 12, color: C.dim }}>{fmtDate(s.ts)}</span>
+            </div>
           );
-        })
-      )}
+        })}
+      </div>
     </div>
   );
 }
 
-/* ══════════════ PANTALLA: ENTRENAR ══════════════ */
-function TrainScreen({ onStart }) {
-  const [selected, setSelected] = useState(null);
+/* ─── ENTRENAR (selección) ─── */
+function Train({ onStart }) {
+  const [discId, setDiscId] = useState(null);
+  const [focusId, setFocusId] = useState("todo");
+  const [lvlIdx, setLvlIdx] = useState(null);
+  const [seed, setSeed] = useState(0);
 
-  if (selected) {
-    const w = WORKOUTS[selected];
+  const disc = discId ? DISCIPLINES[discId] : null;
+
+  const routine = useMemo(() => {
+    if (!discId || lvlIdx === null) return null;
+    return genRoutine(discId, focusId, lvlIdx);
+    // seed fuerza regeneración con "Variar ejercicios"
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discId, focusId, lvlIdx, seed]);
+
+  if (!discId) {
     return (
-      <div>
-        <button
-          onClick={() => setSelected(null)}
-          style={{ background: "none", border: "none", color: C.cyan, fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 14 }}
-        >
-          ← Volver
-        </button>
-        <div style={{ fontSize: 40, marginBottom: 6 }}>{w.icon}</div>
-        <div style={{ color: C.text, fontWeight: 800, fontSize: 22 }}>{w.label}</div>
-        <div style={{ color: C.mut, fontSize: 13, marginBottom: 20 }}>{w.desc}</div>
-
-        <div style={{ color: C.mut, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ELIGE TU NIVEL</div>
-        {Object.entries(w.levels).map(([lvl, exercises]) => {
-          const diffColor = lvl === "principiante" ? C.green : lvl === "intermedio" ? C.yellow : C.red;
-          const diffEmoji = lvl === "principiante" ? "🟢" : lvl === "intermedio" ? "🟡" : "🔴";
-          return (
-            <Card key={lvl} onClick={() => onStart(selected, lvl)} style={{ borderColor: diffColor + "33" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ color: C.text, fontWeight: 700, fontSize: 15, textTransform: "capitalize" }}>
-                    {diffEmoji} {lvl}
-                  </div>
-                  <div style={{ color: C.mut, fontSize: 12, marginTop: 3 }}>
-                    {exercises.length} ejercicios · ~{exercises.reduce((a, e) => a + e.sets, 0)} series
-                  </div>
-                </div>
-                <div style={{ color: diffColor, fontSize: 20 }}>▶</div>
+      <div className="screen">
+        <h2 style={{ fontSize: 22, fontWeight: 800 }}>Entrenar</h2>
+        <p className="muted" style={{ marginTop: 2 }}>Elige tu disciplina de hoy</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+          {Object.entries(DISCIPLINES).map(([id, d]) => (
+            <button
+              key={id}
+              className="card fade-up"
+              onClick={() => { setDiscId(id); setFocusId("todo"); setLvlIdx(null); }}
+              style={{
+                display: "flex", alignItems: "center", gap: 14, textAlign: "left",
+                borderLeft: `4px solid ${d.color}`, transition: "transform .15s ease",
+              }}
+            >
+              <span style={{ fontSize: 30 }}>{d.icon}</span>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>{d.label}</div>
+                <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{d.desc}</div>
               </div>
-            </Card>
-          );
-        })}
+              <span style={{ marginLeft: "auto", color: d.color, fontSize: 20 }}>›</span>
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div style={{ color: C.text, fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Entrenar</div>
-      <div style={{ color: C.mut, fontSize: 13, marginBottom: 20 }}>Elige tu disciplina de hoy</div>
+    <div className="screen" key={discId}>
+      <button onClick={() => setDiscId(null)} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+        ‹ Disciplinas
+      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+        <span style={{ fontSize: 30 }}>{disc.icon}</span>
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: disc.color }}>{disc.label}</h2>
+          <p style={{ fontSize: 12, color: C.mut }}>{disc.desc}</p>
+        </div>
+      </div>
 
-      {Object.entries(WORKOUTS).map(([key, w]) => (
-        <Card
-          key={key}
-          onClick={() => setSelected(key)}
-          style={{
-            background: `linear-gradient(135deg, ${w.color}12 0%, ${C.card} 60%)`,
-            borderColor: w.color + "33",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                background: w.color + "20",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 26,
-              }}
-            >
-              {w.icon}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: C.text, fontWeight: 800, fontSize: 16 }}>{w.label}</div>
-              <div style={{ color: C.mut, fontSize: 12, marginTop: 2 }}>{w.desc}</div>
-            </div>
-            <div style={{ color: w.color, fontSize: 18 }}>→</div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-/* ══════════════ PANTALLA: PROGRESO ══════════════ */
-function ProgressScreen({ history }) {
-  const prs = getPRs(history);
-
-  return (
-    <div>
-      <div style={{ color: C.text, fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Progreso</div>
-      <div style={{ color: C.mut, fontSize: 13, marginBottom: 20 }}>Tus récords vs los mejores del mundo</div>
-
-      {BENCHMARKS.map((bench, i) => {
-        // Buscar el PR del usuario en ejercicios que coincidan
-        let userValue = 0;
-        Object.entries(prs).forEach(([name, pr]) => {
-          const lower = name.toLowerCase();
-          if (bench.match.some((m) => lower.includes(m))) {
-            const val = bench.unit === "kg" ? pr.weight : pr.reps;
-            if (val > userValue) userValue = val;
-          }
-        });
-
-        const maxVal = bench.levels[bench.levels.length - 1].value;
-        // Nivel alcanzado
-        let reachedIdx = -1;
-        bench.levels.forEach((l, idx) => {
-          if (userValue >= l.value) reachedIdx = idx;
-        });
-
-        return (
-          <Card key={i}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ color: C.text, fontWeight: 800, fontSize: 15 }}>
-                {bench.icon} {bench.exercise}
-              </div>
-              <div style={{ color: userValue > 0 ? C.cyan : C.dim, fontWeight: 800, fontSize: 14 }}>
-                {userValue > 0 ? `Tú: ${userValue}${bench.unit === "kg" ? "kg" : bench.unit === "reps" ? " reps" : ""}` : "Sin datos"}
-              </div>
-            </div>
-
-            {bench.levels.map((lvl, li) => {
-              const reached = li <= reachedIdx;
-              const isNext = li === reachedIdx + 1;
-              const pct = bench.unit === "nivel" ? ((li + 1) / bench.levels.length) * 100 : (lvl.value / maxVal) * 100;
-              return (
-                <div key={li} style={{ marginBottom: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                    <span
-                      style={{
-                        color: reached ? C.green : isNext ? C.yellow : C.dim,
-                        fontSize: 12,
-                        fontWeight: reached || isNext ? 700 : 500,
-                      }}
-                    >
-                      {reached ? "✓ " : isNext ? "→ " : ""}
-                      {lvl.label}
-                    </span>
-                    <span style={{ color: reached ? C.green : C.dim, fontSize: 12, fontWeight: 700 }}>
-                      {bench.unit === "nivel" ? "" : `${lvl.value}${bench.unit === "kg" ? "kg" : ""}`}
-                    </span>
-                  </div>
-                  <div style={{ background: C.surface, borderRadius: 99, height: 4, overflow: "hidden" }}>
-                    <div
-                      style={{
-                        width: `${pct}%`,
-                        height: "100%",
-                        background: reached ? C.green : isNext ? C.yellow + "66" : C.border,
-                        borderRadius: 99,
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </Card>
-        );
-      })}
-
-      <Disclaimer text="Las comparativas son aproximadas y motivacionales. Los récords de élite se logran con años de entrenamiento, genética favorable y supervisión profesional." />
-    </div>
-  );
-}
-
-/* ══════════════ PANTALLA: CUERPO (Acondicionamiento) ══════════════ */
-function BodyScreen() {
-  const [open, setOpen] = useState("movilidad");
-
-  return (
-    <div>
-      <div style={{ color: C.text, fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Acondicionamiento</div>
-      <div style={{ color: C.mut, fontSize: 13, marginBottom: 14 }}>Movilidad, rehabilitación y prevención</div>
-
-      <Disclaimer text="Esta es orientación general de calidad, pero no sustituye atención médica. En lesiones graves, dolor persistente o de preferencia siempre, acude con un fisioterapeuta o especialista en persona." />
-
-      {Object.entries(COND).map(([key, section]) => {
-        const isOpen = open === key;
-        return (
-          <Card
-            key={key}
-            onClick={() => setOpen(isOpen ? null : key)}
-            style={{ borderColor: isOpen ? section.color + "44" : C.border }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ color: isOpen ? section.color : C.text, fontWeight: 800, fontSize: 15 }}>
-                {section.icon} {section.label}
-              </div>
-              <span style={{ color: C.dim }}>{isOpen ? "▲" : "▼"}</span>
-            </div>
-            {isOpen && (
-              <div style={{ marginTop: 12 }}>
-                {section.items.map((item, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: "10px 12px",
-                      background: C.surface,
-                      borderRadius: 10,
-                      marginBottom: 8,
-                      borderLeft: `3px solid ${section.color}`,
-                    }}
-                  >
-                    <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>{item.name}</div>
-                    <div style={{ color: C.mut, fontSize: 12, marginTop: 3, lineHeight: 1.5 }}>{item.detail}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ══════════════ PANTALLA: TIPS (Nutrición) ══════════════ */
-function TipsScreen() {
-  const [goal, setGoal] = useState("musculo");
-  const active = NUTRI[goal];
-
-  return (
-    <div>
-      <div style={{ color: C.text, fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Nutrición</div>
-      <div style={{ color: C.mut, fontSize: 13, marginBottom: 14 }}>Consejos según tu meta</div>
-
-      <Disclaimer text="Son consejos generales de nutrición deportiva. Para un plan personalizado a tu cuerpo y objetivos, lo ideal es acudir con un nutriólogo." />
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-        {Object.entries(NUTRI).map(([key, n]) => (
+      <div className="sec-title">A · Enfoque</div>
+      <div className="chip-wrap">
+        {disc.focuses.map((f) => (
           <button
-            key={key}
-            onClick={() => setGoal(key)}
-            style={{
-              padding: "12px 10px",
-              borderRadius: 12,
-              border: `1px solid ${goal === key ? n.color : C.border}`,
-              background: goal === key ? n.color + "20" : C.card,
-              color: goal === key ? n.color : C.mut,
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
+            key={f.id}
+            className={`chip ${focusId === f.id ? "on" : ""}`}
+            style={focusId === f.id ? { background: disc.color } : {}}
+            onClick={() => setFocusId(f.id)}
           >
-            {n.icon} {n.label}
+            {f.label}
           </button>
         ))}
       </div>
 
-      {active.tips.map((tip, i) => (
-        <Card key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", borderLeft: `3px solid ${active.color}` }}>
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 8,
-              background: active.color + "20",
-              color: active.color,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-              fontWeight: 800,
-              flexShrink: 0,
-            }}
+      <div className="sec-title">B · Nivel</div>
+      <div className="chip-wrap">
+        {LEVELS.map((l, i) => (
+          <button
+            key={l.name}
+            className={`chip ${lvlIdx === i ? "on" : ""}`}
+            style={lvlIdx === i ? { background: l.color, color: i === 5 ? "#fff" : "#07070C" } : {}}
+            onClick={() => setLvlIdx(i)}
           >
-            {i + 1}
+            {l.emoji} {l.name}
+          </button>
+        ))}
+      </div>
+
+      {routine ? (
+        <>
+          <div className="sec-title">Tu rutina · {routine.length} ejercicios</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {routine.map((e, i) => (
+              <div key={`${e.name}-${i}`} className="card fade-up" style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{
+                  width: 26, height: 26, borderRadius: 8, background: C.surface, border: `1px solid ${C.border}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: disc.color, flexShrink: 0,
+                }}>
+                  {i + 1}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{e.name}</div>
+                  <div style={{ fontSize: 12, color: C.mut }}>{e.sets} series × {e.reps}</div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div style={{ color: C.text, fontSize: 13, lineHeight: 1.6 }}>{tip}</div>
-        </Card>
-      ))}
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button
+              className="btn-xl"
+              onClick={() => setSeed((s) => s + 1)}
+              style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+            >
+              🔄 Variar
+            </button>
+            <button
+              className="btn-xl"
+              onClick={() => onStart({ discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === focusId).label, lvlIdx, exercises: routine })}
+              style={{ flex: 2, background: disc.color, color: "#07070C", fontSize: 15 }}
+            >
+              COMENZAR SESIÓN
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="card" style={{ marginTop: 20, textAlign: "center", color: C.dim, fontSize: 13 }}>
+          Elige tu nivel para generar la rutina ⚡
+        </div>
+      )}
     </div>
   );
 }
 
-/* ══════════════ CELEBRACIÓN POST-SESIÓN ══════════════ */
-function CelebrationScreen({ session, streak, onClose }) {
-  const doneSets = session.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0);
-  const volume = session.exercises.reduce(
-    (a, e) => a + e.sets.reduce((s, set) => s + (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0), 0),
-    0
-  );
+/* ─── SESIÓN ACTIVA ─── */
+function ActiveSession({ plan, streak, onSave, onClose }) {
+  const [exIdx, setExIdx] = useState(0);
+  const [setNum, setSetNum] = useState(0);
+  const [phase, setPhase] = useState("work"); // work | rest | exdone | finished
+  const [restLeft, setRestLeft] = useState(0);
+  const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
+  const [weight, setWeight] = useState("");
+  const [reps, setReps] = useState("");
+  const restRef = useRef(0);
+
+  const ex = plan.exercises[exIdx];
+  const isLastEx = exIdx === plan.exercises.length - 1;
+  const lvl = LEVELS[plan.lvlIdx];
+
+  const endRest = () => {
+    setPhase("work");
+    setSetNum((n) => n + 1);
+  };
+
+  useEffect(() => {
+    if (phase !== "rest") return undefined;
+    const t = setInterval(() => {
+      restRef.current -= 1;
+      if (restRef.current <= 0) {
+        setPhase("work");
+        setSetNum((n) => n + 1);
+      } else {
+        setRestLeft(restRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [phase]);
+
+  const logSet = (ok) => {
+    const entry = { reps: parseInt(reps, 10) || 0, weight: parseFloat(weight) || 0, ok };
+    setLogs((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
+    setReps("");
+    if (setNum + 1 >= ex.sets) {
+      setPhase("exdone");
+    } else if (ex.rest > 0) {
+      restRef.current = ex.rest;
+      setRestLeft(ex.rest);
+      setPhase("rest");
+    } else {
+      setSetNum((n) => n + 1);
+    }
+  };
+
+  const nextExercise = () => {
+    if (isLastEx) {
+      const record = {
+        id: Date.now(),
+        ts: Date.now(),
+        kind: "entreno",
+        disc: plan.discId,
+        focusLabel: plan.focusLabel,
+        levelIdx: plan.lvlIdx,
+        exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: logs[i] })),
+      };
+      onSave(record);
+      setPhase("finished");
+    } else {
+      setExIdx((i) => i + 1);
+      setSetNum(0);
+      setWeight("");
+      setPhase("work");
+    }
+  };
+
+  const quit = () => {
+    if (window.confirm("¿Abandonar la sesión? No se guardará el progreso.")) onClose();
+  };
+
+  /* Felicitaciones */
+  if (phase === "finished") {
+    const allSets = logs.flat();
+    const okSets = allSets.filter((s) => s.ok).length;
+    const volume = Math.round(allSets.reduce((acc, s) => acc + s.weight * s.reps, 0));
+    const newStreak = streak;
+    const hero = heroForStreak(newStreak);
+    const justUnlocked = HEROES.find((h) => h.days === newStreak);
+    return (
+      <div className="screen fade-up" style={{ paddingTop: 40, textAlign: "center", paddingBottom: 30 }}>
+        <div className="pop" style={{ fontSize: 70 }}>🎉</div>
+        <h2 style={{ fontSize: 26, fontWeight: 900, marginTop: 10 }}>¡FELICITACIONES!</h2>
+        <p style={{ color: C.mut, marginTop: 6, fontSize: 14 }}>
+          Sesión de {plan.discLabel} completada
+        </p>
+        {justUnlocked && (
+          <div className="card pop" style={{ marginTop: 16, borderColor: C.yellow, background: "rgba(255,214,0,0.07)" }}>
+            <div style={{ fontSize: 40 }}>{justUnlocked.emoji}</div>
+            <div style={{ fontWeight: 800, color: C.yellow, marginTop: 4 }}>¡Héroe desbloqueado: {justUnlocked.name}!</div>
+            <div style={{ fontSize: 12, color: C.mut, fontStyle: "italic" }}>“{justUnlocked.quote}”</div>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <StatBox label="Ejercicios" value={plan.exercises.length} accent={plan.discColor} />
+          <StatBox label="Series ✓" value={okSets} accent={C.green} />
+          <StatBox label="Racha 🔥" value={newStreak} accent={C.orange} />
+        </div>
+        {volume > 0 && (
+          <div className="card" style={{ marginTop: 10, padding: "12px" }}>
+            <span style={{ fontSize: 13, color: C.mut }}>Volumen total movido: </span>
+            <span style={{ fontWeight: 800, color: C.cyan }}>{volume} kg</span>
+          </div>
+        )}
+        <div className="card" style={{ marginTop: 10, padding: "14px" }}>
+          <span style={{ fontSize: 26 }}>{hero.emoji}</span>
+          <div style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>
+            {hero === EGG ? "Sigue así: tu héroe está por nacer." : `${hero.name} está orgulloso de ti.`}
+          </div>
+        </div>
+        <button
+          className="btn-xl"
+          onClick={onClose}
+          style={{ marginTop: 20, background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`, color: "#07070C" }}
+        >
+          VOLVER AL INICIO
+        </button>
+      </div>
+    );
+  }
+
+  /* Descanso */
+  if (phase === "rest") {
+    return (
+      <div className="screen fade-up" style={{ paddingTop: 60, textAlign: "center" }}>
+        <p style={{ color: C.mut, fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>DESCANSO</p>
+        <div
+          key={restLeft}
+          style={{ fontSize: 84, fontWeight: 900, marginTop: 20, color: restLeft <= 5 ? C.green : C.text, transition: "color .3s" }}
+        >
+          {restLeft}
+        </div>
+        <p style={{ color: C.dim, fontSize: 13 }}>segundos</p>
+        <div className="card" style={{ marginTop: 30, textAlign: "left" }}>
+          <p style={{ fontSize: 12, color: C.dim, fontWeight: 700 }}>SIGUIENTE SERIE</p>
+          <p style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{ex.name}</p>
+          <p style={{ fontSize: 13, color: C.mut, marginTop: 2 }}>
+            Serie {setNum + 2} de {ex.sets} · {ex.reps}
+          </p>
+        </div>
+        <button
+          className="btn-xl"
+          onClick={endRest}
+          style={{ marginTop: 20, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+        >
+          SALTAR DESCANSO ⏭
+        </button>
+      </div>
+    );
+  }
+
+  /* Ejercicio (work / exdone) */
+  const doneSets = logs[exIdx];
   return (
-    <div style={{ textAlign: "center", paddingTop: 40 }}>
-      <div style={{ fontSize: 72, marginBottom: 10 }}>🏆</div>
-      <div style={{ color: C.text, fontWeight: 900, fontSize: 26 }}>¡Sesión completada!</div>
-      <div style={{ color: C.mut, fontSize: 14, marginTop: 6, marginBottom: 24 }}>
-        {session.workoutName} · nivel {session.level}
+    <div className="screen" style={{ paddingBottom: 30 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button onClick={quit} style={{ color: C.dim, fontSize: 14, fontWeight: 600 }}>✕ Salir</button>
+        <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
+          {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
+        </span>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
-        {[
-          { label: "SERIES", value: doneSets, color: C.green },
-          { label: "MINUTOS", value: session.durationMin, color: C.cyan },
-          { label: "RACHA", value: `${streak}🔥`, color: C.orange },
-        ].map((s, i) => (
+      {/* Progreso de la sesión */}
+      <div style={{ display: "flex", gap: 4, marginTop: 14 }}>
+        {plan.exercises.map((_, i) => (
           <div
             key={i}
             style={{
-              flex: 1,
-              background: C.card,
-              border: `1px solid ${s.color}33`,
-              borderRadius: 14,
-              padding: 14,
+              flex: 1, height: 4, borderRadius: 99,
+              background: i < exIdx ? plan.discColor : i === exIdx ? `${plan.discColor}66` : C.border,
+              transition: "background .3s",
             }}
+          />
+        ))}
+      </div>
+      <p style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
+        Ejercicio {exIdx + 1} de {plan.exercises.length}
+      </p>
+
+      <div className="card fade-up" key={exIdx} style={{ marginTop: 10, borderLeft: `4px solid ${plan.discColor}` }}>
+        <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25 }}>{ex.name}</h2>
+        <p style={{ marginTop: 8, fontSize: 14 }}>
+          <span style={{ color: plan.discColor, fontWeight: 800 }}>{ex.sets} series</span>
+          <span style={{ color: C.mut }}> × </span>
+          <span style={{ fontWeight: 800 }}>{ex.reps}</span>
+        </p>
+        <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>💡 {ex.tip}</p>
+      </div>
+
+      {/* Series completadas */}
+      <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
+        {Array.from({ length: ex.sets }).map((_, i) => {
+          const log = doneSets[i];
+          return (
+            <div
+              key={i}
+              style={{
+                minWidth: 54, padding: "8px 10px", borderRadius: 12, textAlign: "center",
+                background: log ? (log.ok ? "rgba(34,255,136,0.10)" : "rgba(255,59,92,0.10)") : i === setNum && phase === "work" ? C.card2 : C.surface,
+                border: `1px solid ${log ? (log.ok ? "rgba(34,255,136,0.4)" : "rgba(255,59,92,0.4)") : i === setNum && phase === "work" ? plan.discColor : C.border}`,
+              }}
+            >
+              <div style={{ fontSize: 11, color: C.dim }}>S{i + 1}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: log ? (log.ok ? C.green : C.red) : C.mut }}>
+                {log ? (log.ok ? `${log.reps || "✓"}` : "✗") : "—"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {phase === "work" ? (
+        <>
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            {ex.type === "peso" && (
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>PESO (KG)</label>
+                <input
+                  className="input" type="number" inputMode="decimal" placeholder="0"
+                  value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 6 }}
+                />
+              </div>
+            )}
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
+                {ex.type === "tiempo" ? "TIEMPO (SEG)" : "REPS HECHAS"}
+              </label>
+              <input
+                className="input" type="number" inputMode="numeric" placeholder="0"
+                value={reps} onChange={(e) => setReps(e.target.value)} style={{ marginTop: 6 }}
+              />
+            </div>
+          </div>
+          <button
+            className="btn-xl"
+            onClick={() => logSet(true)}
+            style={{ marginTop: 14, background: plan.discColor, color: "#07070C" }}
           >
-            <div style={{ color: s.color, fontSize: 26, fontWeight: 900 }}>{s.value}</div>
-            <div style={{ color: C.mut, fontSize: 10, letterSpacing: 1, marginTop: 4 }}>{s.label}</div>
+            ✓ SERIE COMPLETADA
+          </button>
+          <button
+            className="btn-xl"
+            onClick={() => logSet(false)}
+            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 14 }}
+          >
+            No pude 😤
+          </button>
+        </>
+      ) : (
+        <button
+          className="btn-xl pop"
+          onClick={nextExercise}
+          style={{
+            marginTop: 18, background: `linear-gradient(90deg, ${C.green}, #00CC66)`, color: "#07070C",
+            boxShadow: "0 8px 30px rgba(34,255,136,0.3)",
+          }}
+        >
+          {isLastEx ? "FINALIZAR ENTRENAMIENTO 🏁" : "SIGUIENTE EJERCICIO →"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── PROGRESO ─── */
+function Progress({ sessions }) {
+  const [detail, setDetail] = useState(false);
+
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+  const globalLvl = LEVELS[globalIdx];
+  const nextThreshold = [0, 10, 25, 50, 90, 150][globalIdx + 1];
+
+  const allSets = workouts.flatMap((s) => s.exercises.flatMap((e) => e.sets));
+  const weighted = allSets.filter((s) => s.weight > 0);
+  const avgWeight = weighted.length ? (weighted.reduce((a, s) => a + s.weight, 0) / weighted.length).toFixed(1) : null;
+  const repSets = allSets.filter((s) => s.reps > 0);
+  const avgReps = repSets.length ? (repSets.reduce((a, s) => a + s.reps, 0) / repSets.length).toFixed(1) : null;
+  const maxWeight = weighted.length ? Math.max(...weighted.map((s) => s.weight)) : 0;
+
+  const exStats = useMemo(() => {
+    const map = {};
+    workouts.forEach((s) => {
+      s.exercises.forEach((e) => {
+        if (!map[e.name]) map[e.name] = { count: 0, maxW: 0 };
+        map[e.name].count += 1;
+        e.sets.forEach((st) => { if (st.weight > map[e.name].maxW) map[e.name].maxW = st.weight; });
+      });
+    });
+    return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 12);
+  }, [workouts]);
+
+  if (!detail) {
+    return (
+      <div className="screen">
+        <h2 style={{ fontSize: 22, fontWeight: 800 }}>Progreso</h2>
+        <p className="muted" style={{ marginTop: 2 }}>Tu nivel global como atleta</p>
+
+        <button
+          className="card fade-up"
+          onClick={() => setDetail(true)}
+          style={{
+            width: "100%", marginTop: 20, textAlign: "center", padding: "34px 16px",
+            border: `1px solid ${globalLvl.color}55`, position: "relative", overflow: "hidden",
+          }}
+        >
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `radial-gradient(circle at 50% 0%, ${globalLvl.color}22, transparent 70%)`,
+          }} />
+          <div className="pop" style={{ fontSize: 56 }}>{globalLvl.emoji}</div>
+          <div style={{ fontSize: 30, fontWeight: 900, marginTop: 8, color: globalLvl.color, letterSpacing: 1 }}>
+            {globalLvl.name}
+          </div>
+          <div style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>
+            {sessions.length} {sessions.length === 1 ? "sesión completada" : "sesiones completadas"}
+          </div>
+          {nextThreshold && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div style={{
+                  height: "100%", width: `${Math.min(100, (sessions.length / nextThreshold) * 100)}%`,
+                  background: globalLvl.color, borderRadius: 99, transition: "width .5s ease",
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
+                {LEVELS[globalIdx + 1].name} a las {nextThreshold} sesiones
+              </div>
+            </div>
+          )}
+          <div style={{ fontSize: 12, color: C.dim, marginTop: 14 }}>Toca para ver el detalle ›</div>
+        </button>
+
+        <div className="sec-title">Escalera de niveles</div>
+        <div className="card" style={{ display: "flex", justifyContent: "space-between", padding: "14px 12px" }}>
+          {LEVELS.map((l, i) => (
+            <div key={l.name} style={{ textAlign: "center", opacity: i <= globalIdx ? 1 : 0.3 }}>
+              <div style={{ fontSize: 18 }}>{l.emoji}</div>
+              <div style={{ fontSize: 8.5, color: i <= globalIdx ? l.color : C.dim, fontWeight: 700, marginTop: 3 }}>
+                {l.name}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="disclaimer">
+          Contenido informativo y motivacional. No sustituye asesoría profesional de entrenamiento ni nutrición.
+        </p>
+      </div>
+    );
+  }
+
+  /* Detalle */
+  return (
+    <div className="screen">
+      <button onClick={() => setDetail(false)} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+        ‹ Progreso
+      </button>
+      <h2 style={{ fontSize: 20, fontWeight: 800, marginTop: 8 }}>
+        {globalLvl.emoji} Nivel {globalLvl.name} · Detalle
+      </h2>
+
+      <div className="sec-title">Por disciplina</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {Object.entries(DISCIPLINES).map(([id, d]) => {
+          const count = workouts.filter((s) => s.disc === id).length;
+          const li = levelFromCount(count, [0, 5, 12, 25, 45, 75]);
+          const l = LEVELS[li];
+          return (
+            <div key={id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
+              <span style={{ fontSize: 22 }}>{d.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{d.label}</div>
+                <div style={{ fontSize: 12, color: C.mut }}>{count} sesiones</div>
+              </div>
+              <span style={{
+                fontSize: 12, fontWeight: 800, color: l.color,
+                background: `${l.color}18`, padding: "5px 10px", borderRadius: 99, border: `1px solid ${l.color}44`,
+              }}>
+                {l.emoji} {l.name}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="sec-title">Estadísticas</div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <StatBox label="Peso promedio" value={avgWeight ? `${avgWeight} kg` : "—"} accent={C.cyan} />
+        <StatBox label="Reps promedio" value={avgReps || "—"} accent={C.green} />
+        <StatBox label="Sesiones" value={sessions.length} accent={C.orange} />
+      </div>
+
+      <div className="sec-title">El listón mundial</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {COMPARATIVES.map((c) => (
+          <div key={c.icon} className="card" style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px 14px" }}>
+            <span style={{ fontSize: 24 }}>{c.icon}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, lineHeight: 1.45 }}>{c.text}</p>
+              {c.stat === "maxWeight" && maxWeight > 0 && (
+                <p style={{ fontSize: 12, color: C.cyan, fontWeight: 700, marginTop: 4 }}>
+                  Tu mejor registro: {maxWeight} kg 💪
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>
 
-      {volume > 0 && (
-        <div style={{ color: C.mut, fontSize: 13, marginBottom: 24 }}>
-          Levantaste <span style={{ color: C.cyan, fontWeight: 800 }}>{Math.round(volume).toLocaleString()} kg</span> en total 💪
+      <div className="sec-title">Tus ejercicios</div>
+      {exStats.length === 0 ? (
+        <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13 }}>
+          Completa entrenamientos para ver tu nivel por ejercicio.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {exStats.map(([name, st]) => {
+            const rank = EXRANKS.find((r) => st.count >= r.min);
+            return (
+              <div key={name} className="card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+                  <div style={{ fontSize: 11, color: C.mut }}>
+                    {st.count} {st.count === 1 ? "vez" : "veces"}{st.maxW > 0 ? ` · máx ${st.maxW} kg` : ""}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 11, fontWeight: 800, color: rank.color, flexShrink: 0,
+                  background: `${rank.color}18`, padding: "4px 9px", borderRadius: 99, border: `1px solid ${rank.color}44`,
+                }}>
+                  {rank.name}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <Btn filled color={C.cyan} onClick={onClose} style={{ width: "100%", padding: 16, fontSize: 15 }}>
-        Continuar →
-      </Btn>
+      <p className="disclaimer">
+        Marcas mundiales aproximadas, solo como referencia motivacional. Contenido informativo: no sustituye asesoría profesional.
+      </p>
     </div>
   );
 }
 
-/* ══════════════ APP PRINCIPAL ══════════════ */
+/* ─── CUERPO (Acondicionamiento) ─── */
+function Body({ onComplete }) {
+  const [openId, setOpenId] = useState(null);
+  const [justDone, setJustDone] = useState(false);
+  const section = BODY_SECTIONS.find((b) => b.id === openId);
+
+  if (section) {
+    return (
+      <div className="screen" key={section.id}>
+        <button onClick={() => { setOpenId(null); setJustDone(false); }} style={{ color: C.mut, fontSize: 14, fontWeight: 600, padding: "4px 0" }}>
+          ‹ Cuerpo
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+          <span style={{ fontSize: 32 }}>{section.icon}</span>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: section.color }}>{section.name}</h2>
+            <p style={{ fontSize: 12, color: C.mut }}>{section.desc} · ~{section.mins} min</p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+          {section.items.map((it, i) => (
+            <div key={it.n} className="card fade-up" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
+              <span style={{
+                width: 26, height: 26, borderRadius: 8, background: C.surface, border: `1px solid ${C.border}`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: section.color, flexShrink: 0,
+              }}>
+                {i + 1}
+              </span>
+              <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{it.n}</div>
+              <span style={{ fontSize: 12, color: C.mut, fontWeight: 700, flexShrink: 0 }}>{it.d}</span>
+            </div>
+          ))}
+        </div>
+
+        {justDone ? (
+          <div className="card pop" style={{ marginTop: 16, textAlign: "center", borderColor: `${C.green}66`, background: "rgba(34,255,136,0.06)" }}>
+            <div style={{ fontSize: 30 }}>✅</div>
+            <div style={{ fontWeight: 800, color: C.green, marginTop: 4 }}>¡Sesión registrada!</div>
+            <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>Cuenta para tu racha 🔥</div>
+          </div>
+        ) : (
+          <button
+            className="btn-xl"
+            onClick={() => { onComplete(section.id); setJustDone(true); }}
+            style={{ marginTop: 16, background: section.color, color: "#07070C" }}
+          >
+            ✓ COMPLETAR SESIÓN
+          </button>
+        )}
+
+        <p className="disclaimer">
+          Contenido informativo. Para lesiones graves consulta un especialista.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen">
+      <h2 style={{ fontSize: 22, fontWeight: 800 }}>Cuerpo</h2>
+      <p className="muted" style={{ marginTop: 2 }}>
+        Movilidad, prevención y rehabilitación · Cada sesión suma a tu racha 🔥
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+        {BODY_SECTIONS.map((b) => (
+          <button
+            key={b.id}
+            className="card fade-up"
+            onClick={() => setOpenId(b.id)}
+            style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", borderLeft: `4px solid ${b.color}` }}
+          >
+            <span style={{ fontSize: 26 }}>{b.icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>{b.name}</div>
+              <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{b.desc} · ~{b.mins} min</div>
+            </div>
+            <span style={{ color: b.color, fontSize: 20 }}>›</span>
+          </button>
+        ))}
+      </div>
+      <p className="disclaimer">
+        Contenido informativo. Para lesiones graves consulta un especialista.
+      </p>
+    </div>
+  );
+}
+
+/* ═══════════════════ APP RAÍZ ═══════════════════ */
+
+const TABS = [
+  { id: "inicio", label: "Inicio", icon: "🏠" },
+  { id: "entrenar", label: "Entrenar", icon: "💪" },
+  { id: "progreso", label: "Progreso", icon: "📈" },
+  { id: "cuerpo", label: "Cuerpo", icon: "🧘" },
+];
+
 export default function App() {
-  const [tab, setTab] = useState("home");
-  const [session, setSession] = useState(null); // {category, level}
-  const [celebration, setCelebration] = useState(null);
-  const [history, setHistory] = useState(() => store.get("history", []));
+  const [name, setName] = useState(() => store.get("name", ""));
+  const [sessions, setSessions] = useState(() => store.get("sessions", []));
+  const [heroes, setHeroes] = useState(() => store.get("heroes", []));
+  const [tab, setTab] = useState("inicio");
+  const [live, setLive] = useState(null);
 
-  useEffect(() => {
-    store.set("history", history);
-  }, [history]);
+  const streak = useMemo(() => calcStreak(sessions), [sessions]);
 
-  const streak = calcStreak(history);
-  const prs = getPRs(history);
+  /* Los héroes se desbloquean y se quedan aunque la racha baje */
+  const unlockedHeroes = useMemo(() => {
+    const earned = HEROES.filter((h) => streak >= h.days).map((h) => h.id);
+    return [...new Set([...heroes, ...earned])];
+  }, [heroes, streak]);
 
-  const startSession = (category, level) => setSession({ category, level });
-
-  const finishSession = (record) => {
-    setHistory((prev) => [...prev, record]);
-    setSession(null);
-    setCelebration(record);
+  const saveName = (n) => {
+    setName(n);
+    store.set("name", n);
   };
 
-  const NAV = [
-    { id: "home", icon: "🏠", label: "Inicio" },
-    { id: "train", icon: "⚡", label: "Entrenar" },
-    { id: "progress", icon: "📈", label: "Progreso" },
-    { id: "body", icon: "🧘", label: "Cuerpo" },
-    { id: "tips", icon: "🥗", label: "Tips" },
-  ];
-
-  const renderScreen = () => {
-    if (celebration)
-      return (
-        <CelebrationScreen
-          session={celebration}
-          streak={streak}
-          onClose={() => {
-            setCelebration(null);
-            setTab("home");
-          }}
-        />
-      );
-    if (session)
-      return (
-        <ActiveSession
-          workout={WORKOUTS[session.category]}
-          level={session.level}
-          category={session.category}
-          prs={prs}
-          onFinish={finishSession}
-          onCancel={() => setSession(null)}
-        />
-      );
-    switch (tab) {
-      case "home":
-        return <HomeScreen history={history} streak={streak} goTrain={() => setTab("train")} />;
-      case "train":
-        return <TrainScreen onStart={startSession} />;
-      case "progress":
-        return <ProgressScreen history={history} />;
-      case "body":
-        return <BodyScreen />;
-      case "tips":
-        return <TipsScreen />;
-      default:
-        return null;
+  const saveSession = (record) => {
+    const next = [...sessions, record];
+    setSessions(next);
+    store.set("sessions", next);
+    const s = calcStreak(next);
+    const earned = HEROES.filter((h) => s >= h.days).map((h) => h.id);
+    const merged = [...new Set([...heroes, ...earned])];
+    if (merged.length !== heroes.length) {
+      setHeroes(merged);
+      store.set("heroes", merged);
     }
   };
 
+  const completeBody = (sectionId) => {
+    saveSession({ id: Date.now(), ts: Date.now(), kind: "cuerpo", section: sectionId });
+  };
+
+  if (!name) return <Welcome onDone={saveName} />;
+
+  if (live) {
+    return (
+      <ActiveSession
+        plan={live}
+        streak={streak}
+        onSave={saveSession}
+        onClose={() => { setLive(null); setTab("inicio"); }}
+      />
+    );
+  }
+
   return (
-    <div
-      style={{
-        background: C.bg,
-        minHeight: "100vh",
-        maxWidth: 430,
-        margin: "0 auto",
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        paddingBottom: 84,
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          padding: "16px 18px 12px",
-          borderBottom: `1px solid ${C.border}`,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          position: "sticky",
-          top: 0,
-          background: C.bg + "F0",
-          backdropFilter: "blur(14px)",
-          zIndex: 20,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              background: `linear-gradient(135deg, ${C.cyan}, ${C.purple})`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#000",
-              fontWeight: 900,
-              fontSize: 15,
-            }}
-          >
-            F
-          </div>
-          <div>
-            <div style={{ color: C.text, fontSize: 14, fontWeight: 900, letterSpacing: 2 }}>F.A.S.E.</div>
-            <div style={{ color: C.dim, fontSize: 9, letterSpacing: 0.5 }}>FORMACIÓN ATLÉTICA Y SISTEMAS DE ENTRENAMIENTO</div>
-          </div>
+    <>
+      <header className="header">
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: C.cyan }}>F.A.S.E.</div>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>Hola, {name}</div>
         </div>
-        {streak > 0 && (
-          <div
-            style={{
-              background: C.orange + "20",
-              border: `1px solid ${C.orange}44`,
-              borderRadius: 20,
-              padding: "4px 12px",
-              color: C.orange,
-              fontSize: 13,
-              fontWeight: 800,
-            }}
-          >
-            🔥 {streak}
-          </div>
-        )}
-      </div>
-
-      {/* Contenido */}
-      <div style={{ padding: "16px 16px 0" }}>{renderScreen()}</div>
-
-      {/* Navegación inferior */}
-      {!session && !celebration && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "100%",
-            maxWidth: 430,
-            background: C.surface + "F8",
-            backdropFilter: "blur(18px)",
-            borderTop: `1px solid ${C.border}`,
-            display: "flex",
-            zIndex: 20,
-          }}
-        >
-          {NAV.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              style={{
-                flex: 1,
-                padding: "10px 0 12px",
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-                position: "relative",
-              }}
-            >
-              <span style={{ fontSize: 20, filter: tab === item.id ? "none" : "grayscale(0.7) opacity(0.6)" }}>{item.icon}</span>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: tab === item.id ? C.cyan : C.dim,
-                }}
-              >
-                {item.label}
-              </span>
-              {tab === item.id && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    width: 28,
-                    height: 3,
-                    background: C.cyan,
-                    borderRadius: "0 0 4px 4px",
-                  }}
-                />
-              )}
-            </button>
-          ))}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6, background: "rgba(255,122,47,0.12)",
+          border: "1px solid rgba(255,122,47,0.35)", borderRadius: 99, padding: "6px 12px",
+        }}>
+          <span className="flame" style={{ fontSize: 15 }}>🔥</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: C.orange }}>{streak}</span>
         </div>
+      </header>
+
+      {tab === "inicio" && (
+        <Home name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes} onTrain={() => setTab("entrenar")} />
       )}
-    </div>
+      {tab === "entrenar" && <Train onStart={setLive} />}
+      {tab === "progreso" && <Progress sessions={sessions} />}
+      {tab === "cuerpo" && <Body onComplete={completeBody} />}
+
+      <nav className="tabbar">
+        {TABS.map((t) => (
+          <button key={t.id} className={`tab ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
+            <span className="ico">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+    </>
   );
 }
