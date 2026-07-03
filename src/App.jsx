@@ -4162,8 +4162,33 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
       </div>
 
+      {/* CTA */}
+      <button
+        className="btn-xl"
+        onClick={onTrain}
+        style={{
+          marginTop: 16,
+          background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`,
+          color: "#07070C",
+          fontSize: 18,
+          boxShadow: "0 8px 30px rgba(34,255,136,0.25)",
+        }}
+      >
+        ENTRENAR AHORA 💪
+      </button>
+
+      {lastEntreno && (
+        <button
+          className="btn-xl"
+          onClick={() => onRepeat(lastEntreno)}
+          style={{ marginTop: 8, background: "transparent", border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
+        >
+          🔄 Repetir: {DISCIPLINES[lastEntreno.disc]?.label || lastEntreno.discLabel || "sesión"} · {LEVELS[lastEntreno.levelIdx]?.name}
+        </button>
+      )}
+
       {/* Contador de agua */}
-      <div className="card" style={{ marginTop: 12, padding: "13px 14px", borderColor: waterCount >= waterGoal ? "#0099FF88" : undefined }}>
+      <div className="card" style={{ marginTop: 16, padding: "13px 14px", borderColor: waterCount >= waterGoal ? "#0099FF88" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <p style={{ fontSize: 13, fontWeight: 800 }}>💧 Agua hoy</p>
           <button onClick={() => setShowWaterGoal((v) => !v)} style={{ fontSize: 13, fontWeight: 900, color: "#0099FF" }}>
@@ -4223,31 +4248,6 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           </p>
         )}
       </div>
-
-      {/* CTA */}
-      <button
-        className="btn-xl"
-        onClick={onTrain}
-        style={{
-          marginTop: 16,
-          background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`,
-          color: "#07070C",
-          fontSize: 18,
-          boxShadow: "0 8px 30px rgba(34,255,136,0.25)",
-        }}
-      >
-        ENTRENAR AHORA 💪
-      </button>
-
-      {lastEntreno && (
-        <button
-          className="btn-xl"
-          onClick={() => onRepeat(lastEntreno)}
-          style={{ marginTop: 8, background: "transparent", border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
-        >
-          🔄 Repetir: {DISCIPLINES[lastEntreno.disc]?.label || lastEntreno.discLabel || "sesión"} · {LEVELS[lastEntreno.levelIdx]?.name}
-        </button>
-      )}
 
       {/* Historial reciente */}
       <div className="sec-title">Últimas sesiones</div>
