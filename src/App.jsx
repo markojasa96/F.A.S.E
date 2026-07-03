@@ -22,17 +22,19 @@ const C = {
   blue: "#3B82F6",
 };
 
-/* ─── Modo oscuro / claro (mutan C + variables CSS) ─── */
+/* ─── Modo oscuro / claro (data-theme + variables CSS) ─── */
+const THEME_VARS = {
+  dark: { bg: "#07070C", surface: "#101018", card: "#181822", border: "#26263A", text: "#F2F2F8", mut: "#6B7280", dim: "#374151", accent: "#00E5FF" },
+  light: { bg: "#F0F4F8", surface: "#FFFFFF", card: "#F8FAFC", border: "#E2E8F0", text: "#1A202C", mut: "#64748B", dim: "#94A3B8", accent: "#0099CC" },
+};
+
 function applyDarkMode(isDark) {
-  const vars = isDark
-    ? { bg: "#07070C", surface: "#101018", card: "#181822", card2: "#1E1E2A", border: "#26263A", text: "#F2F2F8", mut: "#8A8AAD" }
-    : { bg: "#F0F4F8", surface: "#FFFFFF", card: "#F8FAFC", card2: "#EDF2F7", border: "#E2E8F0", text: "#1A202C", mut: "#64748B" };
-  C.bg = vars.bg; C.surface = vars.surface; C.card = vars.card; C.card2 = vars.card2; C.border = vars.border; C.text = vars.text; C.mut = vars.mut;
+  const mode = isDark ? "dark" : "light";
+  const vars = THEME_VARS[mode];
+  C.bg = vars.bg; C.surface = vars.surface; C.card = vars.card; C.border = vars.border; C.text = vars.text; C.mut = vars.mut; C.dim = vars.dim; C.cyan = vars.accent;
   try {
-    const root = document.documentElement;
-    Object.entries(vars).forEach(([k, v]) => root.style.setProperty(`--${k}`, v));
+    document.documentElement.setAttribute("data-theme", mode);
     document.body.style.background = vars.bg;
-    document.body.classList.toggle("light-mode", !isDark);
   } catch {
     /* SSR o entorno sin document */
   }
@@ -1008,19 +1010,26 @@ const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 
 /* ─── Héroes por racha (escala histórica, 12 niveles desde 0 días) ─── */
 const HEROES = [
-  { id: "novato", days: 0, emoji: "🌱", name: "Novato", quote: "Todo gran héroe empieza en algún lado", color: C.mut },
-  { id: "espartano", days: 3, emoji: "🛡️", name: "Espartano", quote: "El guerrero despertó", color: C.red },
-  { id: "samurai", days: 7, emoji: "⚔️", name: "Samurái", quote: "Disciplina de acero", color: C.cyan },
-  { id: "vikingo", days: 14, emoji: "🪓", name: "Vikingo", quote: "La leyenda crece", color: C.orange },
-  { id: "faraon", days: 21, emoji: "𓋹", name: "Faraón", quote: "Construyes tu propio imperio", color: C.yellow },
-  { id: "gladiador", days: 30, emoji: "🏛️", name: "Gladiador", quote: "Nadie te detiene", color: C.yellow },
-  { id: "centurion", days: 45, emoji: "🦅", name: "Centurión Romano", quote: "Imperio de fuerza", color: C.purple },
-  { id: "khan", days: 60, emoji: "🏹", name: "Mongol Khan", quote: "Conquistador absoluto", color: C.green },
-  { id: "shogun", days: 90, emoji: "🎌", name: "Shogún", quote: "Maestro de tu propio camino", color: C.cyan },
-  { id: "cruzado", days: 120, emoji: "🗡️", name: "Cruzado", quote: "Tu voluntad no conoce límites", color: C.red },
-  { id: "emperador", days: 180, emoji: "👑", name: "Emperador", quote: "Gobiernas tu disciplina", color: C.yellow },
-  { id: "titan", days: 365, emoji: "⚡", name: "Titán Inmortal", quote: "Un año de guerra ganada contigo mismo", color: C.purple },
+  { id: "esclavo", days: 0, emoji: "🗡️", name: "Esclavo romano", quote: "Tu camino apenas comienza. Cada día es una cadena rota.", color: C.mut },
+  { id: "arquero", days: 3, emoji: "🏹", name: "Arquero mongol", quote: "Aprendes a apuntar. La precisión viene con la práctica.", color: C.green },
+  { id: "legionario", days: 7, emoji: "⚔️", name: "Legionario romano", quote: "La disciplina empieza a forjarte. La legión no descansa.", color: C.red },
+  { id: "caballero", days: 14, emoji: "🛡️", name: "Caballero medieval", quote: "Portador del escudo y el honor. Tu fortaleza crece.", color: C.cyan },
+  { id: "ninja", days: 21, emoji: "🥷", name: "Ninja", quote: "Sigilo, velocidad y precisión. El entrenamiento se vuelve arte.", color: C.purple },
+  { id: "vikingo", days: 30, emoji: "🏴‍☠️", name: "Vikingo", quote: "Guerrero del norte imparable. Nada te detiene.", color: C.orange },
+  { id: "espartano", days: 45, emoji: "⚔️", name: "Espartano", quote: "Este es tu camino. Regresa con el escudo o sobre él.", color: C.red },
+  { id: "samurai", days: 60, emoji: "🐉", name: "Samurái", quote: "El camino del guerrero perfecto. La espada y la mente como uno.", color: C.yellow },
+  { id: "gladiador", days: 90, emoji: "🏛️", name: "Gladiador campeón", quote: "El coliseo te conoce. La multitud grita tu nombre.", color: C.orange },
+  { id: "conquistador", days: 120, emoji: "🌍", name: "Conquistador", quote: "El mundo es tu territorio. No hay fronteras para ti.", color: C.green },
+  { id: "general", days: 180, emoji: "👑", name: "General de ejércitos", quote: "Comandas tus propios límites. Eres la estrategia y la fuerza.", color: C.yellow },
+  { id: "leyenda", days: 365, emoji: "⚡", name: "Leyenda absoluta", quote: "Tu nombre se escribe en la historia. Un año de fuego puro.", color: C.purple },
 ];
+
+/* Devuelve el héroe con days más alto que sea <= streak */
+function getMascot(streak) {
+  let hero = HEROES[0];
+  for (const h of HEROES) if (streak >= h.days) hero = h;
+  return hero;
+}
 
 /* ─── Disciplinas y enfoques ─── */
 const DISCIPLINES = {
@@ -1792,8 +1801,8 @@ function movementCategory(name) {
 }
 
 const MOVEMENT_COLORS = {
-  empuje: "#FFFFFF", tiron: "#00E5FF", sentadilla: "#22FF88",
-  core: "#FFD600", sprint: "#FF7A2F", salto: "#A855F7", tiro: "#A855F7", generic: "#8A8AAD",
+  empuje: "#22FF88", tiron: "#00E5FF", sentadilla: "#FF7A2F",
+  core: "#FF3B5C", sprint: "#FFD600", salto: "#A855F7", tiro: "#FFD700", generic: "#6B7280",
 };
 
 /* Convierte "30-45s", "20 min", "300 m" en segundos objetivo (o null si no aplica) */
@@ -2382,9 +2391,7 @@ function challengeProgress(challenge, sessions, streak) {
 }
 
 function heroForStreak(streak) {
-  let hero = HEROES[0];
-  for (const h of HEROES) if (streak >= h.days) hero = h;
-  return hero;
+  return getMascot(streak);
 }
 
 function startOfWeek() {
@@ -2409,15 +2416,15 @@ function fmtDate(ts) {
 
 /* ─── Escalado real de dificultad por nivel (Iniciado→THE ONE) ───
    setsAdd: series extra sobre la base del ejercicio
-   restMod: segundos que se restan al descanso (mayor nivel = descansos más cortos = más intensidad)
+   restMin/restMax: rango real de descanso en segundos para el nivel
    intensityLabel: etiqueta de intensidad relativa mostrada en la rutina */
 const LEVEL_SCALING = [
-  { setsAdd: 0, restMod: 0, intensityLabel: "Suave" },
-  { setsAdd: 0, restMod: -5, intensityLabel: "Moderada" },
-  { setsAdd: 1, restMod: -10, intensityLabel: "Exigente" },
-  { setsAdd: 1, restMod: -15, intensityLabel: "Alta" },
-  { setsAdd: 2, restMod: -20, intensityLabel: "Muy alta" },
-  { setsAdd: 2, restMod: -25, intensityLabel: "Máxima" },
+  { setsAdd: 0, restMin: 90, restMax: 120, intensityLabel: "Suave" },
+  { setsAdd: 0, restMin: 75, restMax: 90, intensityLabel: "Moderada" },
+  { setsAdd: 1, restMin: 60, restMax: 75, intensityLabel: "Exigente" },
+  { setsAdd: 1, restMin: 45, restMax: 60, intensityLabel: "Alta" },
+  { setsAdd: 2, restMin: 30, restMax: 45, intensityLabel: "Muy alta" },
+  { setsAdd: 2, restMin: 15, restMax: 30, intensityLabel: "Máxima" },
 ];
 
 function levelFromCount(count, thresholds) {
@@ -2428,8 +2435,244 @@ function levelFromCount(count, thresholds) {
   return idx;
 }
 
+/* ─── Rutinas fijas de Básquetbol por nivel (con cancha / sin cancha) ─── */
+const REST_BY_LEVEL = [105, 82, 67, 52, 37, 20];
+
+function fixedItem(it) {
+  const isTime = /s$|min$/.test(String(it.reps).trim());
+  return { name: it.name, type: isTime ? "tiempo" : "reps", sets: it.sets, reps: it.reps, rest: undefined, tip: it.tip, tag: null };
+}
+
+const BASQUET_CANCHA_BY_LEVEL = [
+  [
+    { name: "Tiro libre", sets: 2, reps: "20 intentos", tip: "Pies paralelos, codo bajo el balón, sigue el arco." },
+    { name: "Bote con mano débil", sets: 2, reps: "1 min", tip: "Control sin mirar el balón." },
+    { name: "Layup derecho", sets: 2, reps: "10", tip: "2 pasos, sube rodilla, toca el cuadro." },
+    { name: "Layup izquierdo", sets: 2, reps: "10", tip: "Lado débil, mismo movimiento." },
+    { name: "Defensa stance", sets: 2, reps: "30s", tip: "Caderas bajas, pies activos, manos arriba." },
+  ],
+  [
+    { name: "Tiro media distancia", sets: 3, reps: "15 intentos", tip: "Catch-shoot. Sin bote innecesario." },
+    { name: "Bote slalom entre conos", sets: 3, reps: "45s", tip: "Cabeza arriba, visión del campo." },
+    { name: "Sliding defensivo lateral", sets: 3, reps: "20m", tip: "Sin cruzar pies. Mantén stance." },
+    { name: "Salto vertical al aro", sets: 3, reps: "8", tip: "Máximo esfuerzo, caída controlada." },
+    { name: "Pull-up jumper", sets: 3, reps: "10", tip: "Para + sube + dispara en un movimiento." },
+  ],
+  [
+    { name: "Tiro en movimiento", sets: 4, reps: "10", tip: "Recibe en carrera, equilibrio inmediato." },
+    { name: "Crossover + penetración", sets: 4, reps: "8 c/lado", tip: "Explota después del crossover." },
+    { name: "Closeout defensivo", sets: 4, reps: "6", tip: "Sprint + freno + manos arriba sin foul." },
+    { name: "Salto vertical máximo", sets: 4, reps: "6", tip: "Balanceo de brazos completo." },
+    { name: "Floater", sets: 3, reps: "10", tip: "Arco alto para pasar el bloqueo." },
+  ],
+  [
+    { name: "Step-back jumper", sets: 4, reps: "8", tip: "Paso atrás explosivo, equilibrio perfecto." },
+    { name: "Footwork defensivo avanzado", sets: 4, reps: "45s", tip: "Anticipa, no reacciones." },
+    { name: "Reverse layup", sets: 4, reps: "8 c/lado", tip: "Protege el balón del defensor." },
+    { name: "Intento de mate o salto máximo", sets: 4, reps: "5", tip: "Máxima explosividad, cada intento." },
+    { name: "Catch and shoot desde triple", sets: 4, reps: "10", tip: "Pies listos antes de recibir." },
+  ],
+  [
+    { name: "Fadeaway", sets: 5, reps: "8", tip: "Inclinación mínima, balance perfecto." },
+    { name: "Manejo combinado 1 min", sets: 5, reps: "1 min", tip: "Entre piernas + behind back sin pausas." },
+    { name: "Simulación defensa full court", sets: 3, reps: "2 min", tip: "Presión constante sin perder posición." },
+    { name: "Mate o salto explosivo máximo", sets: 5, reps: "3", tip: "Todo en cada salto. Sin medias tintas." },
+    { name: "Tiro desde logo", sets: 3, reps: "10 intentos", tip: "Base perfecta, arco alto." },
+  ],
+  [
+    { name: "500 tiros distribuidos", sets: 1, reps: "500 tiros", tip: "Tiro libre, media, triple, movimiento. Contar aciertos." },
+    { name: "Defensa 1vs1 all-court simulada", sets: 5, reps: "3 min", tip: "Sin descanso mental. Anticipación total." },
+    { name: "Depth jumps pliométricos", sets: 5, reps: "6", tip: "Caída + reacción explosiva inmediata." },
+    { name: "Manejo bajo fatiga", sets: 4, reps: "1 min", tip: "Los errores de manejo son errores de concentración, no de habilidad." },
+    { name: "4to cuarto simulado", sets: 8, reps: "1 ronda", tip: "Sprint 28m + tiro + sprint vuelta + defensa. Sin descanso entre elementos." },
+  ],
+];
+
+const BASQUET_SIN_CANCHA_BY_LEVEL = [
+  [
+    { name: "Sentadilla base", sets: 3, reps: "15", tip: "Base del salto vertical." },
+    { name: "Salto vertical", sets: 3, reps: "10", tip: "Máxima altura, caída suave." },
+    { name: "Plancha", sets: 3, reps: "30s", tip: "Core estable = menos lesiones." },
+    { name: "Skipping alto", sets: 3, reps: "30s", tip: "Rodillas al pecho, brazos activos." },
+  ],
+  [
+    { name: "Sentadilla búlgara", sets: 3, reps: "8 c/pierna", tip: "Rodilla trasera baja, torso recto." },
+    { name: "Salto con sentadilla", sets: 3, reps: "10", tip: "Explota en cada rep." },
+    { name: "Plancha con toque hombro", sets: 3, reps: "16", tip: "Caderas estables, sin rotación." },
+    { name: "Sprints laterales", sets: 4, reps: "10m", tip: "Simula defensa lateral en cancha." },
+  ],
+  [
+    { name: "Sentadilla búlgara con salto", sets: 4, reps: "8 c/pierna", tip: "Explota al subir, aterriza suave." },
+    { name: "Saltos al cajón", sets: 4, reps: "8", tip: "Sube con potencia, baja caminando." },
+    { name: "Plancha con elevación de pierna", sets: 4, reps: "20", tip: "Cadera estable en todo momento." },
+    { name: "Sprints laterales con cambio", sets: 5, reps: "12m", tip: "Explota en cada cambio de dirección." },
+  ],
+  [
+    { name: "Pistol squat asistido", sets: 4, reps: "6 c/pierna", tip: "Control total en el descenso." },
+    { name: "Saltos explosivos al cajón alto", sets: 5, reps: "6", tip: "Máxima altura, recuperación completa." },
+    { name: "Plancha dinámica con toques", sets: 5, reps: "24", tip: "Ritmo rápido sin perder forma." },
+    { name: "Sprints laterales explosivos", sets: 5, reps: "15m", tip: "Máxima velocidad de reacción." },
+  ],
+  [
+    { name: "Pistol squat completo", sets: 5, reps: "8 c/pierna", tip: "Sin apoyo, control absoluto." },
+    { name: "Saltos de profundidad (depth jump)", sets: 5, reps: "6", tip: "Caída y reacción explosiva inmediata." },
+    { name: "Plancha con combinación de movimientos", sets: 5, reps: "30", tip: "Sin pausas entre variaciones." },
+    { name: "Sprints laterales bajo fatiga", sets: 6, reps: "15m", tip: "Mantén velocidad incluso cansado." },
+  ],
+  [
+    { name: "Pistol squat con salto", sets: 6, reps: "6 c/pierna", tip: "Explosividad y control en cada rep." },
+    { name: "Depth jumps máximos", sets: 6, reps: "8", tip: "Reacción máxima, cero titubeo." },
+    { name: "Circuito core de élite", sets: 6, reps: "40", tip: "Cada movimiento a máxima intensidad." },
+    { name: "Sprints laterales de competencia", sets: 8, reps: "15m", tip: "Ritmo de partido profesional, sin bajar nunca." },
+  ],
+];
+
+function genBasquetRoutine(discId, lvlIdx, deloadActive) {
+  const effLvlIdx = Math.max(0, Math.min(5, deloadActive ? lvlIdx - 1 : lvlIdx));
+  const table = discId === "basquetCancha" ? BASQUET_CANCHA_BY_LEVEL : BASQUET_SIN_CANCHA_BY_LEVEL;
+  const list = table[effLvlIdx] || table[0];
+  let rest = REST_BY_LEVEL[effLvlIdx];
+  return list.map((it) => {
+    const r = fixedItem(it);
+    let sets = r.sets;
+    if (deloadActive) { sets = Math.max(1, Math.round(sets * 0.6)); rest = Math.round(rest * 1.3); }
+    return { ...r, sets, rest, intensity: LEVEL_SCALING[effLvlIdx]?.intensityLabel };
+  });
+}
+
+/* ─── Rutinas fijas de Fútbol Parque por posición (Iniciado + THE ONE dados; se interpolan los niveles intermedios) ─── */
+const FUTBOL_POSITION_PARQUE = {
+  portero: {
+    iniciado: [
+      { name: "Caída lateral técnica", sets: 3, reps: "5 c/lado", tip: "Técnica antes que velocidad. Caer de lado, no de espalda." },
+      { name: "Salto y recepción", sets: 3, reps: "10", tip: "Manos firmes, absorber el impacto." },
+      { name: "Saque con pie", sets: 3, reps: "10", tip: "Contacto en el empeine, seguimiento del pie." },
+      { name: "Agilidad en arco (conos)", sets: 3, reps: "45s", tip: "Salidas laterales desde centro del arco." },
+    ],
+    theOne: [
+      { name: "Reacción explosiva: caída+levantada+tiro", sets: 5, reps: "6", tip: "Tiempo total < 2s por repetición." },
+      { name: "Salto máximo con extensión", sets: 5, reps: "8", tip: "Dedos tocan la barra del arco." },
+      { name: "Manejo bajo presión", sets: 5, reps: "2 min", tip: "Distribuir rápido, nunca perder tiempo." },
+      { name: "Saque de volea distancia máxima", sets: 5, reps: "10", tip: "Lanzar al otro área. Precisión + distancia." },
+      { name: "Achique 1vs1", sets: 5, reps: "5", tip: "Salir rápido, hacerse grande, no tirarse antes de tiempo." },
+    ],
+  },
+  defensaCentral: {
+    iniciado: [
+      { name: "Sentadilla corporal", sets: 3, reps: "12", tip: "Base para duelos aéreos." },
+      { name: "Plancha", sets: 3, reps: "30s", tip: "Estabilidad en disputas." },
+      { name: "Cabezazo desde parado", sets: 3, reps: "10", tip: "Frente, ojos abiertos, cuello firme." },
+      { name: "Salida al pase largo (simulada)", sets: 3, reps: "8", tip: "Anticipa, no esperes." },
+    ],
+    theOne: [
+      { name: "Sentadilla pesada 90% 1RM", sets: 5, reps: "3", tip: "Duelos aéreos se ganan con piernas." },
+      { name: "Hip thrust pesado", sets: 5, reps: "5", tip: "Potencia de salto. Máximo peso." },
+      { name: "Curl nórdico", sets: 4, reps: "6", tip: "Prevención de isquiotibiales. Obligatorio." },
+      { name: "Copenhagen plank", sets: 4, reps: "20s c/lado", tip: "Aductores para duelos laterales." },
+      { name: "Salto al cajón con resistencia", sets: 4, reps: "4", tip: "Explosividad máxima en cada repetición." },
+    ],
+  },
+  lateral: {
+    iniciado: [
+      { name: "Trote suave 1km", sets: 1, reps: "1km", tip: "Base aeróbica del lateral." },
+      { name: "Sprint 20m", sets: 4, reps: "20m", tip: "Subidas de banda. Máxima aceleración." },
+      { name: "Centro desde banda (simulado)", sets: 3, reps: "10", tip: "Contacto en el interior del pie." },
+      { name: "Salto lateral", sets: 3, reps: "10", tip: "Caída estable, listo para continuar." },
+    ],
+    theOne: [
+      { name: "Sprint 40m repetido", sets: 8, reps: "40m", tip: "Simula subidas de banda en partido. Descanso 45s entre sprints." },
+      { name: "Cambio dirección 5-10-5", sets: 6, reps: "1 ronda", tip: "Pies activos, cadera baja en los giros." },
+      { name: "Centro a velocidad máxima", sets: 5, reps: "10", tip: "Máxima velocidad de conducción + centro." },
+      { name: "Resistencia de velocidad 200m", sets: 6, reps: "200m", tip: "Al 90%, no al 100%. Sostén el ritmo." },
+      { name: "Salto de cabeza en carrera", sets: 4, reps: "6", tip: "Timing del salto, no fuerza bruta." },
+    ],
+  },
+  pivote: {
+    iniciado: [
+      { name: "Sentadilla básica", sets: 3, reps: "12", tip: "Fuerza de base para recuperaciones." },
+      { name: "Plancha lateral", sets: 3, reps: "20s c/lado", tip: "Estabilidad en disputas." },
+      { name: "Carrera de presión simulada", sets: 4, reps: "10m", tip: "Aceleración corta, cerrar al rival." },
+      { name: "Control de pase en movimiento", sets: 3, reps: "10", tip: "Control orientado siempre." },
+    ],
+    theOne: [
+      { name: "Sentadilla pesada (duelos)", sets: 5, reps: "4", tip: "El pivote gana duelos con piernas." },
+      { name: "Press Pallof anti-rotación", sets: 4, reps: "12 c/lado", tip: "Resistir la rotación = control del cuerpo." },
+      { name: "Remo pesado", sets: 5, reps: "5", tip: "Ganar disputas de espalda." },
+      { name: "Curl nórdico", sets: 4, reps: "6", tip: "Isquiotibiales = motor de recuperaciones." },
+      { name: "Farmer carry 30m", sets: 4, reps: "30m", tip: "Posesión bajo presión. No soltar." },
+    ],
+  },
+  mediocampista: {
+    iniciado: [
+      { name: "Trote 1.5km", sets: 1, reps: "1.5km", tip: "Base aeróbica. El medio corre 11-13km." },
+      { name: "Pase corto con precisión", sets: 3, reps: "20", tip: "Interior del pie. Siempre al pie." },
+      { name: "Control y conducción 20m", sets: 3, reps: "8", tip: "Balón pegado al pie." },
+      { name: "Cambio de ritmo suave", sets: 4, reps: "40m", tip: "Caminar → trote → sprint → trote." },
+    ],
+    theOne: [
+      { name: "Repeated sprint 30m", sets: 10, reps: "30m", tip: "Mantener velocidad en rep 10 igual que rep 1. Descanso 25s entre sprints." },
+      { name: "Cambio de ritmo partido", sets: 8, reps: "1.5 min", tip: "1 min suave + 30s máximo. Sin parar." },
+      { name: "Técnica bajo fatiga", sets: 4, reps: "5 min", tip: "Control + pase tras sprint. Si fallas técnica, el físico no sirve." },
+      { name: "Resistencia aeróbica 3km", sets: 1, reps: "3km", tip: "Ritmo de partido. Conversacional." },
+      { name: "Visión periférica drill", sets: 3, reps: "2 min", tip: "Cabeza arriba siempre. Sentir el balón, no mirarlo." },
+    ],
+  },
+  extremo: {
+    iniciado: [
+      { name: "Sprint 20m", sets: 5, reps: "20m", tip: "El extremo vive del primer paso." },
+      { name: "Conducción y centro", sets: 3, reps: "8", tip: "Máxima velocidad en los últimos 5m." },
+      { name: "Salto lateral explosivo", sets: 3, reps: "8", tip: "Simula recorte al interior." },
+      { name: "Regate básico (recorte)", sets: 3, reps: "10", tip: "Fintar con el cuerpo, no el balón." },
+    ],
+    theOne: [
+      { name: "Aceleración 0-30m máxima", sets: 8, reps: "30m", tip: "Descanso completo entre sprints. Calidad sobre cantidad." },
+      { name: "1vs1 simulado con centro", sets: 6, reps: "1 ronda", tip: "Regate + centro cruzado en 1 movimiento." },
+      { name: "Cambio de ritmo explosivo", sets: 6, reps: "30m", tip: "Parada total + sprint máximo. El defensor no puede leer eso." },
+      { name: "Resistencia velocidad 60m", sets: 6, reps: "60m", tip: "Al 95%. Sostener velocidad en última etapa." },
+      { name: "Finalización tras conducción", sets: 5, reps: "8", tip: "Conducción larga + disparo. Sin pensar, ejecutar." },
+    ],
+  },
+  delantero: {
+    iniciado: [
+      { name: "Arranque 10m", sets: 5, reps: "10m", tip: "El delantero vive de los primeros 10m." },
+      { name: "Control y definición", sets: 3, reps: "10", tip: "1 toque de control + disparo inmediato." },
+      { name: "Cabezazo desde parado", sets: 3, reps: "10", tip: "Frente, ojos abiertos, cuello firme." },
+      { name: "Movimiento de ruptura", sets: 4, reps: "8", tip: "Arranque en diagonal, enganchar al defensor." },
+    ],
+    theOne: [
+      { name: "Sprint en espacio corto 15m", sets: 10, reps: "15m", tip: "Reacción + explosión. Sin señal previa." },
+      { name: "Recepción y definición 1 toque", sets: 5, reps: "10", tip: "0 balones muertos. Todo en movimiento." },
+      { name: "Movimiento de ruptura + control + gol", sets: 6, reps: "1 ronda", tip: "Arrastra al defensor, rompe, recibe, define. Automático." },
+      { name: "Cabezazo en carrera", sets: 4, reps: "8", tip: "Timing del salto > altura del salto." },
+      { name: "Disparo larga distancia", sets: 4, reps: "10", tip: "Contacto en el empeine, pie de apoyo junto al balón." },
+    ],
+  },
+};
+
+const LEVEL_SETS_FRACTION = [0.55, 0.7, 0.85, 1, 1.1, 1.2];
+
+function genFutbolPositionRoutine(positionId, lvlIdx, deloadActive) {
+  const pos = FUTBOL_POSITION_PARQUE[positionId];
+  const effLvlIdx = Math.max(0, Math.min(5, deloadActive ? lvlIdx - 1 : lvlIdx));
+  const base = effLvlIdx <= 1 ? pos.iniciado : pos.theOne;
+  const frac = LEVEL_SETS_FRACTION[effLvlIdx];
+  let rest = REST_BY_LEVEL[effLvlIdx];
+  return base.map((it) => {
+    const r = fixedItem(it);
+    let sets = Math.max(1, Math.round(r.sets * frac));
+    if (deloadActive) { sets = Math.max(1, Math.round(sets * 0.6)); rest = Math.round(rest * 1.3); }
+    return { ...r, sets, rest, intensity: LEVEL_SCALING[effLvlIdx]?.intensityLabel };
+  });
+}
+
 /* ─── Generador de rutinas (5-8 ejercicios, con variación por semilla) ─── */
 function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
+  if (discId === "basquetCancha" || discId === "basquetSinCancha") {
+    return genBasquetRoutine(discId, lvlIdx, !!store.get("deload_active", null));
+  }
+  if (discId === "futbolParque" && FUTBOL_POSITION_PARQUE[focusId]) {
+    return genFutbolPositionRoutine(focusId, lvlIdx, !!store.get("deload_active", null));
+  }
   const deloadActive = !!store.get("deload_active", null);
   const effLvlIdx = deloadActive ? Math.max(0, lvlIdx - 1) : lvlIdx;
   const rnd = mulberry32(seed);
@@ -2473,7 +2716,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
   return chosen.map((e) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
-    let rest = Math.max(10, e.rest + scaling.restMod);
+    let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
     if (deloadActive) {
       sets = Math.max(1, Math.round(sets * 0.6));
       rest = Math.round(rest * 1.3);
@@ -2498,7 +2741,7 @@ function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
   return shuffled.map((e) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
-    let rest = Math.max(10, e.rest + scaling.restMod);
+    let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
     if (deloadActive) {
       sets = Math.max(1, Math.round(sets * 0.6));
       rest = Math.round(rest * 1.3);
@@ -3184,7 +3427,7 @@ function ExerciseDemo({ exerciseName }) {
     <div
       className="exercise-demo"
       style={{
-        width: "100%", maxHeight: 160, aspectRatio: "16 / 9",
+        width: "100%", maxHeight: 150, aspectRatio: "16 / 9",
         borderRadius: 12, background: "#1A1A2E", border: `1px solid ${C.border}`,
         display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden",
       }}
@@ -3311,32 +3554,36 @@ function StatBox({ label, value, accent }) {
 function WaterGlass({ count, goal, bubbleKey }) {
   const pct = goal > 0 ? Math.min(1, count / goal) : 0;
   const full = count >= goal;
-  const fillY = 78 - pct * 66;
+  const fillY = 114 - pct * 100;
+  const opacity = pct <= 0.25 ? 0.4 : pct <= 0.5 ? 0.6 : pct <= 0.75 ? 0.8 : 1.0;
   const bubbles = pct > 0 ? Array.from({ length: 3 }) : [];
   return (
-    <div style={{ position: "relative", width: 52, height: 84, flexShrink: 0 }}>
-      <svg width="52" height="84" viewBox="0 0 52 84">
+    <div style={{ position: "relative", width: 80, height: 120, flexShrink: 0 }}>
+      <svg width="80" height="120" viewBox="0 0 80 120">
         <defs>
           <clipPath id="glassClip">
-            <path d="M8 6 L44 6 L39 78 L13 78 Z" />
+            <path d="M14 8 L66 8 L58 114 L22 114 Z" />
           </clipPath>
         </defs>
-        <path d="M8 6 L44 6 L39 78 L13 78 Z" fill="none" stroke="#0099FF66" strokeWidth="2" />
-        {[24, 46, 68].map((y) => (
-          <line key={y} x1="10" y1={y} x2="42" y2={y} stroke="#0099FF33" strokeWidth="1" strokeDasharray="2 2" />
+        <path d="M14 8 L66 8 L58 114 L22 114 Z" fill="none" stroke="#0099FF66" strokeWidth="2" strokeLinejoin="round" />
+        {[0.25, 0.5, 0.75].map((p) => (
+          <line key={p} x1="16" y1={114 - p * 100} x2="64" y2={114 - p * 100} stroke="#0099FF33" strokeWidth="1" strokeDasharray="2 2" />
         ))}
         <g clipPath="url(#glassClip)">
           <rect
-            x="6" y={fillY} width="40" height={84 - fillY}
-            fill={full ? "#22FF88" : "#0099FF"} opacity="0.75"
-            style={{ transition: "y .6s ease, height .6s ease, fill .4s ease" }}
+            x="10" y={fillY} width="60" height={114 - fillY}
+            fill="#0099FF" opacity={opacity}
+            style={{ transition: "y 500ms ease, height 500ms ease, opacity 500ms ease" }}
           />
+          {full && (
+            <path d={`M14 ${fillY} q7,-4 14,0 t14,0 t14,0 t14,0`} fill="none" stroke="#ffffffcc" strokeWidth="2" className="water-wave-surface" />
+          )}
           {bubbles.map((_, i) => (
             <circle
               key={`${bubbleKey}-${i}`}
               className="water-bubble"
-              cx={18 + i * 8}
-              cy="76"
+              cx={28 + i * 10}
+              cy="108"
               r={2 + (i % 2)}
               fill="#ffffffaa"
               style={{ animationDelay: `${i * 0.15}s` }}
@@ -3344,7 +3591,7 @@ function WaterGlass({ count, goal, bubbleKey }) {
           ))}
         </g>
       </svg>
-      {full && <div className="water-wave-msg" style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", fontSize: 16 }}>🌊</div>}
+      {full && <div className="water-wave-msg" style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", fontSize: 18 }}>🌊</div>}
     </div>
   );
 }
@@ -3938,61 +4185,6 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
       </p>
       <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
 
-      {sessions.length > 0 && (
-        <>
-          {isStreakRecordToday ? (
-            <div className="card pop" style={{ marginTop: 12, padding: "16px", textAlign: "center", background: "rgba(255,215,0,0.1)", borderColor: "#FFD700" }}>
-              <div style={{ fontSize: 30 }}>🏆</div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", marginTop: 4 }}>RÉCORD DE RACHA — Día {streak}</div>
-            </div>
-          ) : trainedToday ? (
-            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>Ya entrenaste hoy 🔥 — Sesión completada</p>
-              <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{todaySessions.length} {todaySessions.length === 1 ? "sesión" : "sesiones"} hoy{todayVolume > 0 ? ` · ${todayVolume} kg` : ""}</p>
-            </div>
-          ) : daysSince !== null && daysSince >= 2 ? (
-            <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `2px solid ${C.red}`, animation: "flame 1.6s ease-in-out infinite" }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: C.red }}>{name}, han pasado {daysSince} días desde tu último entrenamiento</p>
-              <button className="btn-xl" onClick={onTrain} style={{ marginTop: 10, background: C.red, color: "#fff", fontSize: 13 }}>
-                Volver a entrenar ahora
-              </button>
-            </div>
-          ) : (
-            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
-              <p style={{ fontSize: 13, fontWeight: 700 }}>Buenos días {name} ☀️ — ¿Entrenamos hoy?</p>
-              {lastEntreno && (
-                <button className="btn-xl" onClick={() => onRepeat(lastEntreno)} style={{ marginTop: 10, background: C.cyan, color: "#07070C", fontSize: 13 }}>
-                  Continuar con {DISCIPLINES[lastEntreno.disc]?.label || "tu última disciplina"}
-                </button>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.cyan}44` }}>
-        <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>💡 INSIGHT DEL DÍA</p>
-        <p style={{ fontSize: 13, marginTop: 3, lineHeight: 1.4 }}>{insight}</p>
-      </div>
-
-      {challProg && (
-        <div className="card" style={{ marginTop: 10, padding: "13px 14px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: 13, fontWeight: 800 }}>🏆 {challProg.label}</span>
-            <span style={{ fontSize: 11, color: C.dim }}>{challProg.daysLeft}d restantes</span>
-          </div>
-          <div style={{ height: 8, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 8 }}>
-            <div style={{
-              height: "100%", width: `${challProg.pct * 100}%`, borderRadius: 99, transition: "width .5s ease",
-              background: `linear-gradient(90deg, ${C.red}, ${challProg.pct > 0.5 ? C.yellow : C.red}, ${C.green})`,
-            }} />
-          </div>
-          <p style={{ fontSize: 11, color: C.mut, marginTop: 6 }}>
-            {challProg.current ?? "—"} / {challProg.target} {challProg.unit} {challProg.done ? "· ¡Completado! 🎉" : ""}
-          </p>
-        </div>
-      )}
-
       {pro ? (
         /* Modo Control total: estadísticas limpias, sin héroes ni animaciones */
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
@@ -4032,7 +4224,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
             </div>
           )}
           {/* Colección */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
             {HEROES.map((h) => {
               const has = unlockedHeroes.includes(h.id);
               return (
@@ -4040,9 +4232,10 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                   key={h.id}
                   onClick={() => has && setTappedHero(h)}
                   aria-label={has ? `${h.name}, desbloqueado a los ${h.days} días de racha` : `${h.name} bloqueado`}
-                  style={{ textAlign: "center", opacity: has ? 1 : 0.2, minWidth: 44, minHeight: 44 }}
+                  style={{ textAlign: "center", minWidth: 44, minHeight: 44, position: "relative" }}
                 >
-                  <div style={{ fontSize: 20, filter: has ? "none" : "grayscale(1)" }}>{has ? h.emoji : "🔒"}</div>
+                  <div style={{ fontSize: has ? 28 : 20, opacity: has ? 1 : 0.2 }}>{h.emoji}</div>
+                  {!has && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", fontSize: 14 }}>🔒</div>}
                   <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
                 </button>
               );
@@ -4187,6 +4380,56 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         </button>
       )}
 
+      {sessions.length > 0 && (
+        <>
+          {isStreakRecordToday ? (
+            <div className="card pop" style={{ marginTop: 12, padding: "16px", textAlign: "center", background: "rgba(255,215,0,0.1)", borderColor: "#FFD700" }}>
+              <div style={{ fontSize: 30 }}>🏆</div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", marginTop: 4 }}>RÉCORD DE RACHA — Día {streak}</div>
+            </div>
+          ) : trainedToday ? (
+            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>Ya entrenaste hoy 🔥 — Sesión completada</p>
+              <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{todaySessions.length} {todaySessions.length === 1 ? "sesión" : "sesiones"} hoy{todayVolume > 0 ? ` · ${todayVolume} kg` : ""}</p>
+            </div>
+          ) : daysSince !== null && daysSince >= 2 ? (
+            <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `2px solid ${C.red}`, animation: "flame 1.6s ease-in-out infinite" }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.red }}>{name}, han pasado {daysSince} días desde tu último entrenamiento</p>
+              <button className="btn-xl" onClick={onTrain} style={{ marginTop: 10, background: C.red, color: "#fff", fontSize: 13 }}>
+                Volver a entrenar ahora
+              </button>
+            </div>
+          ) : (
+            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
+              <p style={{ fontSize: 13, fontWeight: 700 }}>Buenos días {name} ☀️ — ¿Entrenamos hoy?</p>
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.cyan}44` }}>
+        <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>💡 INSIGHT DEL DÍA</p>
+        <p style={{ fontSize: 13, marginTop: 3, lineHeight: 1.4 }}>{insight}</p>
+      </div>
+
+      {challProg && (
+        <div className="card" style={{ marginTop: 10, padding: "13px 14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontSize: 13, fontWeight: 800 }}>🏆 {challProg.label}</span>
+            <span style={{ fontSize: 11, color: C.dim }}>{challProg.daysLeft}d restantes</span>
+          </div>
+          <div style={{ height: 8, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 8 }}>
+            <div style={{
+              height: "100%", width: `${challProg.pct * 100}%`, borderRadius: 99, transition: "width .5s ease",
+              background: `linear-gradient(90deg, ${C.red}, ${challProg.pct > 0.5 ? C.yellow : C.red}, ${C.green})`,
+            }} />
+          </div>
+          <p style={{ fontSize: 11, color: C.mut, marginTop: 6 }}>
+            {challProg.current ?? "—"} / {challProg.target} {challProg.unit} {challProg.done ? "· ¡Completado! 🎉" : ""}
+          </p>
+        </div>
+      )}
+
       {/* Contador de agua */}
       <div className="card" style={{ marginTop: 16, padding: "13px 14px", borderColor: waterCount >= waterGoal ? "#0099FF88" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -4208,14 +4451,17 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
             ))}
           </div>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
           <WaterGlass count={waterCount} goal={waterGoal} bubbleKey={waterBubbleKey} />
+          <div style={{ flex: 1, textAlign: "center", fontSize: 24, fontWeight: 900 }}>
+            {waterCount}<span style={{ color: C.mut, fontSize: 16, fontWeight: 700 }}>/{waterGoal} vasos</span>
+          </div>
           <button
             onClick={addWater}
             disabled={waterCount >= waterGoal}
             aria-label="Sumar vaso de agua"
             style={{
-              width: 44, height: 44, borderRadius: 14, fontSize: 22, fontWeight: 900, flexShrink: 0,
+              width: 56, height: 56, borderRadius: "50%", fontSize: 26, fontWeight: 900, flexShrink: 0,
               background: waterCount >= waterGoal ? C.surface : "#0099FF", color: waterCount >= waterGoal ? C.dim : "#07070C",
             }}
           >
@@ -4223,7 +4469,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           </button>
         </div>
         {waterCount >= waterGoal ? (
-          <p style={{ fontSize: 12, color: "#0099FF", fontWeight: 700, marginTop: 8 }}>¡Meta de agua alcanzada! 🎉</p>
+          <p style={{ fontSize: 12, color: "#0099FF", fontWeight: 700, marginTop: 8 }}>💧 ¡Hidratación completa! +25 XP</p>
         ) : new Date().getHours() >= 15 && waterCount < 4 ? (
           <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.yellow}66`, background: "rgba(255,214,0,0.08)" }}>
             <p style={{ fontSize: 11, color: C.yellow, fontWeight: 700 }}>⚠️ Llevas solo {waterCount} vasos. ¡Hidratación importante!</p>
@@ -5879,29 +6125,33 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         </div>
       )}
 
-      <div className="sec-title">A · Enfoque</div>
-      {showTutorial && (
-        <div className="card" style={{ marginBottom: 8, padding: "9px 12px", borderColor: `${C.cyan}66`, background: "rgba(0,229,255,0.08)" }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>Selecciona tu enfoque</p>
-        </div>
-      )}
-      <div className="chip-wrap">
-        {disc.focuses.map((f) => (
-          <button
-            key={f.id}
-            className={`chip ${focusId === f.id ? "on" : ""}`}
-            style={focusId === f.id ? { background: disc.color } : {}}
-            onClick={() => setFocusId(f.id)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      {!discId?.startsWith("basquet") && (
+        <>
+          <div className="sec-title">A · Enfoque</div>
+          {showTutorial && (
+            <div className="card" style={{ marginBottom: 8, padding: "9px 12px", borderColor: `${C.cyan}66`, background: "rgba(0,229,255,0.08)" }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>Selecciona tu enfoque</p>
+            </div>
+          )}
+          <div className="chip-wrap">
+            {disc.focuses.map((f) => (
+              <button
+                key={f.id}
+                className={`chip ${focusId === f.id ? "on" : ""}`}
+                style={focusId === f.id ? { background: disc.color } : {}}
+                onClick={() => setFocusId(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
 
-      {FOCUS_ZONES[discId] && (
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
-          <MuscleMap zones={FOCUS_ZONES[discId][focusId] || []} />
-        </div>
+          {FOCUS_ZONES[discId] && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+              <MuscleMap zones={FOCUS_ZONES[discId][focusId] || []} />
+            </div>
+          )}
+        </>
       )}
 
       <div className="sec-title">B · Nivel</div>
@@ -9453,7 +9703,7 @@ export default function App() {
     if (clean.length !== raw.length) store.set("sessions", clean);
     return clean;
   });
-  const [heroes, setHeroes] = useState(() => store.get("heroes", []));
+  const [heroes, setHeroes] = useState(() => store.get("heroes_unlocked", store.get("heroes", [])));
   const [tab, setTab] = useState("inicio");
   const [live, setLive] = useState(null);
   const [accent, setAccent] = useState(() => getTabAccent("inicio"));
@@ -9505,7 +9755,7 @@ export default function App() {
   };
   const [challenge, setChallenge] = useState(() => store.get("challenge", null));
   const [darkMode, setDarkMode] = useState(() => {
-    const isDark = store.get("dark_mode", true);
+    const isDark = store.get("theme", "dark") !== "light";
     applyDarkMode(isDark);
     return isDark;
   });
@@ -9521,7 +9771,7 @@ export default function App() {
     setDarkMode((v) => {
       const next = !v;
       applyDarkMode(next);
-      store.set("dark_mode", next);
+      store.set("theme", next ? "dark" : "light");
       return next;
     });
   };
@@ -9756,7 +10006,7 @@ export default function App() {
     const merged = [...new Set([...heroes, ...earned])];
     if (merged.length !== heroes.length) {
       setHeroes(merged);
-      store.set("heroes", merged);
+      store.set("heroes_unlocked", merged);
     }
   };
 
@@ -9896,8 +10146,8 @@ export default function App() {
       <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           {/* Izquierda: logo */}
-          <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1 }}>
-            <span style={{ color: C.cyan }}>F</span><span style={{ color: C.dim }}>.A.S.E.</span>
+          <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, color: C.cyan }}>
+            F.A.S.E.
           </div>
 
           {/* Centro: vacío (respiro visual) */}
