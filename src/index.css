@@ -86,6 +86,13 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
 input {
   font-family: inherit;
 }
@@ -331,10 +338,12 @@ input[type='number'] {
 
 .fade-up {
   animation: fadeUp 0.3s ease both;
+  will-change: transform, opacity;
 }
 
 .pop {
   animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  will-change: transform, opacity;
 }
 
 .flame {
@@ -436,6 +445,7 @@ input[type='number'] {
 }
 .mountain3d-base {
   animation: mountainSway 6s ease-in-out infinite;
+  will-change: transform;
 }
 
 @keyframes tabSlideIn {
@@ -444,6 +454,7 @@ input[type='number'] {
 }
 .tab-slide {
   animation: tabSlideIn 200ms ease both;
+  will-change: transform, opacity;
 }
 
 @keyframes unlockPop {
@@ -452,7 +463,8 @@ input[type='number'] {
   100% { transform: scale(1); opacity: 1; filter: blur(0); }
 }
 .unlock-pop {
-  animation: unlockPop 400ms ease both;
+  animation: unlockPop 300ms ease both;
+  will-change: transform, opacity;
 }
 
 @keyframes sessionRise {

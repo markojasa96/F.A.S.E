@@ -67,9 +67,10 @@ const store = {
     try {
       window.localStorage.setItem("fase_" + key, JSON.stringify(value));
     } catch {
-      /* sin storage disponible */
+      if (store.onError) store.onError();
     }
   },
+  onError: null,
 };
 
 /* ─── Niveles de entrenamiento ─── */
@@ -81,6 +82,9 @@ const LEVELS = [
   { name: "Leyenda", emoji: "🔴", color: C.red, desc: "Entreno como profesional" },
   { name: "THE ONE", emoji: "⚡", color: C.purple, desc: "Soy el límite" },
 ];
+
+/* Umbrales de sesiones totales para el nivel global (Iniciado 0-4, Guerrero 5-14, Campeón 15-29, Élite 30-59, Leyenda 60-99, THE ONE 100+) */
+const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 
 /* ─── Héroes por racha ─── */
 const HEROES = [
@@ -254,7 +258,7 @@ const EXDB = {
     { n: "Press inclinado con mancuernas", t: "peso", f: ["pecho"], lv: [0, 5], s: 3, r: "8-12", rest: 90, tip: "Banco a 30°, no arquees la zona lumbar." },
     { n: "Aperturas con mancuernas", t: "peso", f: ["pecho"], lv: [0, 4], s: 3, r: "10-15", rest: 60, tip: "Codos ligeramente flexionados, siente el estiramiento del pecho." },
     { n: "Cruce de poleas", t: "peso", f: ["pecho"], lv: [1, 5], s: 3, r: "12-15", rest: 60, tip: "Contrae el pecho al cerrar, controla la vuelta." },
-    { n: "Press banca con pausa", t: "peso", f: ["pecho"], lv: [3, 5], s: 4, r: "4-6", rest: 180, tip: "Pausa de 1 segundo en el pecho antes de empujar." },
+    { n: "Press banca con barra y pausa", t: "peso", f: ["pecho"], lv: [3, 5], s: 4, r: "4-6", rest: 180, tip: "Pausa de 1 segundo en el pecho antes de empujar." },
     { n: "Jalón al pecho", t: "peso", f: ["espalda"], lv: [0, 3], s: 3, r: "10-12", rest: 90, tip: "Lleva la barra a la clavícula con el pecho arriba." },
     { n: "Dominadas", t: "reps", f: ["espalda"], lv: [1, 3], s: 4, r: "5-10", rest: 120, tip: "Agarre prono, manos algo más anchas que hombros. Inicia el movimiento retrayendo escápulas. Sube hasta que la barbilla supere la barra. Baja completamente controlado." },
     { n: "Dominadas lastradas", t: "peso", f: ["espalda"], lv: [3, 5], s: 4, r: "4-6", rest: 150, tip: "Añade peso al cinturón, mantén el control al bajar." },
@@ -311,7 +315,7 @@ const EXDB = {
     { n: "Flexiones con rodillas", t: "reps", f: ["empuje"], lv: [0, 0], s: 3, r: "8-12", rest: 60, tip: "Cuerpo alineado de rodillas a cabeza, pecho al suelo." },
     { n: "Flexiones", t: "reps", f: ["empuje"], lv: [0, 2], s: 3, r: "10-20", rest: 60, tip: "Manos a la anchura de hombros. Cuerpo en línea recta de cabeza a talones. Baja hasta rozar el pecho con el suelo. Codos a 45° del cuerpo, no abiertos." },
     { n: "Flexiones diamante", t: "reps", f: ["empuje"], lv: [1, 4], s: 3, r: "8-15", rest: 90, tip: "Manos juntas formando un diamante bajo el pecho." },
-    { n: "Flexiones declinadas", t: "reps", f: ["empuje"], lv: [2, 4], s: 3, r: "10-15", rest: 90, tip: "Pies elevados en un banco o muro bajo." },
+    { n: "Flexiones declinadas", t: "reps", f: ["empuje"], lv: [2, 4], s: 3, r: "10-15", rest: 90, tip: "Pies elevados en un escalón o silla firme, manos en el suelo." },
     { n: "Flexiones arqueras", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "6 c/lado", rest: 120, tip: "Un brazo empuja, el otro se extiende recto al lado." },
     { n: "Pike push-ups", t: "reps", f: ["empuje"], lv: [1, 3], s: 3, r: "8-12", rest: 90, tip: "Cadera alta en V invertida, baja la cabeza entre las manos." },
     { n: "Flexiones de pino en pared", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "4-8", rest: 150, tip: "Pies apoyados en la pared, baja la cabeza con control." },
@@ -335,7 +339,7 @@ const EXDB = {
     { n: "Dragon flag (progresión)", t: "reps", f: ["core"], lv: [4, 5], s: 3, r: "5-8", rest: 120, tip: "Sujétate de un poste y baja el cuerpo recto sin quebrar la cadera." , bar: true },
     { n: "Sentadillas", t: "reps", f: ["piernas"], lv: [0, 1], s: 3, r: "15-25", rest: 60, tip: "Baja profundo con los talones en el suelo." },
     { n: "Zancadas alternadas", t: "reps", f: ["piernas"], lv: [0, 2], s: 3, r: "10 c/pierna", rest: 60, tip: "Paso largo y torso vertical." },
-    { n: "Sentadilla búlgara", t: "reps", f: ["piernas"], lv: [1, 4], s: 3, r: "10 c/pierna", rest: 90, tip: "Pie trasero apoyado en banco o muro bajo." },
+    { n: "Sentadilla búlgara", t: "reps", f: ["piernas"], lv: [1, 4], s: 3, r: "10 c/pierna", rest: 90, tip: "Pie trasero apoyado en una silla firme o escalón." },
     { n: "Sentadilla sissy", t: "reps", f: ["piernas"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Rodillas adelante y talones arriba; sujétate si hace falta." },
     { n: "Pistol squat asistida", t: "reps", f: ["piernas"], lv: [2, 4], s: 3, r: "5 c/pierna", rest: 120, tip: "Sujétate de un poste y baja a una pierna." },
     { n: "Pistol squat", t: "reps", f: ["piernas"], lv: [4, 5], s: 4, r: "5 c/pierna", rest: 120, tip: "Una pierna extendida al frente, baja completo." },
@@ -345,7 +349,7 @@ const EXDB = {
     { n: "Sentadillas con salto", t: "reps", f: ["explosivo", "piernas"], lv: [0, 3], s: 3, r: "10-12", rest: 60, tip: "Aterriza suave con las rodillas flexionadas." },
     { n: "Flexiones con aplauso", t: "reps", f: ["explosivo", "empuje"], lv: [2, 5], s: 4, r: "6-10", rest: 120, tip: "Empuja explosivo, aplaude y amortigua la caída." },
     { n: "Zancadas con salto", t: "reps", f: ["explosivo", "piernas"], lv: [1, 4], s: 3, r: "8 c/pierna", rest: 90, tip: "Cambia de pierna en el aire y aterriza estable." },
-    { n: "Mountain climbers sprint", t: "tiempo", f: ["explosivo", "core"], lv: [0, 2], s: 3, r: "30s", rest: 45, tip: "Rodillas al pecho lo más rápido que puedas." },
+    { n: "Escaladores rápidos", t: "tiempo", f: ["explosivo", "core"], lv: [0, 2], s: 3, r: "30s", rest: 45, tip: "Rodillas al pecho lo más rápido que puedas." },
     { n: "Burpee con rodillas al pecho", t: "reps", f: ["explosivo"], lv: [3, 5], s: 4, r: "8-12", rest: 90, tip: "En el salto, lleva las rodillas hasta el pecho." },
     { n: "Pseudo planche push-up", t: "reps", f: ["empuje"], lv: [3, 5], s: 4, r: "5-8", rest: 150, tip: "Manos a la altura de la cadera, inclínate muy adelante." },
     { n: "Flexiones hindú (dive bomber)", t: "reps", f: ["empuje"], lv: [2, 4], s: 3, r: "8-12", rest: 90, tip: "Dibuja una ola con el cuerpo, de V invertida a cobra." },
@@ -362,7 +366,7 @@ const EXDB = {
     { n: "Superman con pausa", t: "reps", f: ["core"], lv: [0, 2], s: 3, r: "12", rest: 45, tip: "Aguanta 2 segundos arriba en cada repetición." },
     { n: "Puente completo", t: "tiempo", f: ["core", "piernas"], lv: [2, 4], s: 3, r: "15-20s", rest: 90, tip: "Empuja la cadera al cielo, abre bien los hombros." },
     { n: "Sentadilla cosaca", t: "reps", f: ["piernas"], lv: [2, 4], s: 3, r: "6 c/lado", rest: 90, tip: "Peso a una pierna, la otra estirada al lado." },
-    { n: "Step-up en banco alto", t: "reps", f: ["piernas"], lv: [0, 2], s: 3, r: "10 c/pierna", rest: 60, tip: "Banco a la altura de la rodilla, sube controlado." },
+    { n: "Step-up en escalón", t: "reps", f: ["piernas"], lv: [0, 2], s: 3, r: "10 c/pierna", rest: 60, tip: "Un escalón o silla firme a la altura de la rodilla, sube controlado." },
     { n: "Broad jumps", t: "reps", f: ["explosivo", "piernas"], lv: [1, 4], s: 3, r: "6", rest: 90, tip: "Salta lo más lejos posible y aterriza estable." },
     { n: "Sprawls", t: "reps", f: ["explosivo"], lv: [0, 2], s: 3, r: "12", rest: 60, tip: "Como burpee sin flexión: cae, extiende y levántate rápido." },
     { n: "High knees a máxima velocidad", t: "tiempo", f: ["explosivo"], lv: [0, 2], s: 3, r: "20s", rest: 45, tip: "Rodillas a la cadera con braceo rápido." },
@@ -1228,6 +1232,8 @@ function fmtDate(ts) {
   const k = dayKey(ts);
   if (k === today) return "Hoy";
   if (k === yest) return "Ayer";
+  const daysAgo = Math.round((Date.now() - ts) / 86400000);
+  if (daysAgo >= 2 && daysAgo <= 6) return `hace ${daysAgo} días`;
   const d = new Date(ts);
   return d.toLocaleDateString("es", { day: "numeric", month: "short" });
 }
@@ -1359,7 +1365,7 @@ const FOCUS_ZONES = {
 /* Confetti CSS puro: 20 partículas cayendo, sin librerías */
 const CONFETTI_COLORS = [C.cyan, C.green, C.orange, C.yellow, C.red, C.purple];
 function Confetti({ show }) {
-  const [particles] = useState(() => Array.from({ length: 20 }, (_, i) => ({
+  const [particles] = useState(() => Array.from({ length: 15 }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
     color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
@@ -1425,6 +1431,7 @@ function NumPad({ onKey }) {
         <button
           key={k}
           onClick={() => onKey(k)}
+          aria-label={k === "⌫" ? "Borrar" : k === "." ? "Punto decimal" : `Dígito ${k}`}
           style={{
             height: 64, borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`,
             fontSize: 18, fontWeight: 800, color: k === "⌫" ? C.red : C.text,
@@ -1589,17 +1596,25 @@ function Stopwatch({ target, onStop }) {
   );
 }
 
-function Heatmap({ sessions, color }) {
+function Heatmap({ sessions, color, freezes = [] }) {
+  const [tapped, setTapped] = useState(null);
   const days = useMemo(() => {
     const set = new Set(sessions.map((s) => dayKey(s.ts)));
+    const freezeSet = new Set(freezes);
+    const today = new Date();
+    const dow = (today.getDay() + 6) % 7; // 0 = lunes
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - dow - 28); // inicio de hace 5 semanas (lunes)
+    monday.setHours(0, 0, 0, 0);
     const arr = [];
-    for (let i = 34; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      arr.push(set.has(dayKey(d.getTime())));
+    for (let i = 0; i < 35; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const k = dayKey(d.getTime());
+      arr.push({ key: k, active: set.has(k), frozen: freezeSet.has(k), isToday: k === todayKey(), future: d.getTime() > today.getTime() });
     }
     return arr;
-  }, [sessions]);
+  }, [sessions, freezes]);
   const month = new Date().toLocaleDateString("es", { month: "long", year: "numeric" });
   return (
     <div className="card" style={{ marginTop: 12 }}>
@@ -1608,19 +1623,25 @@ function Heatmap({ sessions, color }) {
         <span style={{ fontSize: 12, color: C.mut, textTransform: "capitalize" }}>{month}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginTop: 10 }}>
-        {days.map((active, i) => (
-          <div
-            key={i}
+        {days.map((d) => (
+          <button
+            key={d.key}
+            aria-label={d.future ? "Día futuro" : d.active ? "Entrenaste aquí" : d.frozen ? "Racha congelada este día" : "Sin entrenamiento"}
+            onClick={() => !d.future && setTapped(d.frozen ? "Racha congelada este día ❄️" : d.active ? "Entrenaste aquí 💪" : "Sin entrenamiento")}
             style={{
-              aspectRatio: "1", borderRadius: 6,
-              background: active ? color : "#1A1A2E",
-              border: `1px solid ${active ? color : C.border}`,
+              aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
+              background: d.future ? "transparent" : d.active ? color : "#1A1A2E",
+              border: d.isToday ? "1.5px solid #FFFFFFcc" : `1px solid ${d.active ? color : C.border}`,
+              opacity: d.future ? 0.2 : 1,
               transition: "background .3s ease",
             }}
-          />
+          >
+            {d.frozen && !d.active ? "❄️" : ""}
+          </button>
         ))}
       </div>
-      <div style={{ fontSize: 11, color: C.dim, marginTop: 8, textAlign: "right" }}>Últimos 35 días</div>
+      {tapped && <div style={{ fontSize: 11, color: C.mut, marginTop: 8, textAlign: "center" }}>{tapped}</div>}
+      <div style={{ fontSize: 11, color: C.dim, marginTop: 8, textAlign: "right" }}>Últimas 5 semanas · lunes a domingo</div>
     </div>
   );
 }
@@ -1944,8 +1965,9 @@ function Welcome({ onDone }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [] }) {
   const [menuId, setMenuId] = useState(null);
+  const [tappedHero, setTappedHero] = useState(null);
   const longPressRef = useRef(null);
   const startLongPress = (id) => {
     longPressRef.current = setTimeout(() => setMenuId(id), 500);
@@ -2014,7 +2036,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
             </div>
           ) : daysSince !== null && daysSince >= 2 ? (
             <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `2px solid ${C.red}`, animation: "flame 1.6s ease-in-out infinite" }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: C.red }}>Han pasado {daysSince} días desde tu último entrenamiento</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.red }}>{name}, han pasado {daysSince} días desde tu último entrenamiento</p>
               <button className="btn-xl" onClick={onTrain} style={{ marginTop: 10, background: C.red, color: "#fff", fontSize: 13 }}>
                 Volver a entrenar ahora
               </button>
@@ -2098,13 +2120,23 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
             {HEROES.map((h) => {
               const has = unlockedHeroes.includes(h.id);
               return (
-                <div key={h.id} style={{ textAlign: "center", opacity: has ? 1 : 0.35 }} title={h.name}>
+                <button
+                  key={h.id}
+                  onClick={() => has && setTappedHero(h)}
+                  aria-label={has ? `${h.name}, desbloqueado a los ${h.days} días de racha` : `${h.name} bloqueado`}
+                  style={{ textAlign: "center", opacity: has ? 1 : 0.3, minWidth: 44, minHeight: 44 }}
+                >
                   <div style={{ fontSize: 20, filter: has ? "none" : "grayscale(1)" }}>{has ? h.emoji : "🔒"}</div>
                   <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
-                </div>
+                </button>
               );
             })}
           </div>
+          {tappedHero && (
+            <p style={{ fontSize: 11, color: C.mut, marginTop: 8 }}>
+              {tappedHero.name} — desbloqueado a los {tappedHero.days} días de racha
+            </p>
+          )}
         </div>
       )}
 
@@ -2118,7 +2150,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
         <div className="card fade-up" style={{ marginTop: 12, textAlign: "center", padding: "20px 16px" }}>
           <div style={{ fontSize: 34 }}>🌅</div>
           <p style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>
-            Tu racha se rompió en {broken.lost} {broken.lost === 1 ? "día" : "días"}. ¿Empezamos una nueva?
+            {name}, tu racha se rompió en {broken.lost} {broken.lost === 1 ? "día" : "días"}. ¿Empezamos una nueva?
           </p>
           <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
             Tus héroes desbloqueados se quedan contigo para siempre.
@@ -2163,7 +2195,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
       </div>
 
       {/* Heatmap de actividad */}
-      <Heatmap sessions={sessions} color={hero.color} />
+      <Heatmap sessions={sessions} color={hero.color} freezes={freezes} />
 
       {/* Resumen semanal */}
       <div className="card" style={{ marginTop: 12, padding: "13px 16px" }}>
@@ -2830,6 +2862,8 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [calLocation, setCalLocation] = useState(null);
   const [distance, setDistance] = useState(null);
   const [customRoutines, setCustomRoutines] = useState(() => store.get("custom_routines", []));
+  const [trainCards] = useState(() => orderedTrainCards());
+  const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
   const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos"
   /* La energía elegida se recuerda durante el día */
@@ -2837,6 +2871,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     const saved = store.get("energy", null);
     return saved && saved.day === todayKey() ? saved.value : null;
   });
+
+  const startAndFinishTutorial = (planToStart) => {
+    if (showTutorial) store.set("tutorial_done", true);
+    onStart(planToStart);
+  };
 
   const chooseEnergy = (v) => {
     setEnergy(v);
@@ -2954,8 +2993,13 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
       <div className="screen">
         <h2 style={{ fontSize: 18, fontWeight: 800 }}>Entrenar</h2>
         <p className="muted" style={{ marginTop: 2 }}>Elige tu disciplina de hoy</p>
+        {showTutorial && (
+          <div className="card" style={{ marginTop: 10, padding: "9px 12px", borderColor: `${C.cyan}66`, background: "rgba(0,229,255,0.08)" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>👇 Elige tu disciplina</p>
+          </div>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-          {orderedTrainCards().map((d) => (
+          {trainCards.map((d) => (
             <button
               key={d.id}
               className="card fade-up"
@@ -3144,7 +3188,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
               </button>
               <button
                 className="btn-xl"
-                onClick={() => onStart({
+                onClick={() => startAndFinishTutorial({
                   discId: "atletismo", discLabel: "Atletismo", discColor: C.purple, discIcon: "🏃",
                   focusLabel: DISTANCES.find((d) => d.id === distance)?.label, lvlIdx, exercises: atletRoutine,
                 })}
@@ -3246,6 +3290,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
       )}
 
       <div className="sec-title">A · Enfoque</div>
+      {showTutorial && (
+        <div className="card" style={{ marginBottom: 8, padding: "9px 12px", borderColor: `${C.cyan}66`, background: "rgba(0,229,255,0.08)" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>Selecciona tu enfoque</p>
+        </div>
+      )}
       <div className="chip-wrap">
         {disc.focuses.map((f) => (
           <button
@@ -3266,6 +3315,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
       )}
 
       <div className="sec-title">B · Nivel</div>
+      {showTutorial && (
+        <div className="card" style={{ marginBottom: 8, padding: "9px 12px", borderColor: `${C.cyan}66`, background: "rgba(0,229,255,0.08)" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>Elige tu nivel honestamente</p>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         {LEVELS.map((l, i) => (
           <button
@@ -3313,7 +3367,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             </button>
             <button
               className="btn-xl"
-              onClick={() => onStart({ discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === focusId).label, lvlIdx, exercises: routine, calLocation: discId === "calistenia" ? calLocation : undefined })}
+              onClick={() => startAndFinishTutorial({ discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === focusId).label, lvlIdx, exercises: routine, calLocation: discId === "calistenia" ? calLocation : undefined })}
               style={{ flex: 2, background: disc.color, color: "#07070C", fontSize: 15 }}
             >
               COMENZAR SESIÓN
@@ -3380,11 +3434,20 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ambientOn]);
   const [showSwipeHint] = useState(() => store.get("session_count", 0) < 3);
+  const [showGestureOverlay, setShowGestureOverlay] = useState(() => store.get("session_count", 0) === 0);
+  const [showStep4, setShowStep4] = useState(() => store.get("session_count", 0) === 0 && !store.get("tutorial_done", false));
   const restRef = useRef(0);
   const touchYRef = useRef(null);
 
   useEffect(() => {
     store.set("session_count", store.get("session_count", 0) + 1);
+    store.set("tutorial_done", true);
+    if (showStep4) {
+      const t = setTimeout(() => setShowStep4(false), 3000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [startTs] = useState(() => Date.now());
 
@@ -3474,6 +3537,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
       if (cur.replace(".", "").length >= 4) return;
       next = cur === "0" ? k : cur + k;
     }
+    const cap = field === "weight" ? 500 : 200;
+    if (parseFloat(next) > cap) next = String(cap);
     if (field === "weight") setWeight(next);
     else setReps(next);
   };
@@ -3488,16 +3553,43 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
     logSet(true);
   };
 
+  const finishSession = (finalLogs) => {
+    const record = {
+      id: Date.now(),
+      ts: Date.now(),
+      kind: "entreno",
+      disc: plan.discId,
+      focusLabel: plan.focusLabel,
+      levelIdx: plan.lvlIdx,
+      calLocation: plan.calLocation,
+      durationMin: Math.round(sessionSecs / 60),
+      exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i] })),
+    };
+    onSave(record);
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (voiceOn) speak(`¡Sesión completada! Eres un ${LEVELS[plan.lvlIdx]?.name || ""}`);
+    popConfetti();
+    setFlashWhite(true);
+    setTimeout(() => setFlashWhite(false), 300);
+    setPhase("finished");
+  };
+
   const logSet = (ok, repsOverride = null) => {
     ensureAudio(); // el AudioContext debe nacer en un gesto del usuario (móvil)
     if (ok && navigator.vibrate) navigator.vibrate(100);
     const repsVal = repsOverride !== null ? repsOverride : parseInt(reps, 10) || 0;
     const entry = { reps: repsVal, weight: parseFloat(weight) || 0, ok };
-    setLogs((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
+    const updatedLogs = logs.map((arr, i) => (i === exIdx ? [...arr, entry] : arr));
+    setLogs(updatedLogs);
     setReps("");
     if (setNum + 1 >= ex.sets) {
       setFlashDone(true);
       setTimeout(() => setFlashDone(false), 300);
+      if (isLastEx) {
+        /* Última serie del último ejercicio: va directo a felicitaciones */
+        finishSession(updatedLogs);
+        return;
+      }
       if (voiceOn) speak("¡Ejercicio completado!");
       setPhase("exdone");
     } else if (ex.rest > 0) {
@@ -3511,24 +3603,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
 
   const nextExercise = () => {
     if (isLastEx) {
-      const record = {
-        id: Date.now(),
-        ts: Date.now(),
-        kind: "entreno",
-        disc: plan.discId,
-        focusLabel: plan.focusLabel,
-        levelIdx: plan.lvlIdx,
-        calLocation: plan.calLocation,
-        durationMin: Math.round(sessionSecs / 60),
-        exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: logs[i] })),
-      };
-      onSave(record);
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      if (voiceOn) speak(`¡Sesión completada! Eres un ${LEVELS[plan.lvlIdx]?.name || ""}`);
-      popConfetti();
-      setFlashWhite(true);
-      setTimeout(() => setFlashWhite(false), 300);
-      setPhase("finished");
+      /* Reserva de seguridad: normalmente ya se pasó a "finished" automáticamente desde logSet */
+      finishSession(logs);
     } else {
       const nextEx = plan.exercises[exIdx + 1];
       setExIdx((i) => i + 1);
@@ -3539,9 +3615,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
     }
   };
 
-  const quit = () => {
-    if (window.confirm("¿Abandonar la sesión? No se guardará el progreso.")) onClose();
-  };
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const quit = () => setShowExitConfirm(true);
 
   /* Felicitaciones — resumen épico post-sesión */
   if (phase === "finished") {
@@ -3739,6 +3814,47 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   const doneSets = logs[exIdx];
   return (
     <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30 }}>
+      {showExitConfirm && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="card" style={{ maxWidth: 340, textAlign: "center", padding: 20 }}>
+            <p style={{ fontSize: 15, fontWeight: 700 }}>¿Seguro que quieres salir?</p>
+            <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>Perderás el progreso de esta sesión</p>
+            <button
+              className="btn-xl" onClick={onClose} aria-label="Confirmar salida de la sesión"
+              style={{ marginTop: 16, background: C.red, color: "#fff" }}
+            >
+              Sí, salir
+            </button>
+            <button
+              className="btn-xl" onClick={() => setShowExitConfirm(false)} aria-label="Continuar entrenando"
+              style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+            >
+              Continuar entrenando
+            </button>
+          </div>
+        </div>
+      )}
+      {showGestureOverlay && (
+        <button
+          onClick={() => setShowGestureOverlay(false)}
+          aria-label="Cerrar guía de gestos"
+          style={{
+            position: "fixed", inset: 0, zIndex: 260, background: "rgba(0,0,0,0.75)",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center", padding: 24,
+          }}
+        >
+          <p style={{ fontSize: 34 }}>↑</p>
+          <p style={{ fontSize: 15, color: "#fff", fontWeight: 700 }}>Desliza arriba para completar serie</p>
+          <p style={{ fontSize: 34, marginTop: 10 }}>↓</p>
+          <p style={{ fontSize: 15, color: "#fff", fontWeight: 700 }}>Desliza abajo si no pudiste</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 16 }}>Toca en cualquier lugar para continuar</p>
+        </button>
+      )}
+      {showStep4 && (
+        <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, textAlign: "center", padding: 14, borderColor: `${C.green}66` }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>¡Perfecto! La sesión empieza ahora</p>
+        </div>
+      )}
       {!liveMode && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
@@ -3911,8 +4027,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
               {sug
                 ? sug.up
                   ? `💪 Completaste todo la última vez: sugerido ${sug.weight} kg (+2.5)`
-                  : `Sugerido: mantener ${sug.weight} kg y asegurar la técnica`
-                : "Empieza con un peso cómodo"}
+                  : `Último peso: ${sug.weight} kg — mantén o baja un poco`
+                : "Primera vez — empieza ligero"}
             </p>
           )}
           <NumPad onKey={pressKey} />
@@ -4006,6 +4122,15 @@ function Mountain3DChart({ sessions }) {
   }, [sessions]);
 
   const max = Math.max(1, ...weeks);
+  const hasData = weeks.some((v) => v > 0);
+
+  if (!hasData) {
+    return (
+      <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13, padding: "20px 12px" }}>
+        Aún no hay volumen registrado. Completa sesiones con peso para ver tu montaña de progreso.
+      </div>
+    );
+  }
 
   return (
     <div className="card" style={{ padding: "20px 10px 10px", overflow: "hidden" }}>
@@ -4151,7 +4276,7 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
   const code = useMemo(() => getFaseCode(name), [name]);
   const { list: achievements } = useMemo(() => computeAchievements(sessions, freezes), [sessions, freezes]);
   const unlocked = achievements.filter((a) => a.unlocked);
-  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
   const globalLvl = LEVELS[globalIdx];
   const xpInfo = computeXP(sessions, unlocked.length, Math.max(longestStreakEver(sessions), streak));
   const gStats = computeGlobalStats(sessions);
@@ -4376,9 +4501,9 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const globalStats = useMemo(() => computeGlobalStats(sessions), [sessions]);
 
   const workouts = sessions.filter((s) => s.kind === "entreno");
-  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
   const globalLvl = LEVELS[globalIdx];
-  const nextThreshold = [0, 10, 25, 50, 90, 150][globalIdx + 1];
+  const nextThreshold = GLOBAL_LEVEL_THRESHOLDS[globalIdx + 1];
 
   const allSets = workouts.flatMap((s) => s.exercises.flatMap((e) => e.sets));
   const weighted = allSets.filter((s) => s.weight > 0);
@@ -4437,7 +4562,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
 
   if (showPlan) {
-    const globalIdx0 = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+    const globalIdx0 = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
     const startDay = (item) => {
       if (item.rest || !onQuickStart) return;
       const seed = seedNow();
@@ -4986,7 +5111,7 @@ const MONTHLY_CHALLENGES = [
 function exportStatsCode(name, sessions, streak) {
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const volume = Math.round(workouts.reduce((a, s) => a + sessionVolume(s), 0));
-  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
   const payload = {
     code: getFaseCode(name), name, streak, sessions: sessions.length, volume,
     level: LEVELS[globalIdx].name, ts: Date.now(),
@@ -5008,7 +5133,7 @@ function Community({ name, sessions, streak, freezes }) {
   const myCode = useMemo(() => getFaseCode(name), [name]);
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const myVolume = Math.round(workouts.reduce((a, s) => a + sessionVolume(s), 0));
-  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
 
   const doExport = () => setExportStr(exportStatsCode(name, sessions, streak));
   const copyExport = async () => {
@@ -5396,7 +5521,23 @@ export default function App() {
   const [highContrast, setHighContrast] = useState(() => store.get("high_contrast", false));
   const [noEquipment, setNoEquipment] = useState(() => store.get("no_equipment", false));
   const [toast, setToast] = useState(null);
+  const [storageFull, setStorageFull] = useState(false);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
+
+  useEffect(() => {
+    store.onError = () => setStorageFull(true);
+    return () => { store.onError = null; };
+  }, []);
+
+  const cleanOldSessions = () => {
+    const cutoff = Date.now() - 180 * 86400000;
+    const next = sessions.filter((s) => s.ts >= cutoff);
+    setSessions(next);
+    try {
+      store.set("sessions", next);
+      setStorageFull(false);
+    } catch { /* sigue lleno */ }
+  };
   const [challenge, setChallenge] = useState(() => store.get("challenge", null));
   const [themeId, setThemeId] = useState(() => {
     const id = store.get("theme", "sombra");
@@ -5474,10 +5615,10 @@ export default function App() {
       const lastShown = store.get("notif_last_shown", null);
       if (now.getHours() === targetHour && lastShown !== today) {
         const msg = streak === 0
-          ? "💪 Hoy es un buen día para empezar"
+          ? `💪 ${name}, hoy es un buen día para empezar`
           : streak < 7
-          ? `🔥 Llevas ${streak} días. No rompas la racha`
-          : `⚡ ${streak} días seguidos. Eres una máquina`;
+          ? `🔥 ${name}, llevas ${streak} días. No rompas la racha`
+          : `⚡ ${name}, ${streak} días seguidos. Eres una máquina`;
         try {
           new Notification("F.A.S.E.", { body: msg, icon: "/favicon.svg" });
         } catch {
@@ -5489,7 +5630,7 @@ export default function App() {
     check();
     const id = setInterval(check, 60000);
     return () => clearInterval(id);
-  }, [streak]);
+  }, [streak, name]);
 
   /* Streak freeze: disponible si la cadena terminó anteayer y no se usó este mes */
   const freezeInfo = useMemo(() => computeFreezeInfo(sessions, freezes), [sessions, freezes]);
@@ -5582,6 +5723,29 @@ export default function App() {
 
   return (
     <>
+      {storageFull && (
+        <div style={{
+          position: "sticky", top: 0, zIndex: 60, textAlign: "center", padding: "10px 14px",
+          background: "rgba(255,59,92,0.15)", borderBottom: "1px solid rgba(255,59,92,0.4)",
+          color: C.red, fontSize: 12, fontWeight: 700,
+        }}>
+          <p>Almacenamiento lleno. Exporta tu historial y limpia datos antiguos.</p>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 6 }}>
+            <button
+              onClick={() => exportCSV(sessions)} aria-label="Exportar historial a CSV"
+              style={{ fontSize: 11, fontWeight: 800, color: C.text, background: C.surface, padding: "6px 10px", borderRadius: 8 }}
+            >
+              📥 Exportar CSV
+            </button>
+            <button
+              onClick={cleanOldSessions} aria-label="Eliminar sesiones de hace más de 6 meses"
+              style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: C.red, padding: "6px 10px", borderRadius: 8 }}
+            >
+              🗑 Limpiar +6 meses
+            </button>
+          </div>
+        </div>
+      )}
       {!online && (
         <div style={{
           position: "sticky", top: 0, zIndex: 50, textAlign: "center", padding: "6px 10px",
@@ -5696,7 +5860,7 @@ export default function App() {
             onTrain={() => changeTab("entrenar")} mode={mode}
             onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
             broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
-            challenge={challenge} onDeleteSession={deleteSession}
+            challenge={challenge} onDeleteSession={deleteSession} freezes={freezes}
           />
         )}
         {tab === "entrenar" && (
