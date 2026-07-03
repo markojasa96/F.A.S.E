@@ -22,32 +22,17 @@ const C = {
   blue: "#3B82F6",
 };
 
-/* ─── Temas visuales (mutan C + variables CSS; ver applyTheme) ─── */
-const THEMES = [
-  { id: "sombra", name: "Sombra", emoji: "🌑", bg: "#07070C", card: "#13131D", card2: "#1A1A28", border: "#23233A", surface: "#0E0E16", accent: "#00E5FF", locked: false },
-  { id: "fuego", name: "Fuego", emoji: "🔥", bg: "#0C0700", card: "#1D1006", card2: "#2A160A", border: "#3A2010", surface: "#150A02", accent: "#FF6B00", locked: false },
-  { id: "bosque", name: "Bosque", emoji: "🌲", bg: "#030C05", card: "#0D1D10", card2: "#12280F", border: "#1A3A20", surface: "#071309", accent: "#00FF85", locked: false },
-  { id: "oceano", name: "Océano", emoji: "🌊", bg: "#00050C", card: "#0A1A2E", card2: "#0F2440", border: "#1A2A44", surface: "#040D18", accent: "#0099FF", locked: false },
-  { id: "oro", name: "Oro", emoji: "🏆", bg: "#0C0900", card: "#1D1706", card2: "#2A2109", border: "#3A2E10", surface: "#150F02", accent: "#FFD700",
-    locked: true, unlockDesc: "Alcanza nivel Leyenda en cualquier disciplina", check: (st) => st.reachedLeyenda },
-  { id: "cosmos", name: "Cosmos", emoji: "✨", bg: "#05030C", card: "#12102A", card2: "#191640", border: "#2A2050", surface: "#0A081A", accent: "#B084FF",
-    locked: true, unlockDesc: "Completa 50 sesiones totales", check: (st) => st.totalSessions >= 50 },
-  { id: "sangre", name: "Sangre y fuego", emoji: "🩸", bg: "#0C0000", card: "#1D0505", card2: "#2A0808", border: "#3A0A0A", surface: "#150202", accent: "#FF1A1A",
-    locked: true, unlockDesc: "Racha de 30 días", check: (st) => st.bestStreak >= 30 },
-];
-
-/* Muta el objeto C (leído por todos los estilos inline) y las variables CSS globales */
-function applyTheme(theme) {
-  C.bg = theme.bg; C.card = theme.card; C.card2 = theme.card2; C.border = theme.border; C.surface = theme.surface; C.cyan = theme.accent;
+/* ─── Modo oscuro / claro (mutan C + variables CSS) ─── */
+function applyDarkMode(isDark) {
+  const vars = isDark
+    ? { bg: "#07070C", surface: "#101018", card: "#181822", card2: "#1E1E2A", border: "#26263A", text: "#F2F2F8", mut: "#8A8AAD" }
+    : { bg: "#F0F4F8", surface: "#FFFFFF", card: "#F8FAFC", card2: "#EDF2F7", border: "#E2E8F0", text: "#1A202C", mut: "#64748B" };
+  C.bg = vars.bg; C.surface = vars.surface; C.card = vars.card; C.card2 = vars.card2; C.border = vars.border; C.text = vars.text; C.mut = vars.mut;
   try {
     const root = document.documentElement;
-    root.style.setProperty("--bg", theme.bg);
-    root.style.setProperty("--card", theme.card);
-    root.style.setProperty("--card2", theme.card2);
-    root.style.setProperty("--border", theme.border);
-    root.style.setProperty("--surface", theme.surface);
-    root.style.setProperty("--cyan", theme.accent);
-    document.body.style.background = theme.bg;
+    Object.entries(vars).forEach(([k, v]) => root.style.setProperty(`--${k}`, v));
+    document.body.style.background = vars.bg;
+    document.body.classList.toggle("light-mode", !isDark);
   } catch {
     /* SSR o entorno sin document */
   }
@@ -999,16 +984,21 @@ const LEVELS = [
 /* Umbrales de sesiones totales para el nivel global (Iniciado 0-4, Guerrero 5-14, Campeón 15-29, Élite 30-59, Leyenda 60-99, THE ONE 100+) */
 const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 
-/* ─── Héroes por racha ─── */
+/* ─── Héroes por racha (escala histórica, 12 niveles desde 0 días) ─── */
 const HEROES = [
+  { id: "novato", days: 0, emoji: "🌱", name: "Novato", quote: "Todo gran héroe empieza en algún lado", color: C.mut },
   { id: "espartano", days: 3, emoji: "🛡️", name: "Espartano", quote: "El guerrero despertó", color: C.red },
   { id: "samurai", days: 7, emoji: "⚔️", name: "Samurái", quote: "Disciplina de acero", color: C.cyan },
   { id: "vikingo", days: 14, emoji: "🪓", name: "Vikingo", quote: "La leyenda crece", color: C.orange },
+  { id: "faraon", days: 21, emoji: "𓋹", name: "Faraón", quote: "Construyes tu propio imperio", color: C.yellow },
   { id: "gladiador", days: 30, emoji: "🏛️", name: "Gladiador", quote: "Nadie te detiene", color: C.yellow },
-  { id: "centurion", days: 60, emoji: "🦅", name: "Centurión Romano", quote: "Imperio de fuerza", color: C.purple },
-  { id: "khan", days: 90, emoji: "🏹", name: "Mongol Khan", quote: "Conquistador absoluto", color: C.green },
+  { id: "centurion", days: 45, emoji: "🦅", name: "Centurión Romano", quote: "Imperio de fuerza", color: C.purple },
+  { id: "khan", days: 60, emoji: "🏹", name: "Mongol Khan", quote: "Conquistador absoluto", color: C.green },
+  { id: "shogun", days: 90, emoji: "🎌", name: "Shogún", quote: "Maestro de tu propio camino", color: C.cyan },
+  { id: "cruzado", days: 120, emoji: "🗡️", name: "Cruzado", quote: "Tu voluntad no conoce límites", color: C.red },
+  { id: "emperador", days: 180, emoji: "👑", name: "Emperador", quote: "Gobiernas tu disciplina", color: C.yellow },
+  { id: "titan", days: 365, emoji: "⚡", name: "Titán Inmortal", quote: "Un año de guerra ganada contigo mismo", color: C.purple },
 ];
-const EGG = { emoji: "🥚", name: "Huevo", quote: "Tu héroe aún no despierta. Entrena 3 días seguidos.", color: C.mut };
 
 /* ─── Disciplinas y enfoques ─── */
 const DISCIPLINES = {
@@ -1680,6 +1670,7 @@ function speak(text) {
 /* ─── Categoría de movimiento según el nombre del ejercicio (para el SVG animado) ─── */
 function movementCategory(name) {
   const n = name.toLowerCase();
+  if (/tiro|remate|disparo|lanzamiento|encest|gol\b|chut/.test(n)) return "tiro";
   if (/flexion|press|fondo/.test(n)) return "empuje";
   if (/domin|remo|jalón|jalon|tirón|tiron/.test(n)) return "tiron";
   if (/sentadill|zancada|squat|pistol/.test(n)) return "sentadilla";
@@ -1691,7 +1682,7 @@ function movementCategory(name) {
 
 const MOVEMENT_COLORS = {
   empuje: "#FFFFFF", tiron: "#00E5FF", sentadilla: "#22FF88",
-  core: "#FFD600", sprint: "#FF7A2F", salto: "#A855F7", generic: "#8A8AAD",
+  core: "#FFD600", sprint: "#FF7A2F", salto: "#A855F7", tiro: "#A855F7", generic: "#8A8AAD",
 };
 
 /* Convierte "30-45s", "20 min", "300 m" en segundos objetivo (o null si no aplica) */
@@ -2280,9 +2271,9 @@ function challengeProgress(challenge, sessions, streak) {
 }
 
 function heroForStreak(streak) {
-  let hero = null;
+  let hero = HEROES[0];
   for (const h of HEROES) if (streak >= h.days) hero = h;
-  return hero || EGG;
+  return hero;
 }
 
 function startOfWeek() {
@@ -3032,6 +3023,18 @@ function StickFigure({ category, color }) {
           <path d="M65 55 L78 78" {...strokeProps} />
         </g>
       );
+    case "tiro":
+      return (
+        <g>
+          <circle cx="55" cy="18" r="7" fill={color} />
+          <path d="M55 25 L58 50" {...strokeProps} />
+          <path d="M58 30 L75 25" {...strokeProps} />
+          <path d="M58 34 L40 40" {...strokeProps} />
+          <path className="anim-plant-leg" d="M58 50 L45 65 L42 85" {...strokeProps} />
+          <path className="anim-kick-leg" d="M58 50 L78 60 L95 52" {...strokeProps} />
+          <circle className="anim-ball" cx="100" cy="48" r="5" fill={color} opacity="0.85" />
+        </g>
+      );
     default:
       return (
         <g className="anim-generic">
@@ -3163,22 +3166,6 @@ function Heatmap({ sessions, color, freezes = [] }) {
   );
 }
 
-function XPRingMini({ progress, roman, color }) {
-  const r = 8;
-  const circ = 2 * Math.PI * r;
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" aria-label={`Rango ${roman}`}>
-      <circle cx="10" cy="10" r={r} fill="none" stroke={C.border} strokeWidth="2" />
-      <circle
-        cx="10" cy="10" r={r} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={circ * (1 - progress)}
-        transform="rotate(-90 10 10)" style={{ transition: "stroke-dashoffset .5s ease" }}
-      />
-      <text x="10" y="13" textAnchor="middle" fontSize="7" fontWeight="800" fill={color}>{roman}</text>
-    </svg>
-  );
-}
-
 function StatBox({ label, value, accent }) {
   const isNumeric = typeof value === "number" && Number.isFinite(value);
   const animated = useCountUp(isNumeric ? value : 0);
@@ -3189,6 +3176,47 @@ function StatBox({ label, value, accent }) {
         {shown}
       </div>
       <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+function WaterGlass({ count, goal, bubbleKey }) {
+  const pct = goal > 0 ? Math.min(1, count / goal) : 0;
+  const full = count >= goal;
+  const fillY = 78 - pct * 66;
+  const bubbles = pct > 0 ? Array.from({ length: 3 }) : [];
+  return (
+    <div style={{ position: "relative", width: 52, height: 84, flexShrink: 0 }}>
+      <svg width="52" height="84" viewBox="0 0 52 84">
+        <defs>
+          <clipPath id="glassClip">
+            <path d="M8 6 L44 6 L39 78 L13 78 Z" />
+          </clipPath>
+        </defs>
+        <path d="M8 6 L44 6 L39 78 L13 78 Z" fill="none" stroke="#0099FF66" strokeWidth="2" />
+        {[24, 46, 68].map((y) => (
+          <line key={y} x1="10" y1={y} x2="42" y2={y} stroke="#0099FF33" strokeWidth="1" strokeDasharray="2 2" />
+        ))}
+        <g clipPath="url(#glassClip)">
+          <rect
+            x="6" y={fillY} width="40" height={84 - fillY}
+            fill={full ? "#22FF88" : "#0099FF"} opacity="0.75"
+            style={{ transition: "y .6s ease, height .6s ease, fill .4s ease" }}
+          />
+          {bubbles.map((_, i) => (
+            <circle
+              key={`${bubbleKey}-${i}`}
+              className="water-bubble"
+              cx={18 + i * 8}
+              cy="76"
+              r={2 + (i % 2)}
+              fill="#ffffffaa"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </g>
+      </svg>
+      {full && <div className="water-wave-msg" style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", fontSize: 16 }}>🌊</div>}
     </div>
   );
 }
@@ -3699,10 +3727,12 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   const [waterGoal, setWaterGoal] = useState(() => store.get("water_goal", 8));
   const [waterCount, setWaterCount] = useState(() => store.get("water_" + todayKey(), 0));
   const [showWaterGoal, setShowWaterGoal] = useState(false);
+  const [waterBubbleKey, setWaterBubbleKey] = useState(0);
   const addWater = () => {
     const next = Math.min(waterGoal, waterCount + 1);
     setWaterCount(next);
     store.set("water_" + todayKey(), next);
+    setWaterBubbleKey((k) => k + 1);
     if (next >= waterGoal) awardBonusXpOnce("water_bonus_" + todayKey(), 25);
   };
 
@@ -3846,11 +3876,11 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           <div
             style={{
               position: "absolute", inset: 0, pointerEvents: "none",
-              background: `radial-gradient(circle at 50% 0%, ${hero === EGG ? "rgba(138,138,173,0.10)" : "rgba(255,122,47,0.12)"}, transparent 70%)`,
+              background: `radial-gradient(circle at 50% 0%, ${streak === 0 ? "rgba(138,138,173,0.10)" : "rgba(255,122,47,0.12)"}, transparent 70%)`,
               animation: "glowPulse 3s ease-in-out infinite",
             }}
           />
-          <div className="pop" style={{ fontSize: 62 }} key={hero.name}>{hero.emoji}</div>
+          <div className="pop" style={{ fontSize: 64 }} key={hero.name}>{hero.emoji}</div>
           <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>{hero.name}</div>
           <div style={{ color: C.mut, fontSize: 13, marginTop: 3, fontStyle: "italic" }}>“{hero.quote}”</div>
           {nextHero && (
@@ -3880,7 +3910,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                   key={h.id}
                   onClick={() => has && setTappedHero(h)}
                   aria-label={has ? `${h.name}, desbloqueado a los ${h.days} días de racha` : `${h.name} bloqueado`}
-                  style={{ textAlign: "center", opacity: has ? 1 : 0.3, minWidth: 44, minHeight: 44 }}
+                  style={{ textAlign: "center", opacity: has ? 1 : 0.2, minWidth: 44, minHeight: 44 }}
                 >
                   <div style={{ fontSize: 20, filter: has ? "none" : "grayscale(1)" }}>{has ? h.emoji : "🔒"}</div>
                   <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
@@ -4023,12 +4053,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
             ))}
           </div>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-          <div style={{ display: "flex", gap: 4, flex: 1, flexWrap: "wrap" }}>
-            {Array.from({ length: waterGoal }).map((_, i) => (
-              <span key={i} style={{ fontSize: 18, color: i < waterCount ? "#0099FF" : "#1a1a2e" }}>🥤</span>
-            ))}
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 10 }}>
+          <WaterGlass count={waterCount} goal={waterGoal} bubbleKey={waterBubbleKey} />
           <button
             onClick={addWater}
             disabled={waterCount >= waterGoal}
@@ -6630,8 +6656,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           if (touchYRef.current === null || phase !== "work" || ex.type === "tiempo") return;
           const dy = e.changedTouches[0].clientY - touchYRef.current;
           touchYRef.current = null;
-          if (dy < -60) attemptComplete();
-          else if (dy > 60) logSet(false);
+          if (dy < -120) attemptComplete();
+          else if (dy > 120) logSet(false);
         }}
       >
         <ExerciseDemo exerciseName={ex.name} />
@@ -6975,9 +7001,10 @@ function SettingsRow({ label, children }) {
 }
 
 function SettingsScreen({
-  name, onRename, weeklyGoal, onSetWeeklyGoal, mode, onSetMode,
-  highContrast, onToggleContrast, noEquipment, onToggleEquipment,
-  voiceOn, onToggleVoice, themeId, onSelectTheme,
+  name, onRename, mode, onSetMode,
+  noEquipment, onToggleEquipment,
+  voiceOn, onToggleVoice, darkMode, onToggleDarkMode,
+  installPrompt, appInstalled, onInstallApp,
   sessions, onCleanOld, onWipeAll, onBack,
 }) {
   const [, setTick] = useState(0);
@@ -7056,17 +7083,9 @@ function SettingsScreen({
 
       <div className="sec-title">Preferencias</div>
       <div className="card">
-        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>TEMA VISUAL</label>
-        <div className="chip-wrap" style={{ marginTop: 6 }}>
-          {THEMES.map((t) => (
-            <button
-              key={t.id} className={`chip ${themeId === t.id ? "on" : ""}`}
-              onClick={() => !t.locked && onSelectTheme(t.id)} style={{ opacity: t.locked ? 0.4 : 1 }}
-            >
-              {t.emoji} {t.name}
-            </button>
-          ))}
-        </div>
+        <SettingsRow label={darkMode ? "🌙 Modo oscuro" : "☀️ Modo claro"}>
+          <SettingsToggle on={darkMode} onClick={onToggleDarkMode} aria-label="Alternar modo oscuro/claro" />
+        </SettingsRow>
         <SettingsRow label="Modo Control Total (sin gamificación)">
           <SettingsToggle on={mode === "pro"} onClick={() => onSetMode(mode === "pro" ? "guiado" : "pro")} aria-label="Alternar modo control total" />
         </SettingsRow>
@@ -7084,9 +7103,6 @@ function SettingsScreen({
             on={vibrationOn} aria-label="Alternar vibración"
             onClick={() => { const n = !vibrationOn; setVibrationOn(n); store.set("vibration_on", n); }}
           />
-        </SettingsRow>
-        <SettingsRow label="Alto contraste ☀️">
-          <SettingsToggle on={highContrast} onClick={onToggleContrast} aria-label="Alternar alto contraste" />
         </SettingsRow>
         <SettingsRow label="Modo sin equipo 🎒">
           <SettingsToggle on={noEquipment} onClick={onToggleEquipment} aria-label="Alternar modo sin equipo" />
@@ -7128,24 +7144,21 @@ function SettingsScreen({
         </SettingsRow>
       </div>
 
-      <div className="sec-title">Meta semanal</div>
-      <div className="card">
-        <SettingsRow label="Días objetivo">
-          <div style={{ display: "flex", gap: 4 }}>
-            {[2, 3, 4, 5, 6].map((n) => (
+      {installPrompt && !appInstalled && (
+        <>
+          <div className="sec-title">Instalación</div>
+          <div className="card">
+            <SettingsRow label="Instalar F.A.S.E. en tu dispositivo 📲">
               <button
-                key={n} onClick={() => onSetWeeklyGoal(n)}
-                style={{
-                  width: 28, height: 28, borderRadius: 8, fontSize: 12, fontWeight: 800,
-                  background: n === weeklyGoal ? C.cyan : C.surface, color: n === weeklyGoal ? "#07070C" : C.text,
-                }}
+                onClick={onInstallApp}
+                style={{ background: C.cyan, color: "#07070C", fontSize: 12, fontWeight: 800, padding: "6px 14px", borderRadius: 99 }}
               >
-                {n}
+                Instalar
               </button>
-            ))}
+            </SettingsRow>
           </div>
-        </SettingsRow>
-      </div>
+        </>
+      )}
 
       <div className="sec-title">Plan de entrenamiento</div>
       <div className="card">
@@ -7229,44 +7242,6 @@ function SettingsScreen({
         <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Formación Atlética y Sistemas de Entrenamiento</p>
         <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Desarrollado con 💪 para atletas serios</p>
         <p style={{ fontSize: 11, color: C.cyan, marginTop: 6 }}>f-a-s-e.vercel.app</p>
-      </div>
-    </div>
-  );
-}
-
-function ThemeScreen({ sessions, freezes, activeThemeId, onSelect, onBack }) {
-  const stats = useMemo(() => computeAchievementStats(sessions, freezes), [sessions, freezes]);
-  return (
-    <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🎨 Mi estilo</h2>
-      <p className="muted" style={{ marginTop: 2 }}>Elige el tema visual de tu app</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
-        {THEMES.map((t) => {
-          const unlocked = !t.locked || t.check(stats);
-          const active = activeThemeId === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => unlocked && onSelect(t.id)}
-              className="card"
-              style={{
-                display: "flex", alignItems: "center", gap: 14, textAlign: "left",
-                background: t.card, border: `2px solid ${active ? t.accent : t.border}`,
-                opacity: unlocked ? 1 : 0.55,
-              }}
-            >
-              <span style={{ fontSize: 28 }}>{unlocked ? t.emoji : "🔒"}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: unlocked ? t.accent : C.mut }}>{t.name}</div>
-                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>
-                  {unlocked ? (active ? "Activo" : "Toca para aplicar") : t.unlockDesc}
-                </div>
-              </div>
-              {active && <span style={{ fontSize: 16, color: t.accent }}>✓</span>}
-            </button>
-          );
-        })}
       </div>
     </div>
   );
@@ -8152,6 +8127,7 @@ function PlateauCard({ sessions }) {
 }
 
 function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
+  const fatigueLevel = useMemo(() => analyzeFatigue(sessions), [sessions]);
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
   const [recordDetail, setRecordDetail] = useState(null);
@@ -8714,6 +8690,14 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
       <h2 style={{ fontSize: 20, fontWeight: 800, marginTop: 8 }}>
         {globalLvl.emoji} Nivel {globalLvl.name} · Detalle
       </h2>
+
+      <div className="card" style={{ marginTop: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, borderColor: `${FATIGUE_INFO[fatigueLevel].color}55` }}>
+        <span style={{ fontSize: 20 }}>{FATIGUE_INFO[fatigueLevel].emoji}</span>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: FATIGUE_INFO[fatigueLevel].color }}>{FATIGUE_INFO[fatigueLevel].title}</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{FATIGUE_INFO[fatigueLevel].desc}</div>
+        </div>
+      </div>
 
       <div className="sec-title">Por disciplina</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -9314,9 +9298,6 @@ export default function App() {
   const [accent, setAccent] = useState(() => getTabAccent("inicio"));
   const [online, setOnline] = useState(() => navigator.onLine);
   const [freezes, setFreezes] = useState(() => store.get("freezes", []));
-  const [weeklyGoal, setWeeklyGoal] = useState(() => store.get("weekly_goal", 4));
-  const [editingGoal, setEditingGoal] = useState(false);
-  const [highContrast, setHighContrast] = useState(() => store.get("high_contrast", false));
   const [noEquipment, setNoEquipment] = useState(() => store.get("no_equipment", false));
   const [toast, setToast] = useState(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(() => {
@@ -9328,7 +9309,6 @@ export default function App() {
   const [storageFull, setStorageFull] = useState(false);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
   const [mentor, setMentor] = useState(null);
-  const [showFatigueInfo, setShowFatigueInfo] = useState(false);
 
   const triggerMentor = (id, message) => {
     if (!canShowMentorToday()) return;
@@ -9363,12 +9343,11 @@ export default function App() {
     } catch { /* sigue lleno */ }
   };
   const [challenge, setChallenge] = useState(() => store.get("challenge", null));
-  const [themeId, setThemeId] = useState(() => {
-    const id = store.get("theme", "sombra");
-    applyTheme(THEMES.find((t) => t.id === id) || THEMES[0]);
-    return id;
+  const [darkMode, setDarkMode] = useState(() => {
+    const isDark = store.get("dark_mode", true);
+    applyDarkMode(isDark);
+    return isDark;
   });
-  const [showTheme, setShowTheme] = useState(false);
   const [showProfileCard, setShowProfileCard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -9377,22 +9356,11 @@ export default function App() {
     store.set("challenge", c);
   };
 
-  const selectTheme = (id) => {
-    const t = THEMES.find((th) => th.id === id);
-    if (!t) return;
-    applyTheme(t);
-    setThemeId(id);
-    store.set("theme", id);
-  };
-
-  useEffect(() => {
-    document.body.classList.toggle("hc", highContrast);
-  }, [highContrast]);
-
-  const toggleContrast = () => {
-    setHighContrast((v) => {
+  const toggleDarkMode = () => {
+    setDarkMode((v) => {
       const next = !v;
-      store.set("high_contrast", next);
+      applyDarkMode(next);
+      store.set("dark_mode", next);
       return next;
     });
   };
@@ -9508,19 +9476,6 @@ export default function App() {
       }
       store.set("plan_last_phase", phaseId);
     }
-  }, []);
-  const headerAchCount = useMemo(() => computeAchievements(sessions, freezes).list.filter((a) => a.unlocked).length, [sessions, freezes]);
-  const headerXpInfo = useMemo(
-    () => computeXP(sessions, headerAchCount, Math.max(longestStreakEver(sessions), streak)),
-    [sessions, headerAchCount, streak]
-  );
-  const headerDateLabel = useMemo(() => {
-    const now = new Date();
-    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1).replace(".", "");
-    const weekday = cap(now.toLocaleDateString("es", { weekday: "short" }));
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = cap(now.toLocaleDateString("es", { month: "short" }));
-    return `${weekday} ${day} ${month}`;
   }, []);
 
   /* Recordatorios inteligentes: mejor esfuerzo del lado del cliente (revisa mientras la
@@ -9660,20 +9615,10 @@ export default function App() {
     store.set("sessions", next);
   };
 
-  const touchStartX = useRef(null);
 
   if (loading) return <Splash onDone={() => setLoading(false)} />;
 
   if (!name) return <Welcome onDone={saveName} />;
-
-  if (showTheme) {
-    return (
-      <ThemeScreen
-        sessions={sessions} freezes={freezes} activeThemeId={themeId}
-        onSelect={selectTheme} onBack={() => setShowTheme(false)}
-      />
-    );
-  }
 
   if (showProfileCard) {
     return (
@@ -9688,12 +9633,11 @@ export default function App() {
     return (
       <SettingsScreen
         name={name} onRename={renameUser}
-        weeklyGoal={weeklyGoal} onSetWeeklyGoal={(n) => { setWeeklyGoal(n); store.set("weekly_goal", n); }}
         mode={mode} onSetMode={(m) => { setMode(m); store.set("mode", m); }}
-        highContrast={highContrast} onToggleContrast={toggleContrast}
         noEquipment={noEquipment} onToggleEquipment={toggleEquipment}
         voiceOn={voiceOn} onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
-        themeId={themeId} onSelectTheme={selectTheme}
+        darkMode={darkMode} onToggleDarkMode={toggleDarkMode}
+        installPrompt={installPrompt} appInstalled={appInstalled} onInstallApp={installApp}
         sessions={sessions} onCleanOld={cleanOldSessions} onWipeAll={wipeAllData}
         onBack={() => setShowSettings(false)}
       />
@@ -9717,8 +9661,6 @@ export default function App() {
       />
     );
   }
-
-  const weekCount = sessions.filter((s) => s.ts >= startOfWeek()).length;
 
   return (
     <>
@@ -9790,135 +9732,29 @@ export default function App() {
         </div>
       )}
       {mentor && <MentorModal mentorId={mentor.id} message={mentor.message} onClose={() => setMentor(null)} />}
-      <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease", flexDirection: "column", alignItems: "stretch", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* Izquierda: identidad */}
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 1 }}>
-              <span style={{ color: C.cyan }}>F</span><span style={{ color: C.dim }}>.A.S.E.</span>
-            </div>
-            <div style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 1 }}>
-              Hola, {name}
-              {noEquipment && (
-                <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, color: C.cyan, background: "rgba(0,229,255,0.12)", padding: "2px 6px", borderRadius: 99 }}>
-                  Sin equipo
-                </span>
-              )}
-            </div>
+      <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+          {/* Izquierda: logo */}
+          <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1 }}>
+            <span style={{ color: C.cyan }}>F</span><span style={{ color: C.dim }}>.A.S.E.</span>
           </div>
 
-          {/* Centro: fecha y meta semanal */}
-          <div style={{ position: "relative", textAlign: "center" }}>
-            <button onClick={() => setEditingGoal((v) => !v)} aria-label="Ver o editar meta semanal" style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: C.mut, fontWeight: 700 }}>{headerDateLabel}</div>
-              <div style={{ width: 60, height: 3, background: C.border, borderRadius: 99, overflow: "hidden", marginTop: 4 }}>
-                <div
-                  style={{
-                    height: "100%", width: `${Math.min(100, (weekCount / weeklyGoal) * 100)}%`, borderRadius: 99,
-                    background: weekCount >= weeklyGoal ? C.green : weekCount > 0 ? accent : C.dim,
-                    transition: "width .5s ease, background .3s ease",
-                  }}
-                />
-              </div>
-              <div style={{ fontSize: 9, color: C.dim, marginTop: 3 }}>{weekCount}/{weeklyGoal} sesiones</div>
-            </button>
-            {editingGoal && (
-              <div
-                className="card fade-up"
-                style={{
-                  position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 6, zIndex: 50,
-                  display: "flex", gap: 4, padding: 8,
-                }}
-              >
-                {[2, 3, 4, 5, 6].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => { setWeeklyGoal(n); store.set("weekly_goal", n); setEditingGoal(false); }}
-                    style={{
-                      width: 28, height: 28, borderRadius: 8, fontSize: 12, fontWeight: 800,
-                      background: n === weeklyGoal ? C.cyan : C.surface,
-                      color: n === weeklyGoal ? "#07070C" : C.text,
-                    }}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Centro: vacío (respiro visual) */}
+          <div />
 
-          {/* Derecha: estado */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
-            <button onClick={() => setShowFatigueInfo((v) => !v)} aria-label="Estado de fatiga" style={{ fontSize: 15, padding: 2 }}>
-              {FATIGUE_INFO[fatigueLevel].emoji}
-            </button>
-            {showFatigueInfo && (
-              <div
-                className="card fade-up"
-                style={{ position: "absolute", top: "100%", right: 0, marginTop: 8, zIndex: 60, width: 240, textAlign: "left", borderColor: `${FATIGUE_INFO[fatigueLevel].color}66` }}
-              >
-                <p style={{ fontSize: 13, fontWeight: 800, color: FATIGUE_INFO[fatigueLevel].color }}>{FATIGUE_INFO[fatigueLevel].title}</p>
-                <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>{FATIGUE_INFO[fatigueLevel].desc}</p>
-                <button
-                  onClick={() => setShowFatigueInfo(false)}
-                  style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: FATIGUE_INFO[fatigueLevel].color }}
-                >
-                  {fatigueLevel === "critical" ? "Entiendo — descanso hoy" : "Entendido"}
-                </button>
-              </div>
-            )}
+          {/* Derecha: racha + configuración */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {streak > 0 && (
               <span style={{ fontSize: 13, fontWeight: 800, color: C.orange, display: "flex", alignItems: "center", gap: 3 }}>
                 <span className="flame">🔥</span>{streak}
               </span>
             )}
-            <XPRingMini progress={headerXpInfo.progress} roman={headerXpInfo.roman} color={accent} />
-            <button onClick={() => setShowProfileCard(true)} aria-label="Mi perfil" style={{ fontSize: 22, lineHeight: 1 }}>
-              {heroForStreak(streak).emoji}
-            </button>
+            <button onClick={() => setShowSettings(true)} aria-label="Configuración" style={{ fontSize: 17, padding: 4 }}>⚙️</button>
           </div>
-        </div>
-
-        {/* Fila secundaria: accesos rápidos */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-          {installPrompt && !appInstalled && (
-            <button
-              onClick={installApp}
-              aria-label="Instalar app"
-              style={{
-                background: "#00E5FF", color: "#000", border: "none", borderRadius: 20,
-                padding: "5px 12px", fontWeight: 800, fontSize: 11, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-              }}
-            >
-              📲 Instalar
-            </button>
-          )}
-          <button onClick={toggleEquipment} aria-label="Alternar modo sin equipo" style={{ fontSize: 15, padding: 4 }}>
-            {noEquipment ? "🎒" : "🏋️"}
-          </button>
-          <button onClick={toggleContrast} aria-label="Alternar modo alto contraste" style={{ fontSize: 15, padding: 4 }}>
-            {highContrast ? "🌙" : "☀️"}
-          </button>
-          <button onClick={() => setShowTheme(true)} aria-label="Mi estilo" style={{ fontSize: 15, padding: 4 }}>🎨</button>
-          <button onClick={() => setShowSettings(true)} aria-label="Configuración" style={{ fontSize: 15, padding: 4 }}>⚙️</button>
         </div>
       </header>
 
-      <div
-        key={tab}
-        className="tab-slide"
-        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-        onTouchEnd={(e) => {
-          if (touchStartX.current === null) return;
-          const dx = e.changedTouches[0].clientX - touchStartX.current;
-          touchStartX.current = null;
-          if (Math.abs(dx) < 50) return;
-          const idx = TABS.findIndex((t) => t.id === tab);
-          const nextIdx = dx < 0 ? idx + 1 : idx - 1;
-          if (nextIdx >= 0 && nextIdx < TABS.length) changeTab(TABS[nextIdx].id);
-        }}
-      >
+      <div key={tab} className="tab-slide">
         {calculating ? (
           <div className="screen">
             <SkeletonCard height={90} />
@@ -9929,7 +9765,7 @@ export default function App() {
           <>
             {tab === "inicio" && (
               <div style={{ position: "relative" }}>
-                {!highContrast && <ParticleBackground />}
+                {darkMode && <ParticleBackground />}
                 <div style={{ position: "relative", zIndex: 1 }}>
                   <Home
                     name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
