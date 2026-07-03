@@ -54,24 +54,52 @@ function applyTheme(theme) {
 }
 
 /* ─── Storage seguro (prefijo fase_) ─── */
+const STORE_MAX_READ = 5_000_000; // 5MB por key: si se supera, se asume corrupto
+const STORE_MAX_WRITE = 4_000_000; // 4MB por key: no se guarda si es más grande
+
 const store = {
   get(key, fallback) {
+    const fullKey = "fase_" + key;
     try {
-      const v = window.localStorage.getItem("fase_" + key);
-      return v !== null ? JSON.parse(v) : fallback;
+      const v = window.localStorage.getItem(fullKey);
+      if (v === null) return fallback;
+      if (v.length > STORE_MAX_READ) {
+        window.localStorage.removeItem(fullKey);
+        return fallback;
+      }
+      return JSON.parse(v);
     } catch {
+      try { window.localStorage.removeItem(fullKey); } catch { /* nada más que hacer */ }
       return fallback;
     }
   },
   set(key, value) {
     try {
-      window.localStorage.setItem("fase_" + key, JSON.stringify(value));
-    } catch {
-      if (store.onError) store.onError();
+      const serialized = JSON.stringify(value);
+      if (serialized.length > STORE_MAX_WRITE) {
+        console.warn("Dato demasiado grande para guardar:", key);
+        return false;
+      }
+      window.localStorage.setItem("fase_" + key, serialized);
+      return true;
+    } catch (e) {
+      if (store.onError) store.onError(e);
+      return false;
     }
   },
   onError: null,
 };
+
+/* ─── Sanitización de texto ingresado por el usuario (nombre, rutinas, etc.) ─── */
+function sanitize(str) {
+  if (typeof str !== "string") return "";
+  return str
+    .replace(/[<>"']/g, "") // eliminar HTML
+    .replace(/javascript:/gi, "") // XSS
+    .replace(/on\w+=/gi, "") // event handlers
+    .trim()
+    .slice(0, 100); // máximo 100 caracteres
+}
 
 /* ─── Niveles de entrenamiento ─── */
 const LEVELS = [
@@ -604,8 +632,28 @@ const dayKey = (ts) => {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 };
 
+/* Verificación de integridad del historial: descarta registros corruptos o manipulados */
+const MIN_VALID_TS = new Date(2020, 0, 1).getTime();
+function verifyHistory(sessions) {
+  if (!Array.isArray(sessions)) return [];
+  return sessions.filter((s) => {
+    if (!s || typeof s !== "object") return false;
+    if (typeof s.id !== "number" && typeof s.id !== "string") return false;
+    if (typeof s.ts !== "number" || !Number.isFinite(s.ts)) return false;
+    if (s.ts < MIN_VALID_TS || s.ts > Date.now() + 86400000) return false;
+    if (s.kind !== "entreno" && s.kind !== "cuerpo") return false;
+    if (s.kind === "entreno" && !Array.isArray(s.exercises)) return false;
+    if (s.kind === "entreno" && s.durationMin != null && (s.durationMin < 0 || s.durationMin > 240)) return false;
+    return true;
+  });
+}
+
+/* Sesiones "rápidas" (<5 min) no cuentan para la racha ni los récords de constancia */
+const streakEligible = (sessions) => sessions.filter((s) => !s.sesionRapida);
+
 function calcStreak(sessions, frozen = []) {
-  const days = new Set([...sessions.map((s) => dayKey(s.ts)), ...frozen]);
+  const elig = streakEligible(sessions);
+  const days = new Set([...elig.map((s) => dayKey(s.ts)), ...frozen]);
   let streak = 0;
   const d = new Date();
   if (!days.has(dayKey(d.getTime()))) d.setDate(d.getDate() - 1);
@@ -618,9 +666,10 @@ function calcStreak(sessions, frozen = []) {
 
 /* Racha de la última cadena de días (aunque ya esté rota) */
 function lastChainStreak(sessions, frozen = []) {
-  if (!sessions.length) return 0;
-  const days = new Set([...sessions.map((s) => dayKey(s.ts)), ...frozen]);
-  const d = new Date(Math.max(...sessions.map((s) => s.ts)));
+  const elig = streakEligible(sessions);
+  if (!elig.length) return 0;
+  const days = new Set([...elig.map((s) => dayKey(s.ts)), ...frozen]);
+  const d = new Date(Math.max(...elig.map((s) => s.ts)));
   let n = 0;
   while (days.has(dayKey(d.getTime()))) {
     n++;
@@ -770,7 +819,7 @@ function parseTargetSeconds(reps) {
 
 /* Estado del streak freeze y de la racha rota */
 function computeFreezeInfo(sessions, freezes) {
-  const daySet = new Set([...sessions.map((s) => dayKey(s.ts)), ...freezes]);
+  const daySet = new Set([...streakEligible(sessions).map((s) => dayKey(s.ts)), ...freezes]);
   const trainedToday = daySet.has(dayKey(Date.now()));
   const trainedYest = daySet.has(dayKey(Date.now() - 86400000));
   const chainEndedDayBefore = daySet.has(dayKey(Date.now() - 2 * 86400000));
@@ -868,7 +917,7 @@ function requiresGymEquipment(name) {
 
 /* Longitud de la cadena de días más larga en todo el historial (no solo la actual) */
 function longestStreakEver(sessions) {
-  const days = [...new Set(sessions.map((s) => dayKey(s.ts)))]
+  const days = [...new Set(streakEligible(sessions).map((s) => dayKey(s.ts)))]
     .map((k) => {
       const [y, m, d] = k.split("-").map(Number);
       return new Date(y, m - 1, d).getTime();
@@ -1759,7 +1808,7 @@ function Welcome({ onDone }) {
   const finish = () => {
     store.set("profile", { goal, experience, days });
     store.set("weekly_goal", days);
-    onDone(value.trim(), mode);
+    onDone(sanitize(value), mode);
   };
 
   const acceptNotifs = async (hourId) => {
@@ -2419,7 +2468,7 @@ function CustomRoutineBuilder({ initial, onSave, onCancel }) {
       <button
         className="btn-xl"
         disabled={!canSave}
-        onClick={() => onSave({ id: initial?.id || `custom-${Date.now()}`, name: name.trim(), exercises: items })}
+        onClick={() => onSave({ id: initial?.id || `custom-${Date.now()}`, name: sanitize(name), exercises: items })}
         style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}
       >
         💾 GUARDAR RUTINA
@@ -2792,7 +2841,7 @@ function ChallengeScreen({ challenge, sessions, streak, onSave, onBack }) {
     const t = parseFloat(target) || 0;
     if (t <= 0) return;
     onSave({
-      type, target: t, exercise: type === "weight" || type === "distance" ? exercise : null,
+      type, target: t, exercise: type === "weight" || type === "distance" ? sanitize(exercise) : null,
       startTs: Date.now(), deadline: Date.now() + (parseInt(days, 10) || 30) * 86400000,
     });
   };
@@ -3563,6 +3612,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
       levelIdx: plan.lvlIdx,
       calLocation: plan.calLocation,
       durationMin: Math.round(sessionSecs / 60),
+      sesionRapida: sessionSecs < 300,
       exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i] })),
     };
     onSave(record);
@@ -3665,6 +3715,14 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
         <div className="unlock-pop" style={{ fontSize: 64 }}>{hero.emoji}</div>
         <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>{title}</h2>
         <p style={{ color: C.mut, marginTop: 4, fontSize: 13 }}>Sesión de {plan.discLabel} completada</p>
+
+        {sessionSecs < 300 && (
+          <div className="card" style={{ marginTop: 12, borderColor: `${C.orange}55`, background: "rgba(255,122,47,0.08)" }}>
+            <p style={{ fontSize: 12, color: C.orange, fontWeight: 700 }}>
+              ⏱ Sesión muy corta. Completa al menos 5 minutos para que cuente en tu racha.
+            </p>
+          </div>
+        )}
 
         {justUnlocked && (
           <div className="card unlock-pop" style={{ marginTop: 14, borderColor: C.yellow, background: "rgba(255,214,0,0.07)" }}>
@@ -4269,8 +4327,49 @@ function loadHtml2Canvas() {
 }
 
 /* ─── Tarjeta de perfil pública / exportable ─── */
+/* ─── Backup completo: exporta/restaura todas las claves fase_* de localStorage ─── */
+function collectBackupData() {
+  const data = {};
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const key = window.localStorage.key(i);
+    if (key && key.startsWith("fase_")) data[key.slice(5)] = window.localStorage.getItem(key);
+  }
+  return data;
+}
+
+function downloadBackupFile() {
+  const backup = { version: "1.0", date: new Date().toISOString(), data: collectBackupData() };
+  const blob = new Blob([JSON.stringify(backup)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `FASE_backup_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function isValidBackup(obj) {
+  if (!obj || typeof obj !== "object") return false;
+  if (typeof obj.version !== "string") return false;
+  if (!obj.data || typeof obj.data !== "object") return false;
+  return Object.entries(obj.data).every(([k, v]) => typeof k === "string" && typeof v === "string" && v.length <= STORE_MAX_READ);
+}
+
+function applyBackup(obj) {
+  Object.entries(obj.data).forEach(([k, v]) => {
+    try {
+      window.localStorage.setItem("fase_" + k, v);
+    } catch {
+      /* clave omitida por falta de espacio */
+    }
+  });
+}
+
 function ProfileCard({ name, sessions, streak, freezes, onBack }) {
   const cardRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const code = useMemo(() => getFaseCode(name), [name]);
@@ -4309,6 +4408,25 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
     setSaving(false);
   };
 
+  const handleRestoreFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        if (!isValidBackup(parsed)) throw new Error("formato inválido");
+        if (!window.confirm("Esto reemplazará todos tus datos actuales. ¿Continuar?")) return;
+        applyBackup(parsed);
+        window.location.reload();
+      } catch {
+        alert("Archivo de backup inválido o corrupto.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="screen">
       <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
@@ -4344,6 +4462,18 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
       <button className="btn-xl" onClick={copyCode} style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
         {copied ? "¡Copiado!" : "📋 Copiar código"}
       </button>
+
+      <div className="sec-title">Copia de seguridad</div>
+      <button className="btn-xl" onClick={downloadBackupFile} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
+        💾 Exportar backup completo
+      </button>
+      <button
+        className="btn-xl" onClick={() => fileInputRef.current?.click()}
+        style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+      >
+        📂 Restaurar backup
+      </button>
+      <input ref={fileInputRef} type="file" accept="application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
     </div>
   );
 }
@@ -5123,6 +5253,21 @@ function exportStatsCode(name, sessions, streak) {
   }
 }
 
+/* Valida estrictamente el código de amigo importado antes de guardarlo */
+function validateFriendCode(data) {
+  if (!data || typeof data !== "object") return false;
+  const allowedKeys = ["code", "name", "streak", "sessions", "volume", "level", "ts"];
+  if (Object.keys(data).some((k) => !allowedKeys.includes(k))) return false;
+  if (typeof data.code !== "string" || !/^FASE-[A-Z]{2}\d{4}$/.test(data.code)) return false;
+  if (typeof data.name !== "string" || !data.name.trim() || data.name.length > 100) return false;
+  if (typeof data.streak !== "number" || !Number.isFinite(data.streak) || data.streak < 0 || data.streak > 100000) return false;
+  if (typeof data.sessions !== "number" || !Number.isFinite(data.sessions) || data.sessions < 0 || data.sessions > 100000) return false;
+  if (typeof data.volume !== "number" || !Number.isFinite(data.volume) || data.volume < 0) return false;
+  if (typeof data.level !== "string" || !LEVELS.some((l) => l.name === data.level)) return false;
+  if (typeof data.ts !== "number" || !Number.isFinite(data.ts) || data.ts > Date.now() + 86400000) return false;
+  return true;
+}
+
 function Community({ name, sessions, streak, freezes }) {
   const [tab, setTab] = useState("clasificacion");
   const [importValue, setImportValue] = useState("");
@@ -5146,13 +5291,17 @@ function Community({ name, sessions, streak, freezes }) {
   const doImport = () => {
     try {
       const data = JSON.parse(decodeURIComponent(atob(importValue.trim())));
-      if (!data.code) throw new Error("formato inválido");
-      const next = [...friends.filter((f) => f.code !== data.code), data];
+      if (!validateFriendCode(data)) throw new Error("formato inválido");
+      const clean = {
+        code: data.code, name: sanitize(data.name), streak: data.streak,
+        sessions: data.sessions, volume: data.volume, level: data.level, ts: data.ts,
+      };
+      const next = [...friends.filter((f) => f.code !== clean.code), clean];
       setFriends(next);
       store.set("friends", next);
       setImportValue("");
     } catch {
-      alert("Código inválido. Pídele a tu amigo que exporte de nuevo.");
+      alert("Código inválido o corrupto. Pide a tu amigo que exporte de nuevo.");
     }
   };
 
@@ -5509,7 +5658,12 @@ function getTabAccent(tabId) {
 export default function App() {
   const [name, setName] = useState(() => store.get("name", ""));
   const [mode, setMode] = useState(() => store.get("mode", "guiado"));
-  const [sessions, setSessions] = useState(() => store.get("sessions", []));
+  const [sessions, setSessions] = useState(() => {
+    const raw = store.get("sessions", []);
+    const clean = verifyHistory(raw);
+    if (clean.length !== raw.length) store.set("sessions", clean);
+    return clean;
+  });
   const [heroes, setHeroes] = useState(() => store.get("heroes", []));
   const [tab, setTab] = useState("inicio");
   const [live, setLive] = useState(null);
@@ -5523,6 +5677,8 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [storageFull, setStorageFull] = useState(false);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [appInstalled, setAppInstalled] = useState(() => store.get("installed", false));
 
   useEffect(() => {
     store.onError = () => setStorageFull(true);
@@ -5595,6 +5751,53 @@ export default function App() {
     };
   }, []);
 
+  /* PWA: capturar el prompt de instalación y detectar si ya quedó instalada */
+  useEffect(() => {
+    const onBeforeInstall = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    const onInstalled = () => {
+      store.set("installed", true);
+      setAppInstalled(true);
+      setInstallPrompt(null);
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const installApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    try {
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === "accepted") {
+        store.set("installed", true);
+        setAppInstalled(true);
+      }
+    } catch {
+      /* prompt descartado */
+    }
+    setInstallPrompt(null);
+  };
+
+  /* Aviso cuando el service worker cachea una nueva versión de la app */
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return undefined;
+    const onMessage = (e) => {
+      if (e.data?.type === "SW_UPDATED") {
+        setToast("App actualizada a la última versión ✨");
+        setTimeout(() => setToast(null), 2500);
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, []);
+
   const changeTab = (t) => {
     setTab(t);
     setAccent(getTabAccent(t));
@@ -5659,8 +5862,17 @@ export default function App() {
     store.set("mode", m);
   };
 
+  const MAX_SESSIONS = 500;
+  const TRIM_SESSIONS = 50;
+
   const saveSession = (record) => {
-    const next = [...sessions, record];
+    let next = [...sessions, record];
+    if (next.length > MAX_SESSIONS) {
+      exportCSV(next);
+      next = next.slice(TRIM_SESSIONS);
+      setToast("Se eliminaron sesiones antiguas para liberar espacio. Tu historial reciente está completo.");
+      setTimeout(() => setToast(null), 4000);
+    }
     setSessions(next);
     store.set("sessions", next);
     const s = calcStreak(next, freezes);
@@ -5779,6 +5991,18 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
+          {installPrompt && !appInstalled && (
+            <button
+              onClick={installApp}
+              aria-label="Instalar app"
+              style={{
+                fontSize: 11, fontWeight: 800, color: "#07070C", background: C.cyan,
+                padding: "6px 10px", borderRadius: 99, whiteSpace: "nowrap",
+              }}
+            >
+              📲 Instalar app
+            </button>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
             <WeekRing done={weekCount} goal={weeklyGoal} accent={accent} />
             <button
