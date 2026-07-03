@@ -275,6 +275,195 @@ function awardBonusXpOnce(guardKey, amount) {
   store.set("bonus_xp", store.get("bonus_xp", 0) + amount);
 }
 
+/* ─── Análisis de fatiga acumulada ─── */
+function analyzeFatigue(sessions) {
+  const cutoff = Date.now() - 7 * 86400000;
+  const last7 = sessions.filter((s) => s.kind === "entreno" && s.ts >= cutoff);
+
+  const completionRates = last7.map((s) => {
+    const total = s.exercises.reduce((a, e) => a + e.sets.length, 0);
+    const done = s.exercises.reduce((a, e) => a + e.sets.filter((st) => st.ok).length, 0);
+    return total > 0 ? done / total : 1;
+  });
+  const avgCompletion = completionRates.length ? completionRates.reduce((a, b) => a + b, 0) / completionRates.length : 1;
+  const activeDays = new Set(last7.map((s) => dayKey(s.ts))).size;
+
+  if (activeDays >= 6 && avgCompletion < 0.7) return "critical";
+  if (activeDays >= 5 || avgCompletion < 0.75) return "warning";
+  if (activeDays >= 4 && avgCompletion < 0.85) return "caution";
+  return "optimal";
+}
+
+const FATIGUE_INFO = {
+  optimal: { emoji: "🟢", label: "Óptimo", color: C.green, title: "Cuerpo en estado ideal 💪", desc: "Hoy es un buen día para dar el máximo." },
+  caution: { emoji: "🟡", label: "Precaución", color: C.yellow, title: "Acercándote al límite", desc: "Buen momento para una sesión más ligera." },
+  warning: { emoji: "🟠", label: "Alerta", color: C.orange, title: "Rendimiento bajando", desc: "Considera bajar la intensidad hoy." },
+  critical: { emoji: "🔴", label: "Crítico", color: C.red, title: "⚠️ Signos de sobreentrenamiento", desc: "Tu rendimiento bajó y llevas muchos días seguidos. Tu cuerpo está pidiendo descanso. Recomendación: 2 días de descanso completo, luego Cuerpo/Movilidad suave." },
+};
+
+/* ─── Mentores virtuales ─── */
+const MENTORS = {
+  maestro: { name: "El Maestro", color: "#FFD700" },
+  guerrero: { name: "El Guerrero", color: "#FF3B5C" },
+  medico: { name: "El Médico", color: "#60A5FA" },
+  coach: { name: "El Coach", color: "#22FF88" },
+};
+
+function canShowMentorToday() {
+  return store.get("mentor_shown_today", null) !== todayKey();
+}
+function markMentorShown() {
+  store.set("mentor_shown_today", todayKey());
+}
+
+function MentorFigure({ id, color }) {
+  const strokeProps = { stroke: color, strokeWidth: 3, strokeLinecap: "round", fill: "none" };
+  return (
+    <svg viewBox="0 0 100 130" width="120" height="150">
+      <circle cx="50" cy="24" r="14" {...strokeProps} />
+      <path d="M50 38 L50 85" {...strokeProps} />
+      <path d="M50 50 L30 70" {...strokeProps} />
+      <path d="M50 50 L70 70" {...strokeProps} />
+      <path d="M50 85 L35 125" {...strokeProps} />
+      <path d="M50 85 L65 125" {...strokeProps} />
+      {id === "maestro" && (
+        <>
+          <path d="M40 28 Q50 42 60 28" {...strokeProps} />
+          <path d="M70 70 L70 120" stroke={color} strokeWidth="3" strokeLinecap="round" />
+          <circle cx="70" cy="120" r="4" fill={color} />
+        </>
+      )}
+      {id === "guerrero" && (
+        <>
+          <path d="M30 70 L15 50" {...strokeProps} />
+          <rect x="60" y="55" width="14" height="22" rx="2" fill={color} opacity="0.8" />
+        </>
+      )}
+      {id === "medico" && (
+        <>
+          <rect x="42" y="55" width="16" height="16" fill="none" stroke={color} strokeWidth="3" />
+          <path d="M50 58 L50 68 M45 63 L55 63" stroke={color} strokeWidth="2.5" />
+        </>
+      )}
+      {id === "coach" && (
+        <>
+          <rect x="58" y="58" width="18" height="24" rx="2" fill="none" stroke={color} strokeWidth="3" />
+          <path d="M62 64 L72 64 M62 70 L72 70 M62 76 L68 76" stroke={color} strokeWidth="2" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function MentorModal({ mentorId, message, onClose }) {
+  const mentor = MENTORS[mentorId];
+  useEffect(() => {
+    const t = setTimeout(onClose, 8000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (!mentor) return null;
+  return (
+    <div
+      role="button" tabIndex={0} onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "flex-end", background: "rgba(0,0,0,0.6)" }}
+    >
+      <div
+        className="card session-rise" onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", padding: "24px 20px", textAlign: "center", borderTop: `3px solid ${mentor.color}`, borderRadius: "20px 20px 0 0" }}
+      >
+        <MentorFigure id={mentorId} color={mentor.color} />
+        <h3 style={{ fontSize: 16, fontWeight: 900, color: mentor.color, marginTop: 6 }}>{mentor.name}</h3>
+        <p style={{ fontSize: 14, marginTop: 8, lineHeight: 1.5 }}>{message}</p>
+        <button className="btn-xl" onClick={onClose} style={{ marginTop: 16, background: mentor.color, color: "#07070C" }}>
+          Entendido, {mentor.name}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Periodización automática de 12 semanas ─── */
+const PERIODIZATION = {
+  foundation: { desc: "Construyendo la base", focus: "Técnica perfecta y adaptación", setsModifier: -1, restModifier: 30, color: C.blue },
+  accumulation: { desc: "Acumulando volumen", focus: "Más series, más trabajo", setsModifier: 1, restModifier: 0, color: C.green },
+  intensification: { desc: "Aumentando intensidad", focus: "Más peso, menos reps", setsModifier: 0, restModifier: 20, color: C.orange },
+  deload: { desc: "Semana de recuperación", focus: "Dejar que el cuerpo asimile", setsModifier: -2, restModifier: -15, color: C.purple },
+};
+
+function getPlanWeekNumber() {
+  const start = store.get("plan_start", null);
+  if (!start) return null;
+  return Math.floor((Date.now() - new Date(start).getTime()) / (7 * 86400000)) + 1;
+}
+
+function getPlanPhase(weekNumber) {
+  if (weekNumber <= 3) return "foundation";
+  if (weekNumber === 4) return "deload";
+  if (weekNumber <= 7) return "accumulation";
+  if (weekNumber === 8) return "deload";
+  if (weekNumber <= 11) return "intensification";
+  return "deload";
+}
+
+const PERIODIZATION_LABELS = { foundation: "Base", accumulation: "Acumulación", intensification: "Intensificación", deload: "Deload" };
+
+function PlanPeriodizationCard({ sessions }) {
+  const [, setTick] = useState(0);
+  const refresh = () => setTick((n) => n + 1);
+  const weekNumber = getPlanWeekNumber();
+  if (!weekNumber) return null;
+
+  if (weekNumber > 12) {
+    const start = new Date(store.get("plan_start"));
+    const cycleSessions = sessions.filter((s) => s.kind === "entreno" && s.ts >= start.getTime());
+    const records = computeRecords(sessions).filter((r) => r.ts >= start.getTime());
+    const volume = Math.round(cycleSessions.reduce((a, s) => a + sessionVolume(s), 0));
+    return (
+      <div className="card pop" style={{ marginTop: 12, textAlign: "center", borderColor: C.yellow, background: "rgba(255,214,0,0.06)" }}>
+        <div style={{ fontSize: 34 }}>🏆</div>
+        <p style={{ fontSize: 15, fontWeight: 900, color: C.yellow, marginTop: 4 }}>CICLO COMPLETO</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 10, textAlign: "left" }}>
+          <p style={{ fontSize: 12, color: C.mut }}>Sesiones completadas: <strong style={{ color: C.text }}>{cycleSessions.length}</strong></p>
+          <p style={{ fontSize: 12, color: C.mut }}>Récords batidos: <strong style={{ color: C.text }}>{records.length}</strong></p>
+          <p style={{ fontSize: 12, color: C.mut }}>Volumen total acumulado: <strong style={{ color: C.text }}>{formatVolume(volume)}</strong></p>
+        </div>
+        <p style={{ fontSize: 12, color: C.text, marginTop: 12, fontWeight: 700 }}>¿Empezar nuevo ciclo de 12 semanas?</p>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button
+            className="btn-xl" onClick={() => { store.set("plan_start", new Date().toISOString()); store.set("plan_last_phase", null); refresh(); }}
+            style={{ background: C.yellow, color: "#07070C", fontSize: 13 }}
+          >
+            Empezar nuevo ciclo
+          </button>
+          <button
+            className="btn-xl" onClick={() => { store.set("plan_start", null); refresh(); }}
+            style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
+          >
+            No por ahora
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const phaseId = getPlanPhase(weekNumber);
+  const phase = PERIODIZATION[phaseId];
+  return (
+    <div className="card" style={{ marginTop: 12, borderColor: `${phase.color}66` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <p style={{ fontSize: 13, fontWeight: 800 }}>📅 Tu Plan — Semana {weekNumber}/12</p>
+        <span style={{ fontSize: 11, fontWeight: 800, color: phase.color }}>{PERIODIZATION_LABELS[phaseId]}</span>
+      </div>
+      <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 8 }}>
+        <div style={{ height: "100%", width: `${Math.min(100, (weekNumber / 12) * 100)}%`, background: phase.color, borderRadius: 99, transition: "width .5s ease" }} />
+      </div>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 8 }}>{phase.desc}</p>
+      <p style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>Foco: {phase.focus}</p>
+    </div>
+  );
+}
+
 /* ─── Splash screen inicial ─── */
 const MOTIVATIONAL_QUOTES = [
   "El límite solo existe en tu cabeza.",
@@ -648,6 +837,28 @@ function BreathingScreen({ onDone, voiceOn }) {
         <text x="100" y="95" textAnchor="middle" fontSize={phase.fontSize} fontWeight="800" fill={phase.color}>{phase.label}</text>
       </svg>
       <p style={{ fontSize: 12, color: C.dim, marginTop: 20 }}>Ciclo {cycle} de 2</p>
+    </div>
+  );
+}
+
+/* ─── Selector rápido de RPE tras cada serie exitosa ─── */
+const RPE_COLORS = { 6: C.green, 7: "#8BC34A", 8: C.yellow, 9: C.orange, 10: C.red };
+
+function RpeOverlay({ rpeFor, onPick }) {
+  if (!rpeFor) return null;
+  return (
+    <div className="card fade-up" style={{ position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 150, maxWidth: 430, margin: "0 auto" }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: C.mut, textAlign: "center" }}>¿Qué tan difícil fue?</p>
+      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+        {[6, 7, 8, 9, 10].map((v) => (
+          <button
+            key={v} onClick={() => onPick(rpeFor.exIdx, rpeFor.setIdx, v)}
+            style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontWeight: 800, fontSize: 13, background: RPE_COLORS[v], color: "#07070C" }}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1398,6 +1609,8 @@ function beep(freq, dur, vol, delay = 0) {
     /* silencioso */
   }
 }
+/* Sonido de obturador de cámara: click rápido para la "foto finish" de récord */
+const shutterClick = () => { ensureAudio(); beep(800, 0.1, 0.4, 0); };
 /* Triple beep al terminar el descanso: 880 Hz, 150 ms, separados 200 ms */
 const tripleBeep = () => {
   beep(880, 0.15, 0.3, 0);
@@ -1522,7 +1735,134 @@ function weightSuggestion(sessions, exName) {
   const maxW = Math.max(...last.sets.map((x) => x.weight || 0));
   if (maxW <= 0) return null;
   const allOk = last.sets.every((x) => x.ok);
-  return { weight: allOk ? maxW + 2.5 : maxW, up: allOk };
+
+  /* Ajuste según RPE (esfuerzo percibido) de las últimas sesiones */
+  const last3 = entries.slice(-3);
+  const rpes = last3.flatMap((s) => s.sets.map((x) => x.rpe)).filter((r) => typeof r === "number");
+  const avgRpe = rpes.length ? rpes.reduce((a, b) => a + b, 0) / rpes.length : null;
+  const lastTwoMaxRpe = entries.slice(-2).map((s) => Math.max(0, ...s.sets.map((x) => x.rpe || 0)));
+  const twoConsecutive10 = lastTwoMaxRpe.length === 2 && lastTwoMaxRpe.every((r) => r === 10);
+
+  let result;
+  if (twoConsecutive10) result = { weight: Math.round(maxW * 0.95 * 2) / 2, up: false };
+  else if (avgRpe !== null && avgRpe < 7) result = { weight: maxW + 5, up: true };
+  else if (avgRpe !== null && avgRpe <= 8) result = { weight: maxW + 2.5, up: true };
+  else if (avgRpe !== null && avgRpe > 8.5) result = { weight: maxW, up: false };
+  else result = { weight: allOk ? maxW + 2.5 : maxW, up: allOk };
+
+  /* Feedback de técnica: si se marcó "reducir" para este ejercicio, bajar un poco el peso sugerido */
+  if (store.get(`reduce_${exName}`, false)) {
+    result = { weight: Math.max(0, Math.round(result.weight * 0.9 * 2) / 2), up: false };
+  }
+  return result;
+}
+
+/* ─── Predicción de récord (regresión lineal simple) ─── */
+function predictRecord(sessions, exercise) {
+  const relevant = sessions
+    .filter((s) => s.kind === "entreno" && s.exercises.some((e) => e.name === exercise))
+    .slice(-8)
+    .sort((a, b) => a.ts - b.ts);
+  if (relevant.length < 3) return null;
+
+  const points = relevant.map((s, i) => {
+    const ex = s.exercises.find((e) => e.name === exercise);
+    const okWeights = ex.sets.filter((st) => st.ok).map((st) => st.weight || 0);
+    return { x: i, y: okWeights.length ? Math.max(...okWeights) : 0 };
+  });
+  if (points.every((p) => p.y === 0)) return null;
+
+  const n = points.length;
+  const sumX = points.reduce((a, p) => a + p.x, 0);
+  const sumY = points.reduce((a, p) => a + p.y, 0);
+  const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+  const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+  const denom = n * sumX2 - sumX * sumX;
+  if (denom === 0) return null;
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / n;
+
+  const in4weeks = intercept + slope * (n + 8);
+  const in8weeks = intercept + slope * (n + 16);
+
+  return {
+    in4weeks: Math.max(0, Math.round(in4weeks / 2.5) * 2.5),
+    in8weeks: Math.max(0, Math.round(in8weeks / 2.5) * 2.5),
+    trend: slope > 0.5 ? "rising" : slope > 0 ? "stable" : "falling",
+  };
+}
+
+/* ─── Comparativa visual de progresión (hitos con animales) ─── */
+const WEIGHT_MILESTONES = {
+  sentadilla: [
+    { w: 20, emoji: "🐇", name: "Conejo" }, { w: 40, emoji: "🐕", name: "Perro" },
+    { w: 60, emoji: "🦊", name: "Zorro" }, { w: 80, emoji: "🐺", name: "Lobo" },
+    { w: 100, emoji: "🐻", name: "Oso" }, { w: 130, emoji: "🦁", name: "León" },
+    { w: 160, emoji: "🐯", name: "Tigre" }, { w: 200, emoji: "🦍", name: "Gorila" },
+  ],
+  press: [
+    { w: 20, emoji: "🐇", name: "Conejo" }, { w: 40, emoji: "🦆", name: "Pato" },
+    { w: 60, emoji: "🐕", name: "Perro" }, { w: 80, emoji: "🐺", name: "Lobo" },
+    { w: 100, emoji: "🦁", name: "León" }, { w: 130, emoji: "🐂", name: "Toro" },
+    { w: 160, emoji: "🦏", name: "Rinoceronte" },
+  ],
+  dominadas: [
+    { w: 1, emoji: "🐣", name: "Pollito" }, { w: 4, emoji: "🐦", name: "Pájaro" },
+    { w: 7, emoji: "🐒", name: "Mono" }, { w: 11, emoji: "🦧", name: "Orangután" },
+    { w: 16, emoji: "🦍", name: "Gorila" }, { w: 21, emoji: "👽", name: "Alien" },
+  ],
+};
+
+function milestoneKeyForExercise(name) {
+  const n = name.toLowerCase();
+  if (/dominad/.test(n)) return "dominadas";
+  if (/sentadilla|squat|pistol/.test(n)) return "sentadilla";
+  if (/press banca|press de banca|bench/.test(n)) return "press";
+  return null;
+}
+
+function ProgressTimeline({ exercise, currentValue }) {
+  const key = milestoneKeyForExercise(exercise);
+  if (!key) return null;
+  const milestones = WEIGHT_MILESTONES[key];
+  return (
+    <div className="card" style={{ marginTop: 10, overflowX: "auto" }}>
+      <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>LÍNEA DE PROGRESIÓN</p>
+      <div style={{ display: "flex", gap: 14, marginTop: 10, paddingBottom: 4 }}>
+        {milestones.map((m) => {
+          const reached = currentValue >= m.w;
+          return (
+            <div key={m.w} style={{ textAlign: "center", minWidth: 52, opacity: reached ? 1 : 0.4, flexShrink: 0 }}>
+              <div style={{ fontSize: 26 }}>{reached ? m.emoji : "🔒"}</div>
+              <div style={{ fontSize: 10, color: reached ? C.text : C.dim, fontWeight: 700, marginTop: 2 }}>{m.name}</div>
+              <div style={{ fontSize: 9, color: C.dim }}>{m.w}{key === "dominadas" ? " reps" : "kg"}</div>
+              {reached && <div style={{ fontSize: 10, color: C.green }}>✓</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* RPE promedio histórico de un ejercicio */
+function avgRpeFor(sessions, exName) {
+  const rpes = [];
+  sessions.forEach((s) => {
+    if (s.kind !== "entreno") return;
+    s.exercises.forEach((e) => {
+      if (e.name === exName) e.sets.forEach((st) => { if (typeof st.rpe === "number") rpes.push(st.rpe); });
+    });
+  });
+  if (!rpes.length) return null;
+  return rpes.reduce((a, b) => a + b, 0) / rpes.length;
+}
+
+function rpeColor(avg) {
+  if (avg < 7) return C.green;
+  if (avg <= 8) return C.yellow;
+  if (avg <= 9) return C.orange;
+  return C.red;
 }
 
 /* ─── Orden de disciplinas para agrupar récords ─── */
@@ -2012,11 +2352,20 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     if (!chosen.includes(e)) chosen.push(e);
   }
 
+  const planWeek = getPlanWeekNumber();
+  const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
+
   const extraSets = effLvlIdx >= 3 ? 1 : 0;
   return chosen.map((e) => {
     let sets = e.s === 1 ? 1 : Math.min(5, e.s + extraSets);
-    if (deloadActive) sets = Math.max(1, Math.round(sets * 0.6));
-    return { name: e.n, type: e.t, sets, reps: e.r, rest: e.rest, tip: e.tip, tag: e.f ? e.f[0] : null };
+    let rest = e.rest;
+    if (deloadActive) {
+      sets = Math.max(1, Math.round(sets * 0.6));
+    } else if (phaseMods) {
+      sets = Math.max(1, sets + phaseMods.setsModifier);
+      rest = Math.max(0, rest + phaseMods.restModifier);
+    }
+    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null };
   });
 }
 
@@ -2029,10 +2378,18 @@ function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
   const target = Math.min(pool.length, 5 + (rnd() < 0.5 ? 1 : 0));
   const shuffled = [...pool].sort(() => rnd() - 0.5).slice(0, target);
   const extraSets = effLvlIdx >= 3 ? 1 : 0;
+  const planWeek = getPlanWeekNumber();
+  const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
   return shuffled.map((e) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + extraSets);
-    if (deloadActive) sets = Math.max(1, Math.round(sets * 0.6));
-    return { name: e.n, type: e.t, sets, reps: e.r, rest: e.rest, tip: e.tip, tag: "velocidad" };
+    let rest = e.rest;
+    if (deloadActive) {
+      sets = Math.max(1, Math.round(sets * 0.6));
+    } else if (phaseMods) {
+      sets = Math.max(1, sets + phaseMods.setsModifier);
+      rest = Math.max(0, rest + phaseMods.restModifier);
+    }
+    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: "velocidad" };
   });
 }
 
@@ -3588,6 +3945,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         );
       })()}
 
+      <PlanPeriodizationCard sessions={sessions} />
       <DeloadBanner sessions={sessions} />
 
       {/* Racha (o mensaje motivacional si se rompió) */}
@@ -4432,6 +4790,118 @@ const DUET_DISCIPLINES = [
   { id: "gimnasio", label: "Gimnasio", icon: "🏋️", color: C.cyan },
 ];
 
+/* ─── Modo partido: registro de acciones en tiempo real durante un partido de fútbol ─── */
+const MATCH_ACTIONS = [
+  { id: "sprint", label: "🏃 SPRINT", color: C.orange },
+  { id: "tiro", label: "⚽ TIRO", color: C.green },
+  { id: "regate", label: "🔄 REGATE", color: C.cyan },
+  { id: "pase", label: "✈️ PASE LARGO", color: C.blue },
+  { id: "tackle", label: "🛡️ TACKLE", color: C.red },
+  { id: "salto", label: "↕️ SALTO", color: C.purple },
+];
+
+function MatchMode({ onFinish, onSave }) {
+  const [running, setRunning] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [period, setPeriod] = useState(1);
+  const [counts, setCounts] = useState({ sprint: 0, tiro: 0, regate: 0, pase: 0, tackle: 0, salto: 0 });
+  const [finished, setFinished] = useState(false);
+  const secRef = useRef(0);
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => { secRef.current += 1; setSeconds(secRef.current); }, 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const tap = (id) => {
+    if (navigator.vibrate) navigator.vibrate(50);
+    setCounts((prev) => ({ ...prev, [id]: prev[id] + 1 }));
+  };
+
+  const totalActions = Object.values(counts).reduce((a, b) => a + b, 0);
+  const distanceKm = ((counts.sprint * 30 + (totalActions - counts.sprint) * 10) / 1000).toFixed(1);
+
+  const finishMatch = () => {
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "futbolParque",
+      focusLabel: "Partido", levelIdx: 2, durationMin: Math.round(seconds / 60),
+      exercises: MATCH_ACTIONS.filter((a) => counts[a.id] > 0).map((a) => ({
+        name: a.label.replace(/^\S+\s/, ""),
+        sets: [{ weight: 0, reps: counts[a.id], ok: true }],
+      })),
+    });
+    onFinish();
+  };
+
+  if (finished) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <div className="pop" style={{ fontSize: 50 }}>⚽</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 10 }}>Resumen del partido</h2>
+        <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
+          {MATCH_ACTIONS.map((a) => (
+            <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13 }}>{a.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{counts[a.id]}</span>
+            </div>
+          ))}
+          <hr className="divider-gradient" style={{ margin: "8px 0" }} />
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>Total acciones</span>
+            <span style={{ fontSize: 13, fontWeight: 900 }}>{totalActions}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>Distancia estimada</span>
+            <span style={{ fontSize: 13, fontWeight: 900 }}>{distanceKm} km</span>
+          </div>
+        </div>
+        <button className="btn-xl" onClick={finishMatch} style={{ marginTop: 16, background: C.green, color: "#07070C" }}>
+          GUARDAR Y VOLVER
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 16 }}>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>PERÍODO {period} · 45 MIN</p>
+      <div style={{ fontSize: 40, fontWeight: 900, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
+        ⏱ {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
+        {MATCH_ACTIONS.map((a) => (
+          <button
+            key={a.id} onClick={() => tap(a.id)}
+            style={{ height: 80, borderRadius: 16, fontSize: 15, fontWeight: 900, color: "#07070C", background: a.color }}
+          >
+            {a.label}
+            <div style={{ fontSize: 20 }}>{counts[a.id]}</div>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        {!running ? (
+          <button className="btn-xl" onClick={() => setRunning(true)} style={{ background: C.green, color: "#07070C" }}>▶ INICIAR</button>
+        ) : (
+          <button className="btn-xl" onClick={() => setRunning(false)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
+            PAUSAR
+          </button>
+        )}
+      </div>
+      {period === 1 && seconds >= 45 * 60 && (
+        <button
+          className="btn-xl" onClick={() => { setPeriod(2); setRunning(false); }}
+          style={{ marginTop: 10, background: C.orange, color: "#07070C" }}
+        >
+          Descanso — Empezar 2° tiempo
+        </button>
+      )}
+      <button onClick={() => setFinished(true)} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 600 }}>Terminar partido</button>
+    </div>
+  );
+}
+
 function DuetMode({ onFinish, onSave, name }) {
   const [step, setStep] = useState("name"); // name | discipline | level | session | results
   const [partnerName, setPartnerName] = useState("");
@@ -4750,7 +5220,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [trainCards] = useState(() => orderedTrainCards());
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
-  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "dueto"
+  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "dueto" | "partido"
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -4881,6 +5351,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   }
   if (special === "dueto") {
     return <DuetMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} name={name || "Tú"} />;
+  }
+  if (special === "partido") {
+    return <MatchMode onFinish={() => { setSpecial(null); setDiscId(null); }} onSave={onSaveSpecial} />;
   }
   if (special === "reto") {
     return (
@@ -5014,6 +5487,16 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             </button>
           ))}
         </div>
+        <button
+          className="card" onClick={() => setSpecial("partido")}
+          style={{ marginTop: 10, width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.orange}` }}
+        >
+          <span style={{ fontSize: 24 }}>⚽</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Modo partido</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Registra acciones en tiempo real durante el partido</div>
+          </div>
+        </button>
       </div>
     );
   }
@@ -5309,7 +5792,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 }
 
 /* ─── SESIÓN ACTIVA ─── */
-function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats, name }) {
+function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats, name, onMentor }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
   const [phase, setPhase] = useState("warmupPrompt"); // warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
@@ -5324,6 +5807,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [sessionSecs, setSessionSecs] = useState(0);
   const [confetti, setConfetti] = useState(false);
   const [flashWhite, setFlashWhite] = useState(false);
+  const [photoFinish, setPhotoFinish] = useState(false);
+  const recordCelebratedRef = useRef(false);
   const [liveMode, setLiveMode] = useState(false);
   const [ambientOn, setAmbientOn] = useState(() => store.get("ambient", false));
   const [justWarmedUp, setJustWarmedUp] = useState(false);
@@ -5332,6 +5817,33 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [noteText, setNoteText] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const [rpeFor, setRpeFor] = useState(null);
+  const rpeTimeoutRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(rpeTimeoutRef.current), []);
+
+  const applyRpe = (exI, setI, value) => {
+    clearTimeout(rpeTimeoutRef.current);
+    setLogs((prev) => prev.map((arr, i) => (i === exI ? arr.map((s, j) => (j === setI ? { ...s, rpe: value } : s)) : arr)));
+    setRpeFor(null);
+  };
+
+  const [techniqueRatings, setTechniqueRatings] = useState({});
+
+  const rateTechnique = (exerciseName, exerciseIdx, rating) => {
+    setTechniqueRatings((prev) => ({ ...prev, [exerciseIdx]: rating }));
+    const streakKey = `technique_bad_streak_${exerciseName}`;
+    if (rating === "mal" || rating === "regular") {
+      const count = store.get(streakKey, 0) + 1;
+      store.set(streakKey, count);
+      if (count >= 3) {
+        onMentor?.("maestro", `Llevas 3 sesiones con técnica baja en ${exerciseName}. ¿Lo bajamos un nivel?`);
+        store.set(streakKey, 0);
+      }
+    } else {
+      store.set(streakKey, 0);
+    }
+  };
   const wakeLockRef = useRef(null);
   const ambientRef = useRef(null);
 
@@ -5431,6 +5943,47 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     return w.reduce((a, s) => a + sessionVolume(s), 0) / w.length;
   }, [priorHistory]);
 
+  /* Foto finish: celebración especial al batir un récord (o racha 7 / sesión perfecta) */
+  useEffect(() => {
+    if (phase !== "finished") { recordCelebratedRef.current = false; return; }
+    if (recordCelebratedRef.current) return;
+    recordCelebratedRef.current = true;
+
+    let nr = null;
+    plan.exercises.forEach((e, i) => {
+      const okLogs = (logs[i] || []).filter((l) => l.ok);
+      if (!okLogs.length) return;
+      const best = okLogs.reduce((a, b) => (b.weight * 1000 + b.reps > a.weight * 1000 + a.reps ? b : a));
+      const prior = priorRecords.find((r) => r.name === e.name);
+      const bestScore = best.weight * 1000 + best.reps;
+      if (!prior || bestScore > prior.score) {
+        if (!nr || bestScore - (prior?.score || 0) > nr.improvement) {
+          nr = { name: e.name, weight: best.weight, prevWeight: prior?.weight || 0, improvement: bestScore - (prior?.score || 0) };
+        }
+      }
+    });
+
+    if (nr) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- dispara la celebración una sola vez al entrar a "finished"
+      setPhotoFinish(true);
+      setTimeout(() => setPhotoFinish(false), 3000);
+      shutterClick();
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+      onMentor?.("guerrero", `¡${nr.name} → ${nr.prevWeight}kg → ${nr.weight}kg! RÉCORD ROTO 🔥`);
+      return;
+    }
+
+    const allSets = logs.flat();
+    const totalPlanned = plan.exercises.reduce((a, e) => a + e.sets, 0);
+    const okCount = allSets.filter((s) => s.ok).length;
+    if (streak === 7) {
+      onMentor?.("guerrero", `${streak} días seguidos. Eres lo que otros no se atreven a ser.`);
+    } else if (totalPlanned > 0 && okCount >= totalPlanned) {
+      onMentor?.("guerrero", "¡ESO ES! Nadie te va a detener.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   /* Sugerencias de peso calculadas al iniciar la sesión */
   const suggestions = useMemo(
     () => plan.exercises.map((e) => (e.type === "peso" ? weightSuggestion(sessions, e.name) : null)),
@@ -5513,7 +6066,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       durationMin: Math.round(sessionSecs / 60),
       sesionRapida: sessionSecs < 300,
       cooldownBonus: !!gotCooldownBonus,
-      exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i] })),
+      exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i], technique: techniqueRatings[i] || null })),
     };
     onSave(record);
     setLastRecord(record);
@@ -5533,6 +6086,13 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     const updatedLogs = logs.map((arr, i) => (i === exIdx ? [...arr, entry] : arr));
     setLogs(updatedLogs);
     setReps("");
+    if (ok) {
+      const thisExIdx = exIdx;
+      const thisSetIdx = updatedLogs[exIdx].length - 1;
+      setRpeFor({ exIdx: thisExIdx, setIdx: thisSetIdx });
+      clearTimeout(rpeTimeoutRef.current);
+      rpeTimeoutRef.current = setTimeout(() => applyRpe(thisExIdx, thisSetIdx, 7), 3000);
+    }
     if (setNum + 1 >= ex.sets) {
       setFlashDone(true);
       setTimeout(() => setFlashDone(false), 300);
@@ -5702,13 +6262,24 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         )}
 
         {newRecord && (
-          <div className="card pop" style={{ marginTop: 12, borderColor: C.yellow, background: "rgba(255,214,0,0.1)" }}>
+          <div className={`card pop ${photoFinish ? "record-zoom" : ""}`} style={{ marginTop: 12, borderColor: C.yellow, background: "rgba(255,214,0,0.1)" }}>
             <div style={{ fontSize: 13, fontWeight: 900, color: C.yellow }}>🏆 NUEVO RÉCORD PERSONAL</div>
             <div style={{ fontSize: 12, color: C.text, marginTop: 4 }}>
               {newRecord.name}: {newRecord.weight > 0 ? `${newRecord.weight} kg × ${newRecord.reps}` : `${newRecord.reps} reps`}
             </div>
           </div>
         )}
+        {photoFinish && (
+          <div className="record-badge" style={{ position: "fixed", top: 90, left: 20, right: 20, zIndex: 220, textAlign: "center" }}>
+            <div style={{
+              display: "inline-block", padding: "10px 18px", borderRadius: 99, background: "#FFD700",
+              color: "#07070C", fontWeight: 900, fontSize: 14, boxShadow: "0 0 24px #FFD70088",
+            }}>
+              🏆 NUEVO RÉCORD
+            </div>
+          </div>
+        )}
+        {photoFinish && <div className="white-flash" style={{ animationDuration: "200ms" }} />}
 
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
           <StatBox label="⏱ Tiempo" value={formatDuration(Math.floor(sessionSecs / 60))} accent={C.cyan} />
@@ -5880,6 +6451,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           padding: "0 20px calc(20px + env(safe-area-inset-bottom))",
         }}
       >
+        <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
         <div
           style={{
             minHeight: "60vh", width: "100%", maxWidth: 430,
@@ -5922,6 +6494,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const doneSets = logs[exIdx];
   return (
     <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30 }}>
+      <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
       {showExitConfirm && (
         <div style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div className="card" style={{ maxWidth: 340, textAlign: "center", padding: 20 }}>
@@ -5975,6 +6548,16 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           🔄 Semana de deload — peso ligero, técnica perfecta
         </div>
       )}
+      {!store.get("deload_active", null) && (() => {
+        const wk = getPlanWeekNumber();
+        if (!wk || wk > 12) return null;
+        const ph = PERIODIZATION[getPlanPhase(wk)];
+        return (
+          <div style={{ textAlign: "center", padding: "6px 0", fontSize: 11, fontWeight: 700, color: ph.color }}>
+            Semana de {PERIODIZATION_LABELS[getPlanPhase(wk)].toLowerCase()}: {ph.focus}
+          </div>
+        );
+      })()}
       {!liveMode && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
@@ -6168,16 +6751,50 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           </button>
         </>
       ) : (
-        <button
-          className="btn-xl pop"
-          onClick={nextExercise}
-          style={{
-            marginTop: 18, background: `linear-gradient(90deg, ${C.green}, #00CC66)`, color: "#07070C",
-            boxShadow: "0 8px 30px rgba(34,255,136,0.3)",
-          }}
-        >
-          {isLastEx ? "FINALIZAR ENTRENAMIENTO 🏁" : "SIGUIENTE EJERCICIO →"}
-        </button>
+        <>
+          <div className="card fade-up" style={{ marginTop: 16, textAlign: "left" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, textAlign: "center" }}>¿Cómo estuvo la técnica?</p>
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              {[
+                { id: "perfecta", emoji: "✅", color: C.green },
+                { id: "bien", emoji: "⚡", color: C.cyan },
+                { id: "regular", emoji: "⚠️", color: C.yellow },
+                { id: "mal", emoji: "❌", color: C.red },
+              ].map((t) => (
+                <button
+                  key={t.id} onClick={() => rateTechnique(ex.name, exIdx, t.id)}
+                  style={{
+                    flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 20,
+                    background: techniqueRatings[exIdx] === t.id ? `${t.color}33` : C.surface,
+                    border: `1px solid ${techniqueRatings[exIdx] === t.id ? t.color : C.border}`,
+                  }}
+                >
+                  {t.emoji}
+                </button>
+              ))}
+            </div>
+            {(techniqueRatings[exIdx] === "mal" || techniqueRatings[exIdx] === "regular") && (
+              <div style={{ marginTop: 10 }}>
+                {ex.tip && <p style={{ fontSize: 11, color: C.dim, lineHeight: 1.4 }}>💡 {ex.tip}</p>}
+                <p style={{ fontSize: 12, marginTop: 6, fontWeight: 700 }}>¿Que este ejercicio aparezca con peso más bajo la próxima vez?</p>
+                <div style={{ display: "flex", gap: 14, marginTop: 6 }}>
+                  <button onClick={() => store.set(`reduce_${ex.name}`, true)} style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>Sí</button>
+                  <button onClick={() => store.set(`reduce_${ex.name}`, false)} style={{ fontSize: 12, color: C.dim }}>No</button>
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            className="btn-xl pop"
+            onClick={nextExercise}
+            style={{
+              marginTop: 12, background: `linear-gradient(90deg, ${C.green}, #00CC66)`, color: "#07070C",
+              boxShadow: "0 8px 30px rgba(34,255,136,0.3)",
+            }}
+          >
+            {isLastEx ? "FINALIZAR ENTRENAMIENTO 🏁" : "SIGUIENTE EJERCICIO →"}
+          </button>
+        </>
       )}
     </div>
   );
@@ -6363,6 +6980,8 @@ function SettingsScreen({
   voiceOn, onToggleVoice, themeId, onSelectTheme,
   sessions, onCleanOld, onWipeAll, onBack,
 }) {
+  const [, setTick] = useState(0);
+  const refresh = () => setTick((n) => n + 1);
   const [profile, setProfile] = useState(() => store.get("profile", {}));
   const [height, setHeight] = useState(() => store.get("height", ""));
   const [ambientOn, setAmbientOn] = useState(() => store.get("ambient", false));
@@ -6526,6 +7145,31 @@ function SettingsScreen({
             ))}
           </div>
         </SettingsRow>
+      </div>
+
+      <div className="sec-title">Plan de entrenamiento</div>
+      <div className="card">
+        <SettingsRow label="Periodización de 12 semanas">
+          <SettingsToggle
+            on={!!store.get("plan_start", null)}
+            aria-label="Alternar plan de 12 semanas"
+            onClick={() => {
+              if (store.get("plan_start", null)) {
+                if (window.confirm("¿Desactivar tu plan de 12 semanas actual?")) {
+                  store.set("plan_start", null);
+                  refresh();
+                }
+              } else {
+                store.set("plan_start", new Date().toISOString());
+                store.set("plan_last_phase", null);
+                refresh();
+              }
+            }}
+          />
+        </SettingsRow>
+        <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
+          Ajusta automáticamente series y descansos en 4 fases (base, acumulación, intensificación, deload) durante 12 semanas.
+        </p>
       </div>
 
       <div className="sec-title">Datos</div>
@@ -7197,6 +7841,102 @@ function MacrosCalculator({ sessions, onBack }) {
   );
 }
 
+/* ─── DNA Atlético: radar chart SVG puro ─── */
+const DNA_AXES = [
+  { id: "fuerza", label: "Fuerza" },
+  { id: "velocidad", label: "Velocidad" },
+  { id: "resistencia", label: "Resistencia" },
+  { id: "potencia", label: "Potencia" },
+  { id: "movilidad", label: "Movilidad" },
+  { id: "consistencia", label: "Consistencia" },
+];
+
+function calcDNA(sessions, streak) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const records = computeRecords(sessions);
+  const squatRecord = records.find((r) => /sentadilla/i.test(r.name) && !/pistol/i.test(r.name));
+  const weightLog = getWeightLog();
+  const bodyWeight = weightLog.length ? weightLog[weightLog.length - 1].weight : 75;
+
+  return {
+    fuerza: Math.min(100, ((squatRecord?.weight || 0) / (bodyWeight * 1.5)) * 100),
+    velocidad: Math.min(100, workouts.filter((s) => s.disc === "atletismo").length * 10),
+    resistencia: Math.min(100, workouts.length ? (workouts.filter((s) => (s.durationMin || 0) >= 45).length / workouts.length) * 100 : 0),
+    potencia: Math.min(100, workouts.filter((s) => ["futbolGym", "futbolParque", "atletismo"].includes(s.disc)).length * 8),
+    movilidad: Math.min(100, sessions.filter((s) => s.kind === "cuerpo").length * 15),
+    consistencia: Math.min(100, streak * 3.3),
+  };
+}
+
+function radarPoint(val, i, axes, center, radius) {
+  const angle = (i * 2 * Math.PI) / axes - Math.PI / 2;
+  const r = (Math.max(0, val) / 100) * radius;
+  return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
+}
+
+function DNARadar({ sessions, streak }) {
+  const dna = useMemo(() => calcDNA(sessions, streak), [sessions, streak]);
+  const size = 260;
+  const center = size / 2;
+  const radius = size * 0.34;
+  const axes = DNA_AXES.length;
+  const values = DNA_AXES.map((a) => dna[a.id]);
+  const points = values.map((v, i) => radarPoint(v, i, axes, center, radius));
+  const polygonPoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+  const gridLevels = [20, 40, 60, 80, 100];
+  const strongestIdx = values.indexOf(Math.max(...values));
+  const weakestIdx = values.indexOf(Math.min(...values));
+
+  return (
+    <div className="card" style={{ marginTop: 10 }}>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>🧬 Mi DNA Atlético</p>
+      <svg viewBox={`0 0 ${size} ${size}`} width="100%" style={{ maxWidth: 280, display: "block", margin: "8px auto 0" }}>
+        {gridLevels.map((lvl) => {
+          const gridPts = Array.from({ length: axes }, (_, i) => radarPoint(lvl, i, axes, center, radius));
+          return <polygon key={lvl} points={gridPts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={C.border} strokeWidth="1" />;
+        })}
+        {DNA_AXES.map((a, i) => {
+          const edge = radarPoint(100, i, axes, center, radius);
+          return <line key={a.id} x1={center} y1={center} x2={edge.x} y2={edge.y} stroke={C.border} strokeWidth="1" />;
+        })}
+        <polygon
+          points={polygonPoints} fill={C.cyan} fillOpacity="0.3" stroke={C.cyan} strokeWidth="2"
+          className="pop" style={{ transformOrigin: `${center}px ${center}px` }}
+        />
+        {DNA_AXES.map((a, i) => {
+          const labelPt = radarPoint(124, i, axes, center, radius);
+          const color = i === strongestIdx ? C.green : i === weakestIdx ? C.orange : C.mut;
+          return (
+            <text key={a.id} x={labelPt.x} y={labelPt.y} textAnchor="middle" fontSize="9" fontWeight="800" fill={color}>
+              {a.label} {Math.round(values[i])}%
+            </text>
+          );
+        })}
+      </svg>
+      <p style={{ fontSize: 12, color: C.mut, textAlign: "center", marginTop: 6 }}>
+        Tu fortaleza principal: <strong style={{ color: C.green }}>{DNA_AXES[strongestIdx].label}</strong>
+      </p>
+      <p style={{ fontSize: 12, color: C.mut, textAlign: "center", marginTop: 2 }}>
+        Tu área de mejora: <strong style={{ color: C.orange }}>{DNA_AXES[weakestIdx].label}</strong>
+      </p>
+      <p style={{ fontSize: 11, color: C.dim, textAlign: "center", marginTop: 6 }}>
+        Entrena más para mejorar tu {DNA_AXES[weakestIdx].label.toLowerCase()}
+      </p>
+    </div>
+  );
+}
+
+/* ─── Calidad técnica global (feedback de técnica) ─── */
+function techniqueQualityPct(sessions) {
+  const ratings = sessions
+    .filter((s) => s.kind === "entreno")
+    .flatMap((s) => s.exercises.map((e) => e.technique))
+    .filter(Boolean);
+  if (!ratings.length) return null;
+  const good = ratings.filter((r) => r === "perfecta" || r === "bien").length;
+  return Math.round((good / ratings.length) * 100);
+}
+
 /* ─── Comparativa temporal: esta semana vs la anterior ─── */
 function weekComparisonStats(sessions) {
   const thisWeekStart = startOfWeek();
@@ -7687,6 +8427,32 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
         </button>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>{recordDetail}</h2>
         <p style={{ fontSize: 13, color: C.cyan, fontWeight: 700, marginTop: 4 }}>{trendLabel}</p>
+        {(() => {
+          const avg = avgRpeFor(sessions, recordDetail);
+          if (avg === null) return null;
+          return <p style={{ fontSize: 12, fontWeight: 700, color: rpeColor(avg), marginTop: 4 }}>RPE promedio: {avg.toFixed(1)}</p>;
+        })()}
+
+        <ProgressTimeline exercise={recordDetail} currentValue={maxVal} />
+
+        {(() => {
+          const pred = predictRecord(sessions, recordDetail);
+          if (!pred) return null;
+          if (pred.trend === "falling") {
+            return (
+              <div className="card" style={{ marginTop: 10 }}>
+                <p style={{ fontSize: 12, color: C.mut }}>💡 Tu progresión está estancada. Considera cambiar el estímulo.</p>
+              </div>
+            );
+          }
+          return (
+            <div className="card" style={{ marginTop: 10, borderColor: `${C.green}55` }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>📈 A este ritmo en 4 semanas: ~{pred.in4weeks}kg</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.green, marginTop: 4 }}>📈 En 8 semanas: ~{pred.in8weeks}kg</p>
+              <p style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>Estimado según tu progresión actual</p>
+            </div>
+          );
+        })()}
 
         <div className="sec-title">Últimas veces</div>
         <div className="card" style={{ padding: "14px 10px" }}>
@@ -7810,6 +8576,18 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           </button>
         </div>
 
+        <DNARadar sessions={sessions} streak={streak} />
+        {(() => {
+          const pct = techniqueQualityPct(sessions);
+          if (pct === null) return null;
+          const color = pct >= 80 ? C.green : pct >= 60 ? C.yellow : C.orange;
+          return (
+            <div className="card" style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px" }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Calidad técnica</span>
+              <span style={{ fontSize: 15, fontWeight: 900, color }}>{pct}% 🎯</span>
+            </div>
+          );
+        })()}
         <PlateauCard sessions={sessions} />
         <WeekComparisonCard sessions={sessions} />
         <WeakPointCard
@@ -8549,6 +9327,14 @@ export default function App() {
   });
   const [storageFull, setStorageFull] = useState(false);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
+  const [mentor, setMentor] = useState(null);
+  const [showFatigueInfo, setShowFatigueInfo] = useState(false);
+
+  const triggerMentor = (id, message) => {
+    if (!canShowMentorToday()) return;
+    markMentorShown();
+    setMentor({ id, message });
+  };
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(() => store.get("installed", false));
   const [showIOSHint, setShowIOSHint] = useState(() => {
@@ -8694,6 +9480,35 @@ export default function App() {
   }, [tab]);
 
   const streak = useMemo(() => calcStreak(sessions, freezes), [sessions, freezes]);
+  const fatigueLevel = useMemo(() => analyzeFatigue(sessions), [sessions]);
+
+  /* El Médico aparece cuando la fatiga es crítica (máximo 1 mentor al día) */
+  useEffect(() => {
+    if (fatigueLevel === "critical") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza un modal con un valor externo (localStorage) que cambia entre renders
+      triggerMentor("medico", "Tu cuerpo habla. Escúchalo antes de que grite. Descansa 2 días completos y luego retoma con Cuerpo o Movilidad suave.");
+    }
+  }, [fatigueLevel]);
+
+  /* El Coach aparece los lunes y al entrar a una nueva fase del plan de 12 semanas */
+  useEffect(() => {
+    const isMonday = new Date().getDay() === 1;
+    if (isMonday && store.get("coach_monday_shown", null) !== todayKey()) {
+      store.set("coach_monday_shown", todayKey());
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- muestra el modal una vez al montar según una fecha externa
+      triggerMentor("coach", "Nueva semana, nueva oportunidad. Planifica ahora — los que planifican, logran.");
+      return;
+    }
+    const wk = getPlanWeekNumber();
+    if (wk && wk <= 12) {
+      const phaseId = getPlanPhase(wk);
+      const lastPhase = store.get("plan_last_phase", null);
+      if (lastPhase !== null && lastPhase !== phaseId) {
+        triggerMentor("coach", `Entraste a la fase de ${PERIODIZATION_LABELS[phaseId].toLowerCase()}. ${PERIODIZATION[phaseId].focus}.`);
+      }
+      store.set("plan_last_phase", phaseId);
+    }
+  }, []);
   const headerAchCount = useMemo(() => computeAchievements(sessions, freezes).list.filter((a) => a.unlocked).length, [sessions, freezes]);
   const headerXpInfo = useMemo(
     () => computeXP(sessions, headerAchCount, Math.max(longestStreakEver(sessions), streak)),
@@ -8896,6 +9711,7 @@ export default function App() {
         onClose={() => { setLive(null); setTab("inicio"); }}
         onViewStats={() => { setLive(null); setTab("progreso"); }}
         name={name}
+        onMentor={triggerMentor}
         voiceOn={voiceOn}
         onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
       />
@@ -8973,6 +9789,7 @@ export default function App() {
           </button>
         </div>
       )}
+      {mentor && <MentorModal mentorId={mentor.id} message={mentor.message} onClose={() => setMentor(null)} />}
       <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease", flexDirection: "column", alignItems: "stretch", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Izquierda: identidad */}
@@ -9031,7 +9848,25 @@ export default function App() {
           </div>
 
           {/* Derecha: estado */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+            <button onClick={() => setShowFatigueInfo((v) => !v)} aria-label="Estado de fatiga" style={{ fontSize: 15, padding: 2 }}>
+              {FATIGUE_INFO[fatigueLevel].emoji}
+            </button>
+            {showFatigueInfo && (
+              <div
+                className="card fade-up"
+                style={{ position: "absolute", top: "100%", right: 0, marginTop: 8, zIndex: 60, width: 240, textAlign: "left", borderColor: `${FATIGUE_INFO[fatigueLevel].color}66` }}
+              >
+                <p style={{ fontSize: 13, fontWeight: 800, color: FATIGUE_INFO[fatigueLevel].color }}>{FATIGUE_INFO[fatigueLevel].title}</p>
+                <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>{FATIGUE_INFO[fatigueLevel].desc}</p>
+                <button
+                  onClick={() => setShowFatigueInfo(false)}
+                  style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: FATIGUE_INFO[fatigueLevel].color }}
+                >
+                  {fatigueLevel === "critical" ? "Entiendo — descanso hoy" : "Entendido"}
+                </button>
+              </div>
+            )}
             {streak > 0 && (
               <span style={{ fontSize: 13, fontWeight: 800, color: C.orange, display: "flex", alignItems: "center", gap: 3 }}>
                 <span className="flame">🔥</span>{streak}

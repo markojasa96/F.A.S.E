@@ -490,6 +490,23 @@ input[type='number'] {
   animation: whiteFlash 300ms ease-out forwards;
 }
 
+/* ─── Foto finish de récord ─── */
+@keyframes recordBadgeIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.record-badge {
+  animation: recordBadgeIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes recordZoom {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.record-zoom {
+  animation: recordZoom 300ms ease-in-out;
+}
+
 /* ─── Respiración guiada pre-sesión ─── */
 @keyframes breathe {
   0%, 100% { r: 60; stroke-opacity: 0.4; }
