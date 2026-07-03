@@ -5679,6 +5679,16 @@ export default function App() {
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(() => store.get("installed", false));
+  const [showIOSHint, setShowIOSHint] = useState(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    return isIOS && !isStandalone && !store.get("ios_install_hint_dismissed", false);
+  });
+
+  const dismissIOSHint = () => {
+    setShowIOSHint(false);
+    store.set("ios_install_hint_dismissed", true);
+  };
 
   useEffect(() => {
     store.onError = () => setStorageFull(true);
@@ -5996,11 +6006,12 @@ export default function App() {
               onClick={installApp}
               aria-label="Instalar app"
               style={{
-                fontSize: 11, fontWeight: 800, color: "#07070C", background: C.cyan,
-                padding: "6px 10px", borderRadius: 99, whiteSpace: "nowrap",
+                background: "#00E5FF", color: "#000", border: "none", borderRadius: 20,
+                padding: "6px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
               }}
             >
-              📲 Instalar app
+              📲 Instalar
             </button>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -6107,6 +6118,30 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {showIOSHint && (
+        <div
+          style={{
+            position: "fixed", left: 12, right: 12, bottom: 76, zIndex: 70,
+            background: C.card, border: `1px solid ${C.cyan}55`, borderRadius: 14,
+            padding: "12px 14px", display: "flex", alignItems: "center", gap: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
+        >
+          <span style={{ fontSize: 22 }}>📲</span>
+          <p style={{ fontSize: 12, color: C.text, flex: 1, lineHeight: 1.4 }}>
+            Para instalar en iPhone: toca el ícono compartir <strong>⬆️</strong> y luego{" "}
+            <strong>&quot;Añadir a pantalla de inicio&quot;</strong>.
+          </p>
+          <button
+            onClick={dismissIOSHint}
+            aria-label="Cerrar instrucciones de instalación"
+            style={{ fontSize: 14, color: C.mut, fontWeight: 800, padding: 4 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </>
   );
 }

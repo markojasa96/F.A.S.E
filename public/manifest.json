@@ -1,27 +1,46 @@
 {
   "name": "F.A.S.E. - Formación Atlética",
   "short_name": "F.A.S.E.",
-  "description": "Tu sistema personal de entrenamiento de élite",
+  "description": "Sistema personal de entrenamiento de élite",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#07070C",
   "theme_color": "#00E5FF",
+  "lang": "es",
+  "categories": ["fitness", "health", "sports"],
   "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ],
-  "categories": ["fitness", "health", "sports"],
-  "lang": "es"
+  ]
 }

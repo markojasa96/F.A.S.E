@@ -12,5 +12,8 @@ export default defineConfig({
   server: {
     port: Number(globalThis.process?.env?.PORT) || 5173,
     host: true,
+    headers: {
+      "Service-Worker-Allowed": "/",
+    },
   },
 })
