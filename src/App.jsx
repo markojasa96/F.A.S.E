@@ -22,6 +22,37 @@ const C = {
   blue: "#3B82F6",
 };
 
+/* ─── Temas visuales (mutan C + variables CSS; ver applyTheme) ─── */
+const THEMES = [
+  { id: "sombra", name: "Sombra", emoji: "🌑", bg: "#07070C", card: "#13131D", card2: "#1A1A28", border: "#23233A", surface: "#0E0E16", accent: "#00E5FF", locked: false },
+  { id: "fuego", name: "Fuego", emoji: "🔥", bg: "#0C0700", card: "#1D1006", card2: "#2A160A", border: "#3A2010", surface: "#150A02", accent: "#FF6B00", locked: false },
+  { id: "bosque", name: "Bosque", emoji: "🌲", bg: "#030C05", card: "#0D1D10", card2: "#12280F", border: "#1A3A20", surface: "#071309", accent: "#00FF85", locked: false },
+  { id: "oceano", name: "Océano", emoji: "🌊", bg: "#00050C", card: "#0A1A2E", card2: "#0F2440", border: "#1A2A44", surface: "#040D18", accent: "#0099FF", locked: false },
+  { id: "oro", name: "Oro", emoji: "🏆", bg: "#0C0900", card: "#1D1706", card2: "#2A2109", border: "#3A2E10", surface: "#150F02", accent: "#FFD700",
+    locked: true, unlockDesc: "Alcanza nivel Leyenda en cualquier disciplina", check: (st) => st.reachedLeyenda },
+  { id: "cosmos", name: "Cosmos", emoji: "✨", bg: "#05030C", card: "#12102A", card2: "#191640", border: "#2A2050", surface: "#0A081A", accent: "#B084FF",
+    locked: true, unlockDesc: "Completa 50 sesiones totales", check: (st) => st.totalSessions >= 50 },
+  { id: "sangre", name: "Sangre y fuego", emoji: "🩸", bg: "#0C0000", card: "#1D0505", card2: "#2A0808", border: "#3A0A0A", surface: "#150202", accent: "#FF1A1A",
+    locked: true, unlockDesc: "Racha de 30 días", check: (st) => st.bestStreak >= 30 },
+];
+
+/* Muta el objeto C (leído por todos los estilos inline) y las variables CSS globales */
+function applyTheme(theme) {
+  C.bg = theme.bg; C.card = theme.card; C.card2 = theme.card2; C.border = theme.border; C.surface = theme.surface; C.cyan = theme.accent;
+  try {
+    const root = document.documentElement;
+    root.style.setProperty("--bg", theme.bg);
+    root.style.setProperty("--card", theme.card);
+    root.style.setProperty("--card2", theme.card2);
+    root.style.setProperty("--border", theme.border);
+    root.style.setProperty("--surface", theme.surface);
+    root.style.setProperty("--cyan", theme.accent);
+    document.body.style.background = theme.bg;
+  } catch {
+    /* SSR o entorno sin document */
+  }
+}
+
 /* ─── Storage seguro (prefijo fase_) ─── */
 const store = {
   get(key, fallback) {
@@ -649,6 +680,45 @@ const tripleBeep = () => {
 /* Aviso suave a 3 segundos del final */
 const softBeep = () => beep(440, 0.1, 0.15, 0);
 
+/* ─── Sonido ambiental de fondo (Web Audio, sin archivos externos) ─── */
+function generateAmbientSound(mode) {
+  if (!audioCtx) return { stop() {} };
+  try {
+    if (mode === "atletismo") {
+      /* Pulso rítmico simulando cadencia de 120 pasos/min (cada 500ms) */
+      const id = setInterval(() => beep(300, 0.04, 0.06, 0), 500);
+      return { stop() { clearInterval(id); } };
+    }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    if (mode === "gym") {
+      osc.frequency.value = 60;
+      gain.gain.value = 0.05;
+    } else {
+      osc.frequency.value = 432;
+      gain.gain.value = 0.03;
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.frequency.value = 0.1;
+      lfoGain.gain.value = 0.015;
+      lfo.connect(lfoGain);
+      lfoGain.connect(gain.gain);
+      lfo.start();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      return { stop() { try { osc.stop(); lfo.stop(); } catch { /* ya detenido */ } } };
+    }
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    return { stop() { try { osc.stop(); } catch { /* ya detenido */ } } };
+  } catch {
+    return { stop() {} };
+  }
+}
+
 /* ─── Voz sintetizada (Web Speech API, gratis, sin API key) ─── */
 function speak(text) {
   try {
@@ -886,6 +956,7 @@ function computeAchievementStats(sessions, freezes) {
     workouts.filter((s) => s.disc === "especial").map((s) => s.focusLabel?.split(" ")[0])
   ).size;
   const reachedTheOne = workouts.some((s) => s.levelIdx === 5);
+  const reachedLeyenda = workouts.some((s) => s.levelIdx >= 4);
   const nextDayKey = (k) => {
     const [y, m, d] = k.split("-").map(Number);
     return dayKey(new Date(y, m - 1, d + 1).getTime());
@@ -893,7 +964,7 @@ function computeAchievementStats(sessions, freezes) {
   const usedFreezeAndTrained = freezes.length > 0 && freezes.some((f) => sessions.some((s) => dayKey(s.ts) === nextDayKey(f)));
   return {
     totalSessions, totalVolume, bestStreak, hasEarlySession, hasLateSession, hasMonAndFriSameWeek,
-    hasSprint100, hasMarathonSession, allDisciplinesOneWeek, specialModesUsed, reachedTheOne, usedFreezeAndTrained,
+    hasSprint100, hasMarathonSession, allDisciplinesOneWeek, specialModesUsed, reachedTheOne, reachedLeyenda, usedFreezeAndTrained,
   };
 }
 
@@ -1033,6 +1104,70 @@ const CHALLENGE_TYPES = [
   { id: "weight", label: "Levantar X kg en un ejercicio", unit: "kg" },
   { id: "distance", label: "Correr una distancia en menos de X", unit: "seg" },
 ];
+
+/* ─── Calculadora de plan de entrenamiento semanal ─── */
+const PLAN_GOALS = [
+  { id: "fuerza", label: "Fuerza" }, { id: "musculo", label: "Músculo" }, { id: "resistencia", label: "Resistencia" },
+  { id: "futbol", label: "Fútbol" }, { id: "atletismo", label: "Atletismo" },
+];
+const PLAN_DURATIONS = [30, 45, 60, 90];
+const PLAN_TEMPLATES = {
+  fuerza: [
+    { discId: "gimnasio", focusId: "pecho", label: "Gimnasio — Pecho y tríceps" },
+    { discId: "gimnasio", focusId: "espalda", label: "Gimnasio — Espalda y bíceps" },
+    { discId: "gimnasio", focusId: "piernas", label: "Gimnasio — Piernas" },
+    { discId: "gimnasio", focusId: "hombros", label: "Gimnasio — Hombros y brazos" },
+    { discId: "gimnasio", focusId: "todo", label: "Gimnasio — Full body" },
+    { discId: "gimnasio", focusId: "gluteos", label: "Gimnasio — Glúteos y piernas" },
+  ],
+  musculo: [
+    { discId: "gimnasio", focusId: "pecho", label: "Gimnasio — Pecho y tríceps" },
+    { discId: "gimnasio", focusId: "espalda", label: "Gimnasio — Espalda y bíceps" },
+    { discId: "calistenia", focusId: "core", label: "Calistenia — Core y hombros" },
+    { discId: "gimnasio", focusId: "piernas", label: "Gimnasio — Piernas" },
+    { discId: "gimnasio", focusId: "hombros", label: "Gimnasio — Hombros y brazos" },
+    { discId: "gimnasio", focusId: "brazos", label: "Gimnasio — Brazos" },
+  ],
+  resistencia: [
+    { discId: "futbolParque", focusId: "resistencia", label: "Fútbol Parque — Resistencia" },
+    { discId: "calistenia", focusId: "explosivo", label: "Calistenia — Full body explosivo" },
+    { discId: "atletismo", focusId: "5km", label: "Atletismo — 5 km" },
+    { discId: "calistenia", focusId: "core", label: "Calistenia — Core" },
+    { discId: "futbolParque", focusId: "velocidad", label: "Fútbol Parque — Velocidad" },
+    { discId: "atletismo", focusId: "1000m", label: "Atletismo — 1000 m" },
+  ],
+  futbol: [
+    { discId: "futbolGym", focusId: "fuerza", label: "Fútbol Gimnasio — Fuerza de pierna" },
+    { discId: "futbolParque", focusId: "tiro", label: "Fútbol Parque — Tiro" },
+    { discId: "futbolGym", focusId: "velocidad", label: "Fútbol Gimnasio — Velocidad explosiva" },
+    { discId: "futbolParque", focusId: "regate", label: "Fútbol Parque — Regate" },
+    { discId: "futbolGym", focusId: "estabilidad", label: "Fútbol Gimnasio — Estabilidad" },
+    { discId: "futbolParque", focusId: "resistencia", label: "Fútbol Parque — Resistencia aeróbica" },
+  ],
+  atletismo: [
+    { discId: "atletismo", focusId: "1000m", label: "Atletismo — 1000 m" },
+    { discId: "gimnasio", focusId: "piernas", label: "Gimnasio — Piernas (fuerza)" },
+    { discId: "atletismo", focusId: "100m", label: "Atletismo — 100 m" },
+    { discId: "calistenia", focusId: "explosivo", label: "Calistenia — Explosivo" },
+    { discId: "atletismo", focusId: "5km", label: "Atletismo — 5 km" },
+    { discId: "atletismo", focusId: "400m", label: "Atletismo — 400 m" },
+  ],
+};
+const PLAN_DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const PLAN_TRAIN_SLOTS = { 3: [0, 2, 4], 4: [0, 2, 3, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5] };
+
+function buildWeeklyPlan(days, goal, duration) {
+  const templates = PLAN_TEMPLATES[goal] || PLAN_TEMPLATES.musculo;
+  const trainDays = PLAN_TRAIN_SLOTS[days] || PLAN_TRAIN_SLOTS[4];
+  const plan = PLAN_DAY_NAMES.map((name, i) => {
+    if (i === 6) return { day: name, rest: true, label: "Descanso" };
+    const slotIdx = trainDays.indexOf(i);
+    if (slotIdx !== -1) return { day: name, ...templates[slotIdx % templates.length] };
+    if (i === 5) return { day: name, rest: true, activeRest: true, label: "Descanso activo (Movilidad)" };
+    return { day: name, rest: true, label: "Descanso" };
+  });
+  return { days, goal, duration, plan, createdTs: Date.now() };
+}
 
 function challengeProgress(challenge, sessions, streak) {
   if (!challenge) return null;
@@ -1392,6 +1527,7 @@ function ExerciseDemo({ exerciseName }) {
   const color = MOVEMENT_COLORS[category];
   return (
     <div
+      className="exercise-demo"
       style={{
         width: "100%", maxHeight: 160, aspectRatio: "16 / 9",
         borderRadius: 12, background: "#1A1A2E", border: `1px solid ${C.border}`,
@@ -1808,7 +1944,15 @@ function Welcome({ onDone }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze, challenge }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession }) {
+  const [menuId, setMenuId] = useState(null);
+  const longPressRef = useRef(null);
+  const startLongPress = (id) => {
+    longPressRef.current = setTimeout(() => setMenuId(id), 500);
+  };
+  const cancelLongPress = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+  };
   const pro = mode === "pro";
   const hero = heroForStreak(streak);
   const nextHero = HEROES.find((h) => h.days > streak);
@@ -1837,12 +1981,56 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
       .reduce((a, st) => a + st.weight * st.reps, 0)
   );
 
+  /* Widget de acceso rápido: contexto según cuándo entrenaste por última vez */
+  const todaySessions = sessions.filter((s) => dayKey(s.ts) === todayKey());
+  const trainedToday = todaySessions.length > 0;
+  const lastAnyTs = sessions.length ? Math.max(...sessions.map((s) => s.ts)) : null;
+  const daysSince = lastAnyTs ? Math.floor((seedNow() - lastAnyTs) / 86400000) : null;
+  const bestStreakEver = Math.max(longestStreakEver(sessions), streak);
+  const isStreakRecordToday = streak > 0 && streak === bestStreakEver && trainedToday;
+  const todayVolume = Math.round(
+    todaySessions.filter((s) => s.kind === "entreno").flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((st) => st.ok)
+      .reduce((a, st) => a + st.weight * st.reps, 0)
+  );
+
   return (
     <div className="screen">
       <p style={{ fontSize: 18, fontWeight: 800 }}>
         Hola, <span style={{ color: C.cyan }}>{name}</span> {!pro && "👋"}
       </p>
       <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
+
+      {sessions.length > 0 && (
+        <>
+          {isStreakRecordToday ? (
+            <div className="card pop" style={{ marginTop: 12, padding: "16px", textAlign: "center", background: "rgba(255,215,0,0.1)", borderColor: "#FFD700" }}>
+              <div style={{ fontSize: 30 }}>🏆</div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", marginTop: 4 }}>RÉCORD DE RACHA — Día {streak}</div>
+            </div>
+          ) : trainedToday ? (
+            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>Ya entrenaste hoy 🔥 — Sesión completada</p>
+              <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{todaySessions.length} {todaySessions.length === 1 ? "sesión" : "sesiones"} hoy{todayVolume > 0 ? ` · ${todayVolume} kg` : ""}</p>
+            </div>
+          ) : daysSince !== null && daysSince >= 2 ? (
+            <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `2px solid ${C.red}`, animation: "flame 1.6s ease-in-out infinite" }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: C.red }}>Han pasado {daysSince} días desde tu último entrenamiento</p>
+              <button className="btn-xl" onClick={onTrain} style={{ marginTop: 10, background: C.red, color: "#fff", fontSize: 13 }}>
+                Volver a entrenar ahora
+              </button>
+            </div>
+          ) : (
+            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
+              <p style={{ fontSize: 13, fontWeight: 700 }}>Buenos días {name} ☀️ — ¿Entrenamos hoy?</p>
+              {lastEntreno && (
+                <button className="btn-xl" onClick={() => onRepeat(lastEntreno)} style={{ marginTop: 10, background: C.cyan, color: "#07070C", fontSize: 13 }}>
+                  Continuar con {DISCIPLINES[lastEntreno.disc]?.label || "tu última disciplina"}
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.cyan}44` }}>
         <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>💡 INSIGHT DEL DÍA</p>
@@ -2030,17 +2218,36 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
           const disc = isBody ? null : DISCIPLINES[s.disc];
           const sec = isBody ? BODY_SECTIONS.find((b) => b.id === s.section) : null;
           return (
-            <div key={s.id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
-              <span style={{ fontSize: 24 }}>{isBody ? sec?.icon || "🧘" : disc?.icon}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {isBody ? `Cuerpo · ${sec?.name || ""}` : disc?.label}
+            <div key={s.id} style={{ position: "relative" }}>
+              <div
+                className="card"
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}
+                onTouchStart={() => startLongPress(s.id)}
+                onTouchEnd={cancelLongPress}
+                onTouchMove={cancelLongPress}
+              >
+                <span style={{ fontSize: 24 }}>{isBody ? sec?.icon || "🧘" : disc?.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {isBody ? `Cuerpo · ${sec?.name || ""}` : disc?.label}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.mut }}>
+                    {isBody ? "Acondicionamiento" : `${s.focusLabel} · ${LEVELS[s.levelIdx].emoji} ${LEVELS[s.levelIdx].name}`}
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: C.mut }}>
-                  {isBody ? "Acondicionamiento" : `${s.focusLabel} · ${LEVELS[s.levelIdx].emoji} ${LEVELS[s.levelIdx].name}`}
-                </div>
+                <span style={{ fontSize: 12, color: C.dim }}>{fmtDate(s.ts)}</span>
               </div>
-              <span style={{ fontSize: 12, color: C.dim }}>{fmtDate(s.ts)}</span>
+              {menuId === s.id && (
+                <div className="card pop" style={{ position: "absolute", top: "100%", right: 8, zIndex: 30, padding: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <button onClick={() => setMenuId(null)} style={{ fontSize: 12, padding: "6px 10px", textAlign: "left" }}>Ver detalles</button>
+                  <button
+                    onClick={() => { onDeleteSession?.(s.id); setMenuId(null); }}
+                    style={{ fontSize: 12, padding: "6px 10px", textAlign: "left", color: C.red }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
@@ -3137,7 +3344,48 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   const [flashDone, setFlashDone] = useState(false);
   const [sessionSecs, setSessionSecs] = useState(0);
   const [confetti, setConfetti] = useState(false);
+  const [flashWhite, setFlashWhite] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const [ambientOn, setAmbientOn] = useState(() => store.get("ambient", false));
+  const wakeLockRef = useRef(null);
+  const ambientRef = useRef(null);
+
+  const toggleLiveMode = async () => {
+    const next = !liveMode;
+    setLiveMode(next);
+    try {
+      if (next && navigator.wakeLock) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+      } else if (wakeLockRef.current) {
+        wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+    } catch {
+      /* Wake Lock no soportado: continúa sin bloquear pantalla */
+    }
+  };
+
+  useEffect(() => () => { if (wakeLockRef.current) wakeLockRef.current.release(); }, []);
+
+  /* Sonido ambiental de fondo, mezclado con los beeps existentes */
+  useEffect(() => {
+    if (!ambientOn) {
+      if (ambientRef.current) { ambientRef.current.stop(); ambientRef.current = null; }
+      return undefined;
+    }
+    ensureAudio();
+    const ambientMode = plan.discId === "gimnasio" ? "gym" : plan.discId === "atletismo" ? "atletismo" : "parque";
+    ambientRef.current = generateAmbientSound(ambientMode);
+    return () => { if (ambientRef.current) { ambientRef.current.stop(); ambientRef.current = null; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ambientOn]);
+  const [showSwipeHint] = useState(() => store.get("session_count", 0) < 3);
   const restRef = useRef(0);
+  const touchYRef = useRef(null);
+
+  useEffect(() => {
+    store.set("session_count", store.get("session_count", 0) + 1);
+  }, []);
   const [startTs] = useState(() => Date.now());
 
   const ex = plan.exercises[exIdx];
@@ -3271,12 +3519,15 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
         focusLabel: plan.focusLabel,
         levelIdx: plan.lvlIdx,
         calLocation: plan.calLocation,
+        durationMin: Math.round(sessionSecs / 60),
         exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: logs[i] })),
       };
       onSave(record);
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       if (voiceOn) speak(`¡Sesión completada! Eres un ${LEVELS[plan.lvlIdx]?.name || ""}`);
       popConfetti();
+      setFlashWhite(true);
+      setTimeout(() => setFlashWhite(false), 300);
       setPhase("finished");
     } else {
       const nextEx = plan.exercises[exIdx + 1];
@@ -3334,13 +3585,14 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
 
     return (
       <div className="screen fade-up" style={{ paddingTop: 30, textAlign: "center", paddingBottom: 30 }}>
+        {flashWhite && <div className="white-flash" />}
         <Confetti show={confetti} />
-        <div className="pop" style={{ fontSize: 64 }}>{hero.emoji}</div>
+        <div className="unlock-pop" style={{ fontSize: 64 }}>{hero.emoji}</div>
         <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>{title}</h2>
         <p style={{ color: C.mut, marginTop: 4, fontSize: 13 }}>Sesión de {plan.discLabel} completada</p>
 
         {justUnlocked && (
-          <div className="card pop" style={{ marginTop: 14, borderColor: C.yellow, background: "rgba(255,214,0,0.07)" }}>
+          <div className="card unlock-pop" style={{ marginTop: 14, borderColor: C.yellow, background: "rgba(255,214,0,0.07)" }}>
             <div style={{ fontSize: 36 }}>{justUnlocked.emoji}</div>
             <div style={{ fontWeight: 800, color: C.yellow, marginTop: 4, fontSize: 13 }}>¡Héroe desbloqueado: {justUnlocked.name}!</div>
             <div style={{ fontSize: 11, color: C.mut, fontStyle: "italic" }}>“{justUnlocked.quote}”</div>
@@ -3486,17 +3738,33 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   /* Ejercicio (work / exdone) */
   const doneSets = logs[exIdx];
   return (
-    <div className="screen" style={{ paddingBottom: 30 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
-        <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
-          {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
-        </span>
-        <span style={{ fontSize: 12, fontWeight: 800, color: sessionSecs > 5400 ? C.orange : C.text, fontVariantNumeric: "tabular-nums" }}>
-          ⏱ {String(Math.floor(sessionSecs / 60)).padStart(2, "0")}:{String(sessionSecs % 60).padStart(2, "0")}
-        </span>
-        <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 15, padding: 4 }}>
-          {voiceOn ? "🔊" : "🔇"}
+    <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30 }}>
+      {!liveMode && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
+          <span style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>
+            {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: sessionSecs > 5400 ? C.orange : C.text, fontVariantNumeric: "tabular-nums" }}>
+            ⏱ {String(Math.floor(sessionSecs / 60)).padStart(2, "0")}:{String(sessionSecs % 60).padStart(2, "0")}
+          </span>
+        </div>
+      )}
+      <div style={{ display: "flex", justifyContent: liveMode ? "space-between" : "flex-end", alignItems: "center", gap: 6, marginTop: liveMode ? 0 : 4 }}>
+        {liveMode && (
+          <>
+            <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
+            <span style={{ fontSize: 11, color: C.dim }}>🔆 Pantalla activa</span>
+          </>
+        )}
+        <button onClick={() => setAmbientOn((v) => { const nv = !v; store.set("ambient", nv); return nv; })} aria-label="Sonido ambiental" style={{ fontSize: 14, padding: 4 }}>
+          {ambientOn ? "🎵" : "🔇"}
+        </button>
+        <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 14, padding: 4 }}>
+          {voiceOn ? "🔊" : "🔈"}
+        </button>
+        <button onClick={toggleLiveMode} aria-label="Modo pantalla activa" style={{ fontSize: 14, padding: 4 }}>
+          {liveMode ? "👁️‍🗨️" : "👁️"}
         </button>
       </div>
 
@@ -3538,6 +3806,14 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
           boxShadow: flashDone ? `0 0 0 2px ${C.green}` : "none",
           transition: "box-shadow .3s ease",
         }}
+        onTouchStart={(e) => { touchYRef.current = e.touches[0].clientY; }}
+        onTouchEnd={(e) => {
+          if (touchYRef.current === null || phase !== "work" || ex.type === "tiempo") return;
+          const dy = e.changedTouches[0].clientY - touchYRef.current;
+          touchYRef.current = null;
+          if (dy < -60) attemptComplete();
+          else if (dy > 60) logSet(false);
+        }}
       >
         <ExerciseDemo exerciseName={ex.name} />
         <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25, marginTop: 12 }}>{ex.name}</h2>
@@ -3547,6 +3823,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
           <span style={{ fontWeight: 800 }}>{ex.reps}</span>
         </p>
         <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>💡 {ex.tip}</p>
+        {showSwipeHint && phase === "work" && ex.type !== "tiempo" && (
+          <p style={{ marginTop: 8, fontSize: 11, color: C.cyan, textAlign: "center" }}>💡 Desliza arriba para completar serie</p>
+        )}
       </div>
 
       {/* Series completadas */}
@@ -3711,6 +3990,239 @@ const RM_TABLE = [
 ];
 const round2p5 = (x) => Math.round(x / 2.5) * 2.5;
 
+/* ─── Montaña de progreso 3D (CSS transforms, sin WebGL) ─── */
+function Mountain3DChart({ sessions }) {
+  const [entered, setEntered] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setEntered(true), 50); return () => clearTimeout(t); }, []);
+
+  const weeks = useMemo(() => {
+    const now = seedNow();
+    const buckets = Array.from({ length: 8 }, () => 0);
+    sessions.filter((s) => s.kind === "entreno").forEach((s) => {
+      const weeksAgo = Math.floor((now - s.ts) / (7 * 86400000));
+      if (weeksAgo >= 0 && weeksAgo < 8) buckets[7 - weeksAgo] += sessionVolume(s);
+    });
+    return buckets;
+  }, [sessions]);
+
+  const max = Math.max(1, ...weeks);
+
+  return (
+    <div className="card" style={{ padding: "20px 10px 10px", overflow: "hidden" }}>
+      <div style={{ perspective: 800, height: 140 }}>
+        <div
+          className="mountain3d-base"
+          style={{
+            display: "flex", alignItems: "flex-end", gap: 6, height: 120,
+            transform: "rotateX(30deg)", transformStyle: "preserve-3d",
+          }}
+        >
+          {weeks.map((v, i) => {
+            const h = Math.max(4, Math.round((v / max) * 110));
+            const shade = 20 + Math.round((i / 7) * 60); // más oscuro (viejo) a más claro (actual)
+            const isNow = i === 7;
+            return (
+              <div
+                key={i}
+                style={{
+                  flex: 1, height: entered ? h : 0, borderRadius: "3px 3px 0 0",
+                  background: isNow ? C.cyan : `hsl(190, 80%, ${shade}%)`,
+                  transform: `translateZ(${i * 3}px)`,
+                  transition: `height .6s ease ${i * 0.06}s`,
+                  boxShadow: isNow ? `0 0 12px ${C.cyan}88` : "none",
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      <p style={{ fontSize: 10, color: C.dim, textAlign: "center", marginTop: 6 }}>Volumen semanal · últimas 8 semanas</p>
+    </div>
+  );
+}
+
+/* ─── Wizard de 3 preguntas para generar el plan semanal ─── */
+function PlanWizard({ onBack, onGenerate }) {
+  const [days, setDays] = useState(4);
+  const [goal, setGoal] = useState("musculo");
+  const [duration, setDuration] = useState(60);
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 Mi plan</h2>
+      <p className="muted" style={{ marginTop: 2 }}>Responde 3 preguntas y genera tu plan semanal</p>
+
+      <div className="sec-title">¿Cuántos días a la semana entrenas?</div>
+      <div className="chip-wrap">
+        {[3, 4, 5, 6].map((n) => (
+          <button key={n} className={`chip ${days === n ? "on" : ""}`} style={days === n ? { background: C.cyan } : {}} onClick={() => setDays(n)}>{n}</button>
+        ))}
+      </div>
+
+      <div className="sec-title">¿Tu objetivo principal?</div>
+      <div className="chip-wrap">
+        {PLAN_GOALS.map((g) => (
+          <button key={g.id} className={`chip ${goal === g.id ? "on" : ""}`} style={goal === g.id ? { background: C.cyan } : {}} onClick={() => setGoal(g.id)}>{g.label}</button>
+        ))}
+      </div>
+
+      <div className="sec-title">¿Cuánto tiempo por sesión?</div>
+      <div className="chip-wrap">
+        {PLAN_DURATIONS.map((d) => (
+          <button key={d} className={`chip ${duration === d ? "on" : ""}`} style={duration === d ? { background: C.cyan } : {}} onClick={() => setDuration(d)}>{d} min</button>
+        ))}
+      </div>
+
+      <button className="btn-xl" onClick={() => onGenerate(days, goal, duration)} style={{ marginTop: 18, background: C.cyan, color: "#07070C" }}>
+        🗓️ GENERAR MI PLAN
+      </button>
+    </div>
+  );
+}
+
+/* ─── Pantalla "Mi estilo": temas visuales ─── */
+function ThemeScreen({ sessions, freezes, activeThemeId, onSelect, onBack }) {
+  const stats = useMemo(() => computeAchievementStats(sessions, freezes), [sessions, freezes]);
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🎨 Mi estilo</h2>
+      <p className="muted" style={{ marginTop: 2 }}>Elige el tema visual de tu app</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+        {THEMES.map((t) => {
+          const unlocked = !t.locked || t.check(stats);
+          const active = activeThemeId === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => unlocked && onSelect(t.id)}
+              className="card"
+              style={{
+                display: "flex", alignItems: "center", gap: 14, textAlign: "left",
+                background: t.card, border: `2px solid ${active ? t.accent : t.border}`,
+                opacity: unlocked ? 1 : 0.55,
+              }}
+            >
+              <span style={{ fontSize: 28 }}>{unlocked ? t.emoji : "🔒"}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: unlocked ? t.accent : C.mut }}>{t.name}</div>
+                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>
+                  {unlocked ? (active ? "Activo" : "Toca para aplicar") : t.unlockDesc}
+                </div>
+              </div>
+              {active && <span style={{ fontSize: 16, color: t.accent }}>✓</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Código F.A.S.E. único por usuario (2 letras + 4 dígitos) ─── */
+function getFaseCode(name) {
+  let code = store.get("fase_code_val", null);
+  if (!code) {
+    const letters = (name || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase().padEnd(2, "X");
+    const digits = String(Math.floor(1000 + Math.random() * 9000));
+    code = `FASE-${letters}${digits}`;
+    store.set("fase_code_val", code);
+  }
+  return code;
+}
+
+/* Lazy-load de html2canvas desde CDN solo cuando se necesita exportar la imagen */
+function loadHtml2Canvas() {
+  return new Promise((resolve, reject) => {
+    if (window.html2canvas) return resolve(window.html2canvas);
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    script.onload = () => resolve(window.html2canvas);
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+}
+
+/* ─── Tarjeta de perfil pública / exportable ─── */
+function ProfileCard({ name, sessions, streak, freezes, onBack }) {
+  const cardRef = useRef(null);
+  const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const code = useMemo(() => getFaseCode(name), [name]);
+  const { list: achievements } = useMemo(() => computeAchievements(sessions, freezes), [sessions, freezes]);
+  const unlocked = achievements.filter((a) => a.unlocked);
+  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+  const globalLvl = LEVELS[globalIdx];
+  const xpInfo = computeXP(sessions, unlocked.length, Math.max(longestStreakEver(sessions), streak));
+  const gStats = computeGlobalStats(sessions);
+  const hero = heroForStreak(streak);
+  const bestStreak = Math.max(longestStreakEver(sessions), streak);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* portapapeles no disponible */
+    }
+  };
+
+  const saveImage = async () => {
+    if (!cardRef.current) return;
+    setSaving(true);
+    try {
+      const html2canvas = await loadHtml2Canvas();
+      const canvas = await html2canvas(cardRef.current, { backgroundColor: C.bg, scale: 2 });
+      const link = document.createElement("a");
+      link.download = `fase-perfil-${code}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch {
+      alert("No se pudo generar la imagen. Revisa tu conexión a internet.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>Mi perfil F.A.S.E.</h2>
+
+      <div ref={cardRef} className="card" style={{ marginTop: 14, padding: "24px 18px", textAlign: "center", background: C.card, border: `1px solid ${C.cyan}55` }}>
+        <div style={{ fontSize: 64 }}>{hero.emoji}</div>
+        <div style={{ fontSize: 18, fontWeight: 900, marginTop: 6 }}>{name}</div>
+        <div style={{ fontSize: 12, color: C.cyan, fontWeight: 700, marginTop: 2 }}>Código: {code}</div>
+        <div style={{ height: 1, background: C.border, margin: "14px 0" }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
+          <p style={{ fontSize: 13 }}>🔥 Racha: {streak} días</p>
+          <p style={{ fontSize: 13 }}>💪 Sesiones: {sessions.length}</p>
+          <p style={{ fontSize: 13 }}>🏆 Nivel: {globalLvl.name}</p>
+          <p style={{ fontSize: 13 }}>⭐ XP: {xpInfo.xp} (Rango {xpInfo.roman})</p>
+        </div>
+        <div style={{ height: 1, background: C.border, margin: "14px 0" }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
+          <p style={{ fontSize: 12, color: C.mut }}>Disciplina favorita: {DISCIPLINES[gStats.favDiscId]?.label || "—"}</p>
+          <p style={{ fontSize: 12, color: C.mut }}>Ejercicio estrella: {gStats.favExercise || "—"}</p>
+          <p style={{ fontSize: 12, color: C.mut }}>Mejor racha: {bestStreak} días</p>
+        </div>
+        <div style={{ height: 1, background: C.border, margin: "14px 0" }} />
+        <p style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>LOGROS</p>
+        <div style={{ fontSize: 22 }}>
+          {unlocked.length ? unlocked.slice(0, 8).map((a) => a.emoji).join(" ") : "—"}
+        </div>
+      </div>
+
+      <button className="btn-xl" onClick={saveImage} disabled={saving} style={{ marginTop: 14, background: C.cyan, color: "#07070C" }}>
+        {saving ? "Generando..." : "📸 Guardar como imagen"}
+      </button>
+      <button className="btn-xl" onClick={copyCode} style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
+        {copied ? "¡Copiado!" : "📋 Copiar código"}
+      </button>
+    </div>
+  );
+}
+
 function OneRM({ onBack }) {
   const [exName, setExName] = useState(RM_EXERCISES[0]);
   const [weight, setWeight] = useState("");
@@ -3830,12 +4342,14 @@ function OneRM({ onBack }) {
 }
 
 /* ─── PROGRESO ─── */
-function Progress({ sessions, freezes = [], streak = 0 }) {
+function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
   const [recordDetail, setRecordDetail] = useState(null);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
+  const [weeklyPlan, setWeeklyPlan] = useState(() => store.get("weekly_plan", null));
 
   const [newAchievement, setNewAchievement] = useState(null);
   const [achConfetti, setAchConfetti] = useState(false);
@@ -3922,6 +4436,65 @@ function Progress({ sessions, freezes = [], streak = 0 }) {
 
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
 
+  if (showPlan) {
+    const globalIdx0 = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+    const startDay = (item) => {
+      if (item.rest || !onQuickStart) return;
+      const seed = seedNow();
+      if (item.discId === "atletismo") {
+        const exercises = genAtletismoRoutine(item.focusId, globalIdx0, seed);
+        onQuickStart({ discId: "atletismo", discLabel: "Atletismo", discColor: C.purple, discIcon: "🏃", focusLabel: DISTANCES.find((d) => d.id === item.focusId)?.label, lvlIdx: globalIdx0, exercises });
+      } else {
+        const disc = DISCIPLINES[item.discId];
+        const exercises = genRoutine(item.discId, item.focusId, globalIdx0, seed);
+        onQuickStart({ discId: item.discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === item.focusId)?.label || item.focusId, lvlIdx: globalIdx0, exercises });
+      }
+    };
+
+    if (!weeklyPlan) {
+      return (
+        <PlanWizard
+          onBack={() => setShowPlan(false)}
+          onGenerate={(days, goal, duration) => {
+            const p = buildWeeklyPlan(days, goal, duration);
+            setWeeklyPlan(p);
+            store.set("weekly_plan", p);
+          }}
+        />
+      );
+    }
+    return (
+      <div className="screen">
+        <button onClick={() => setShowPlan(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 Mi plan semanal</h2>
+        <p className="muted" style={{ marginTop: 2 }}>{weeklyPlan.days} días/semana · {PLAN_GOALS.find((g) => g.id === weeklyPlan.goal)?.label} · {weeklyPlan.duration} min</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+          {weeklyPlan.plan.map((d) => (
+            <div key={d.day} className="card" style={{ padding: "12px 14px", borderLeft: `4px solid ${d.rest ? C.border : C.cyan}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>{d.day.toUpperCase()}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>{d.label}</div>
+                </div>
+                {!d.rest && (
+                  <button onClick={() => startDay(d)} style={{ fontSize: 11, fontWeight: 800, color: C.cyan, border: `1px solid ${C.cyan}55`, padding: "6px 10px", borderRadius: 99 }}>
+                    ▶ Iniciar
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          className="btn-xl" onClick={() => { setWeeklyPlan(null); store.set("weekly_plan", null); }}
+          style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
+        >
+          Rehacer plan
+        </button>
+      </div>
+    );
+  }
+
   if (showAchievements) {
     return (
       <div className="screen">
@@ -3979,6 +4552,9 @@ function Progress({ sessions, freezes = [], streak = 0 }) {
           <StatBox label="Racha actual" value={streak} accent={C.red} />
           <StatBox label="Mejor racha" value={bestStreak} accent={C.yellow} />
         </div>
+
+        <div className="sec-title">Montaña de progreso (8 semanas)</div>
+        <Mountain3DChart sessions={sessions} />
 
         <div className="card" style={{ marginTop: 10, padding: "12px 14px" }}>
           <p style={{ fontSize: 12, color: C.mut }}>Disciplina favorita</p>
@@ -4077,7 +4653,7 @@ function Progress({ sessions, freezes = [], streak = 0 }) {
       <div className="screen">
         <Confetti show={achConfetti} />
         {newAchievement && (
-          <div className="card pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, borderColor: C.yellow, background: "#13131dee", textAlign: "center", padding: "14px" }}>
+          <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, borderColor: C.yellow, background: "#13131dee", textAlign: "center", padding: "14px" }}>
             <div style={{ fontSize: 30 }}>{newAchievement.emoji}</div>
             <div style={{ fontSize: 13, fontWeight: 800, color: C.yellow, marginTop: 4 }}>¡Logro desbloqueado!</div>
             <div style={{ fontSize: 12, color: C.text, marginTop: 2 }}>{newAchievement.name}</div>
@@ -4139,6 +4715,10 @@ function Progress({ sessions, freezes = [], streak = 0 }) {
           <button className="card" onClick={() => setShowStats(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
             <div style={{ fontSize: 20 }}>📊</div>
             <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Estadísticas</div>
+          </button>
+          <button className="card" onClick={() => setShowPlan(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 20 }}>📅</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mi plan</div>
           </button>
         </div>
 
@@ -4380,6 +4960,239 @@ function Progress({ sessions, freezes = [], streak = 0 }) {
   );
 }
 
+/* ─── COMUNIDAD ─── */
+function getISOWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+}
+
+const MONTHLY_CHALLENGES = [
+  "Reto Año Nuevo: 20 sesiones este mes",
+  "Reto Fuerza: Bate tu récord de press banca",
+  "Reto Velocidad: 10 sesiones de atletismo",
+  "Reto Primavera: 15 sesiones este mes",
+  "Reto Resistencia: 5 sesiones de cardio o fútbol parque",
+  "Reto Verano: Mantén tu racha 20 días",
+  "Reto Mitad de Año: 25 sesiones este mes",
+  "Reto Fuerza Bruta: Bate tu récord de sentadilla",
+  "Reto Constancia: 18 sesiones este mes",
+  "Reto Otoño: Prueba las 4 disciplinas",
+  "Reto Volumen: 40,000 kg este mes",
+  "Reto Cierre de Año: 22 sesiones este mes",
+];
+
+function exportStatsCode(name, sessions, streak) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const volume = Math.round(workouts.reduce((a, s) => a + sessionVolume(s), 0));
+  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+  const payload = {
+    code: getFaseCode(name), name, streak, sessions: sessions.length, volume,
+    level: LEVELS[globalIdx].name, ts: Date.now(),
+  };
+  try {
+    return btoa(encodeURIComponent(JSON.stringify(payload)));
+  } catch {
+    return "";
+  }
+}
+
+function Community({ name, sessions, streak, freezes }) {
+  const [tab, setTab] = useState("clasificacion");
+  const [importValue, setImportValue] = useState("");
+  const [exportStr, setExportStr] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [friends, setFriends] = useState(() => store.get("friends", []));
+
+  const myCode = useMemo(() => getFaseCode(name), [name]);
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const myVolume = Math.round(workouts.reduce((a, s) => a + sessionVolume(s), 0));
+  const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
+
+  const doExport = () => setExportStr(exportStatsCode(name, sessions, streak));
+  const copyExport = async () => {
+    try {
+      await navigator.clipboard.writeText(exportStr);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* sin portapapeles */ }
+  };
+  const doImport = () => {
+    try {
+      const data = JSON.parse(decodeURIComponent(atob(importValue.trim())));
+      if (!data.code) throw new Error("formato inválido");
+      const next = [...friends.filter((f) => f.code !== data.code), data];
+      setFriends(next);
+      store.set("friends", next);
+      setImportValue("");
+    } catch {
+      alert("Código inválido. Pídele a tu amigo que exporte de nuevo.");
+    }
+  };
+
+  const board = [
+    { code: myCode, name: `${name} (tú)`, streak, sessions: sessions.length, volume: myVolume, level: LEVELS[globalIdx].name, isMe: true },
+    ...friends,
+  ].sort((a, b) => b.streak - a.streak);
+
+  /* Retos globales simulados por semana/mes */
+  const now = new Date();
+  const week = getISOWeek(now);
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1); weekStart.setHours(0, 0, 0, 0);
+  const weekSessions = sessions.filter((s) => s.ts >= weekStart.getTime());
+  const weekVolume = Math.round(weekSessions.filter((s) => s.kind === "entreno").reduce((a, s) => a + sessionVolume(s), 0));
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const monthSessions = sessions.filter((s) => s.ts >= monthStart);
+  const monthlyText = MONTHLY_CHALLENGES[now.getMonth()];
+  const monthlyTarget = parseInt(monthlyText.match(/\d[\d,]*/)?.[0]?.replace(/,/g, "") || "20", 10);
+  const monthlyIsVolume = /kg/i.test(monthlyText);
+  const monthlyIsDiscip = /prueba las 4/i.test(monthlyText);
+  const monthlyProgress = monthlyIsDiscip
+    ? new Set(monthSessions.filter((s) => s.kind === "entreno").map((s) => (s.disc?.startsWith("futbol") ? "futbol" : s.disc))).size
+    : monthlyIsVolume
+    ? Math.round(monthSessions.filter((s) => s.kind === "entreno").reduce((a, s) => a + sessionVolume(s), 0))
+    : monthSessions.length;
+  const monthlyMax = monthlyIsDiscip ? 4 : monthlyTarget;
+
+  const challenges = [
+    { icon: "🏋️", label: `Esta semana: ${5000} kg de volumen`, current: weekVolume, target: 5000 },
+    { icon: "📅", label: "Esta semana: 5 sesiones", current: weekSessions.length, target: 5 },
+    { icon: "🌟", label: monthlyText, current: Math.min(monthlyProgress, monthlyMax), target: monthlyMax },
+  ];
+
+  /* Feed de actividad personal */
+  const feed = useMemo(() => {
+    return sessions.filter((s) => s.kind === "entreno").reverse().slice(0, 15).map((s) => {
+      const priorSessions = sessions.filter((x) => x.ts <= s.ts);
+      const streakAtTime = calcStreak(priorSessions, freezes);
+      const hero = heroForStreak(streakAtTime);
+      const okSets = s.exercises.flatMap((e) => e.sets).filter((st) => st.ok).length;
+      const durMin = s.durationMin || Math.round(okSets * 2.5);
+      const discLabel = DISCIPLINES[s.disc]?.label || s.focusLabel || "Entreno";
+      const lvlName = LEVELS[s.levelIdx]?.name || "";
+      return {
+        id: s.id, hero, text: `${name} completó ${okSets} series de ${discLabel} nivel ${lvlName} en ${durMin} minutos 💪`,
+        ts: s.ts,
+      };
+    });
+  }, [sessions, freezes, name]);
+
+  const shareFeed = async (text) => {
+    try { await navigator.clipboard.writeText(`${text} — F.A.S.E. f-a-s-e.vercel.app`); } catch { /* sin portapapeles */ }
+  };
+
+  return (
+    <div className="screen">
+      <h2 style={{ fontSize: 18, fontWeight: 800 }}>👥 Comunidad</h2>
+      <p className="muted" style={{ marginTop: 2 }}>Comparte tu código F.A.S.E. y compara con amigos</p>
+
+      <div className="chip-wrap" style={{ marginTop: 12 }}>
+        {[{ id: "clasificacion", label: "Clasificación" }, { id: "retos", label: "Retos" }, { id: "feed", label: "Feed" }].map((t) => (
+          <button key={t.id} className={`chip ${tab === t.id ? "on" : ""}`} style={tab === t.id ? { background: C.cyan } : {}} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "clasificacion" && (
+        <>
+          <div className="card" style={{ marginTop: 12, padding: "12px 14px" }}>
+            <p style={{ fontSize: 12, color: C.mut }}>Tu código F.A.S.E.</p>
+            <p style={{ fontSize: 16, fontWeight: 900, color: C.cyan, marginTop: 2 }}>{myCode}</p>
+          </div>
+
+          <div className="sec-title">Importar amigo</div>
+          <textarea
+            className="input" placeholder="Pega aquí el código exportado de tu amigo" value={importValue}
+            onChange={(e) => setImportValue(e.target.value)} rows={2} style={{ resize: "none", fontSize: 12 }}
+          />
+          <button className="btn-xl" onClick={doImport} disabled={!importValue.trim()} style={{ marginTop: 8, background: C.cyan, color: "#07070C", fontSize: 13 }}>
+            Importar
+          </button>
+
+          <div className="sec-title">Exportar mis stats</div>
+          <button className="btn-xl" onClick={doExport} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 13 }}>
+            Generar código para compartir
+          </button>
+          {exportStr && (
+            <div className="card" style={{ marginTop: 8, padding: "10px 12px" }}>
+              <p style={{ fontSize: 10, color: C.mut, wordBreak: "break-all" }}>{exportStr}</p>
+              <button onClick={copyExport} style={{ fontSize: 11, color: C.cyan, fontWeight: 700, marginTop: 6 }}>
+                {copied ? "¡Copiado!" : "📋 Copiar"}
+              </button>
+            </div>
+          )}
+
+          <div className="sec-title">Tabla de clasificación</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {board.map((f, i) => (
+              <div key={f.code} className="card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
+                <span style={{ fontSize: 16 }}>{i === 0 ? "👑" : `#${i + 1}`}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: f.isMe ? 900 : 700, color: f.isMe ? C.cyan : C.text }}>{f.name}</div>
+                  <div style={{ fontSize: 10, color: C.mut }}>{f.sessions} sesiones · {f.volume} kg · {f.level}</div>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, color: C.orange }}>🔥{f.streak}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {tab === "retos" && (
+        <>
+          <p className="muted" style={{ marginTop: 10 }}>Semana ISO #{week} · {now.toLocaleDateString("es", { month: "long" })}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+            {challenges.map((c) => {
+              const pct = Math.min(1, c.current / c.target);
+              const done = c.current >= c.target;
+              return (
+                <div key={c.label} className="card" style={{ padding: "12px 14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>{c.icon} {c.label}</span>
+                    {done && <span style={{ fontSize: 11, color: C.green, fontWeight: 800 }}>✅</span>}
+                  </div>
+                  <div style={{ height: 7, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 8 }}>
+                    <div style={{ height: "100%", width: `${pct * 100}%`, background: done ? C.green : C.cyan, borderRadius: 99, transition: "width .5s ease" }} />
+                  </div>
+                  <p style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>{c.current} / {c.target}</p>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {tab === "feed" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+          {feed.length === 0 ? (
+            <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13 }}>
+              Completa sesiones para ver tu feed de actividad.
+            </div>
+          ) : feed.map((post) => (
+            <div key={post.id} className="card" style={{ padding: "12px 14px" }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span style={{ fontSize: 26 }}>{post.hero.emoji}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 12, lineHeight: 1.4 }}>{post.text}</p>
+                  <p style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{fmtDate(post.ts)}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => shareFeed(post.text)}
+                style={{ fontSize: 11, color: C.cyan, fontWeight: 700, marginTop: 8 }}
+              >
+                📤 Compartir este logro
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── CUERPO (Acondicionamiento) ─── */
 const PAIN_FACES = [
   { n: 1, emoji: "😊", label: "Genial" },
@@ -4560,14 +5373,13 @@ const TABS = [
   { id: "entrenar", label: "Entrenar", icon: "💪" },
   { id: "progreso", label: "Progreso", icon: "📈" },
   { id: "cuerpo", label: "Cuerpo", icon: "🧘" },
+  { id: "comunidad", label: "Comunidad", icon: "👥" },
 ];
 
-const TAB_ACCENTS = {
-  inicio: C.cyan,
-  entrenar: C.green,
-  progreso: C.purple,
-  cuerpo: "#60A5FA",
-};
+/* Función (no objeto estático) para que refleje el tema activo al vuelo */
+function getTabAccent(tabId) {
+  return { inicio: C.cyan, entrenar: C.green, progreso: C.purple, cuerpo: "#60A5FA", comunidad: C.orange }[tabId];
+}
 
 export default function App() {
   const [name, setName] = useState(() => store.get("name", ""));
@@ -4576,7 +5388,7 @@ export default function App() {
   const [heroes, setHeroes] = useState(() => store.get("heroes", []));
   const [tab, setTab] = useState("inicio");
   const [live, setLive] = useState(null);
-  const [accent, setAccent] = useState(TAB_ACCENTS.inicio);
+  const [accent, setAccent] = useState(() => getTabAccent("inicio"));
   const [online, setOnline] = useState(() => navigator.onLine);
   const [freezes, setFreezes] = useState(() => store.get("freezes", []));
   const [weeklyGoal, setWeeklyGoal] = useState(() => store.get("weekly_goal", 4));
@@ -4586,10 +5398,25 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
   const [challenge, setChallenge] = useState(() => store.get("challenge", null));
+  const [themeId, setThemeId] = useState(() => {
+    const id = store.get("theme", "sombra");
+    applyTheme(THEMES.find((t) => t.id === id) || THEMES[0]);
+    return id;
+  });
+  const [showTheme, setShowTheme] = useState(false);
+  const [showProfileCard, setShowProfileCard] = useState(false);
 
   const saveChallenge = (c) => {
     setChallenge(c);
     store.set("challenge", c);
+  };
+
+  const selectTheme = (id) => {
+    const t = THEMES.find((th) => th.id === id);
+    if (!t) return;
+    applyTheme(t);
+    setThemeId(id);
+    store.set("theme", id);
   };
 
   useEffect(() => {
@@ -4629,7 +5456,7 @@ export default function App() {
 
   const changeTab = (t) => {
     setTab(t);
-    setAccent(TAB_ACCENTS[t]);
+    setAccent(getTabAccent(t));
   };
 
   const streak = useMemo(() => calcStreak(sessions, freezes), [sessions, freezes]);
@@ -4708,7 +5535,33 @@ export default function App() {
     saveSession({ id: Date.now(), ts: Date.now(), kind: "cuerpo", section: sectionId });
   };
 
+  const deleteSession = (id) => {
+    const next = sessions.filter((s) => s.id !== id);
+    setSessions(next);
+    store.set("sessions", next);
+  };
+
+  const touchStartX = useRef(null);
+
   if (!name) return <Welcome onDone={saveName} />;
+
+  if (showTheme) {
+    return (
+      <ThemeScreen
+        sessions={sessions} freezes={freezes} activeThemeId={themeId}
+        onSelect={selectTheme} onBack={() => setShowTheme(false)}
+      />
+    );
+  }
+
+  if (showProfileCard) {
+    return (
+      <ProfileCard
+        name={name} sessions={sessions} streak={streak} freezes={freezes}
+        onBack={() => setShowProfileCard(false)}
+      />
+    );
+  }
 
   if (live) {
     return (
@@ -4816,27 +5669,47 @@ export default function App() {
           >
             {highContrast ? "🌙" : "☀️"}
           </button>
+          <button onClick={() => setShowTheme(true)} aria-label="Mi estilo" style={{ fontSize: 16, padding: 4 }}>🎨</button>
+          <button onClick={() => setShowProfileCard(true)} aria-label="Mi perfil" style={{ fontSize: 16, padding: 4 }}>
+            {heroForStreak(streak).emoji}
+          </button>
         </div>
       </header>
 
-      {tab === "inicio" && (
-        <Home
-          name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
-          onTrain={() => changeTab("entrenar")} mode={mode}
-          onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
-          broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
-          challenge={challenge}
-        />
-      )}
-      {tab === "entrenar" && (
-        <Train
-          onStart={setLive} onAccent={(c) => setAccent(c || TAB_ACCENTS.entrenar)} totalSessions={sessions.length}
-          noEquipment={noEquipment} onSaveSpecial={saveSession}
-          sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
-        />
-      )}
-      {tab === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} />}
-      {tab === "cuerpo" && <Body onComplete={completeBody} />}
+      <div
+        key={tab}
+        className="tab-slide"
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          touchStartX.current = null;
+          if (Math.abs(dx) < 50) return;
+          const idx = TABS.findIndex((t) => t.id === tab);
+          const nextIdx = dx < 0 ? idx + 1 : idx - 1;
+          if (nextIdx >= 0 && nextIdx < TABS.length) changeTab(TABS[nextIdx].id);
+        }}
+      >
+        {tab === "inicio" && (
+          <Home
+            name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
+            onTrain={() => changeTab("entrenar")} mode={mode}
+            onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
+            broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
+            challenge={challenge} onDeleteSession={deleteSession}
+          />
+        )}
+        {tab === "entrenar" && (
+          <Train
+            onStart={setLive} onAccent={(c) => setAccent(c || getTabAccent("entrenar"))} totalSessions={sessions.length}
+            noEquipment={noEquipment} onSaveSpecial={saveSession}
+            sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
+          />
+        )}
+        {tab === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive} />}
+        {tab === "cuerpo" && <Body onComplete={completeBody} />}
+        {tab === "comunidad" && <Community name={name} sessions={sessions} streak={streak} freezes={freezes} />}
+      </div>
 
       <nav className="tabbar">
         {TABS.map((t) => (
