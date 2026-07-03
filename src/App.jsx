@@ -698,6 +698,7 @@ function warmupKeyFor(discId) {
   if (discId === "gimnasio") return "gimnasio";
   if (discId === "calistenia") return "calistenia";
   if (discId?.startsWith("futbol")) return "futbol";
+  if (discId?.startsWith("basquet")) return "basquet";
   if (discId === "atletismo") return "atletismo";
   if (discId === "cuerpo") return "cuerpo";
   return "calistenia";
@@ -732,6 +733,13 @@ const WARMUP_ROUTINES = {
     { name: "Zancadas dinámicas caminando (cada pierna)", mode: "reps", reps: 10 },
     { name: "Aceleraciones progresivas al 60% (20m)", mode: "reps", reps: 3 },
   ],
+  basquet: [
+    { name: "Trote suave en el lugar", mode: "tiempo", duration: 45 },
+    { name: "Rotaciones de tobillo (20 por pie)", mode: "reps", reps: 20 },
+    { name: "Deslizamientos defensivos suaves", mode: "tiempo", duration: 30 },
+    { name: "Círculos de hombro (para el tiro)", mode: "reps", reps: 15 },
+    { name: "Saltos suaves de tobillo", mode: "tiempo", duration: 30 },
+  ],
   cuerpo: [
     { name: "Respiración diafragmática", mode: "reps", reps: 5 },
     { name: "Gato-camello en cuadrupedia", mode: "reps", reps: 10 },
@@ -760,6 +768,11 @@ const COOLDOWN_ROUTINES = {
   atletismo: [
     { name: "Estiramiento de isquiotibiales sentado", mode: "tiempo", duration: 45 },
     { name: "Estiramiento de cadera — figura 4 (cada lado)", mode: "tiempo", duration: 30 },
+    { name: "Pantorrilla contra pared (cada pierna)", mode: "tiempo", duration: 30 },
+  ],
+  basquet: [
+    { name: "Estiramiento de hombros y muñecas", mode: "tiempo", duration: 30 },
+    { name: "Estiramiento de isquiotibiales sentado", mode: "tiempo", duration: 45 },
     { name: "Pantorrilla contra pared (cada pierna)", mode: "tiempo", duration: 30 },
   ],
   cuerpo: [
@@ -959,6 +972,15 @@ function DisciplineCelebration({ discId }) {
       </svg>
     );
   }
+  if (discId?.startsWith("basquet")) {
+    return (
+      <svg width="80" height="80" viewBox="0 0 80 80" className="celebrate-basquet" style={style}>
+        <circle cx="40" cy="40" r="18" fill="none" stroke="#A855F7" strokeWidth="2.5" />
+        <line x1="22" y1="40" x2="58" y2="40" stroke="#A855F7" strokeWidth="1.5" />
+        <path d="M40,22 v36 M26,26 q14,14 0,28 M54,26 q-14,14 0,28" fill="none" stroke="#A855F7" strokeWidth="1.5" />
+      </svg>
+    );
+  }
   if (discId === "cuerpo") {
     return (
       <svg width="80" height="80" viewBox="0 0 80 80" className="celebrate-cuerpo" style={style}>
@@ -1061,6 +1083,34 @@ const DISCIPLINES = {
       { id: "resistencia", label: "Resistencia aeróbica", tags: ["resistencia"] },
     ],
   },
+  basquetCancha: {
+    label: "Básquetbol — Con cancha",
+    icon: "🏀",
+    color: "#A855F7",
+    desc: "Con aro · Tiro, dribleo y juego",
+    focuses: [
+      { id: "todo", label: "Todo", tags: null },
+      { id: "tiro", label: "Tiro", tags: ["tiro"] },
+      { id: "dribleo", label: "Dribleo", tags: ["dribleo"] },
+      { id: "defensa", label: "Defensa", tags: ["defensa"] },
+      { id: "salto", label: "Salto", tags: ["salto"] },
+      { id: "resistencia", label: "Resistencia", tags: ["resistencia"] },
+    ],
+  },
+  basquetSinCancha: {
+    label: "Básquetbol — Sin cancha",
+    icon: "🏀",
+    color: "#A855F7",
+    desc: "Sin aro · Fuerza y explosividad",
+    focuses: [
+      { id: "todo", label: "Todo", tags: null },
+      { id: "fuerza", label: "Fuerza de piernas", tags: ["fuerza"] },
+      { id: "salto", label: "Salto vertical", tags: ["salto"] },
+      { id: "agilidad", label: "Agilidad", tags: ["agilidad"] },
+      { id: "core", label: "Core", tags: ["core"] },
+      { id: "resistencia", label: "Resistencia", tags: ["resistencia"] },
+    ],
+  },
 };
 
 /* Fútbol se presenta como una sola disciplina; internamente usa futbolGym/futbolParque */
@@ -1068,6 +1118,13 @@ const FUTBOL_META = { label: "Fútbol", icon: "⚽", color: C.orange, desc: "Gim
 const FUTBOL_LOCATIONS = [
   { id: "futbolGym", emoji: "🏋️", label: "Gimnasio", desc: "Fuerza aplicada al campo" },
   { id: "futbolParque", emoji: "🌳", label: "Parque", desc: "Velocidad y técnica" },
+];
+
+/* Básquetbol se presenta como una sola disciplina; internamente usa basquetCancha/basquetSinCancha */
+const BASQUET_META = { label: "Básquetbol", icon: "🏀", color: "#A855F7", desc: "Con cancha o sin cancha, tú eliges" };
+const BASQUET_LOCATIONS = [
+  { id: "basquetCancha", emoji: "🏀", label: "Con cancha", desc: "Tiro, dribleo y juego" },
+  { id: "basquetSinCancha", emoji: "💪", label: "Sin cancha", desc: "Fuerza y explosividad" },
 ];
 const CAL_LOCATIONS = [
   { id: "parque", emoji: "🌳", label: "Parque", desc: "Barras disponibles" },
@@ -1355,6 +1412,56 @@ const EXDB = {
     { n: "Saltitos de coordinación sobre líneas", t: "tiempo", f: ["ritmo"], lv: [0, 2], s: 3, r: "30s", rest: 45, tip: "Adelante-atrás y lado a lado, pies veloces." },
     { n: "Shuttle runs 20 m", t: "reps", f: ["resistencia", "velocidad"], lv: [0, 4], s: 4, r: "6 idas", rest: 90, tip: "Toca la línea en cada ida, ritmo constante." },
     { n: "Cuesta arriba con balón", t: "reps", f: ["resistencia", "regate"], lv: [2, 5], s: 3, r: "5 subidas", rest: 120, tip: "Conduce cuesta arriba, baja trotando sin balón." },
+  ],
+  basquetCancha: [
+    { n: "Tiro libre", t: "reps", f: ["tiro"], lv: [0, 5], s: 4, r: "10", rest: 60, tip: "Rutina de tiro siempre igual: pies, codo, muñeca." },
+    { n: "Tiro de media distancia (jump shot)", t: "reps", f: ["tiro"], lv: [1, 5], s: 4, r: "8 c/lado", rest: 90, tip: "Salta recto y suelta en el punto más alto." },
+    { n: "Tiro de tres puntos", t: "reps", f: ["tiro"], lv: [2, 5], s: 4, r: "8", rest: 90, tip: "Piernas primero: la potencia sale de las rodillas." },
+    { n: "Tiro tras bote (catch and shoot)", t: "reps", f: ["tiro", "dribleo"], lv: [1, 4], s: 3, r: "10", rest: 60, tip: "Recibe, planta los pies y dispara en un solo tiempo." },
+    { n: "Bandeja con ambas manos", t: "reps", f: ["tiro"], lv: [0, 3], s: 4, r: "8 c/lado", rest: 60, tip: "Da el último paso largo y protege el balón alto." },
+    { n: "Tiro en movimiento tras finta", t: "reps", f: ["tiro", "dribleo"], lv: [2, 5], s: 3, r: "8", rest: 90, tip: "Finta de bote, un paso atrás y dispara equilibrado." },
+    { n: "Dribleo bajo con ambas manos", t: "tiempo", f: ["dribleo"], lv: [0, 3], s: 3, r: "30s c/mano", rest: 45, tip: "Bota bajo y con la vista al frente, no al balón." },
+    { n: "Cambios de mano entre las piernas", t: "reps", f: ["dribleo"], lv: [1, 4], s: 3, r: "15", rest: 45, tip: "Bote firme y rápido, mantén el balón cerca del cuerpo." },
+    { n: "Dribleo tipo crossover explosivo", t: "reps", f: ["dribleo"], lv: [2, 5], s: 3, r: "10 c/lado", rest: 60, tip: "Cambia de dirección con un paso lateral potente." },
+    { n: "Dribleo con dos balones", t: "tiempo", f: ["dribleo"], lv: [2, 5], s: 3, r: "30s", rest: 60, tip: "Control simultáneo: no mires ninguno de los dos balones." },
+    { n: "Slalom con bote entre conos", t: "reps", f: ["dribleo"], lv: [0, 4], s: 3, r: "4 pasadas", rest: 60, tip: "Bote bajo esquivando conos sin perder el ritmo." },
+    { n: "Deslizamiento defensivo lateral", t: "tiempo", f: ["defensa"], lv: [0, 5], s: 4, r: "30s", rest: 45, tip: "Rodillas flexionadas, no cruces los pies nunca." },
+    { n: "Cierre y salto sobre tirador (close-out)", t: "reps", f: ["defensa"], lv: [1, 5], s: 3, r: "8", rest: 60, tip: "Corre, frena en corto y sube las manos sin saltar de más." },
+    { n: "Defensa 1 contra 1 en espacio reducido", t: "tiempo", f: ["defensa"], lv: [2, 5], s: 3, r: "45s", rest: 60, tip: "Cadera baja, no le dejes ganar la línea de fondo." },
+    { n: "Rebote y outlet pass", t: "reps", f: ["defensa", "salto"], lv: [1, 4], s: 3, r: "8", rest: 60, tip: "Salta con los dos brazos arriba y aterriza fuerte." },
+    { n: "Salto vertical con contramovimiento", t: "reps", f: ["salto"], lv: [0, 4], s: 4, r: "6", rest: 90, tip: "Baja rápido y explota hacia el aro imaginario." },
+    { n: "Salto al cajón", t: "reps", f: ["salto"], lv: [0, 4], s: 4, r: "5", rest: 90, tip: "Aterriza suave y en silencio; baja caminando." },
+    { n: "Sprint de línea a línea (suicide)", t: "tiempo", f: ["resistencia"], lv: [0, 5], s: 4, r: "45s", rest: 60, tip: "Toca cada línea de la cancha, ritmo de partido." },
+    { n: "Carrera de definición 3-2-1", t: "reps", f: ["resistencia", "salto"], lv: [1, 5], s: 4, r: "3 series", rest: 90, tip: "Corre, recibe y define en carrera sin frenar del todo." },
+    { n: "Circuito de posesión 3x3", t: "tiempo", f: ["resistencia", "defensa"], lv: [2, 5], s: 1, r: "10 min", rest: 0, tip: "Juega a ritmo real, marca cada punto anotado." },
+    { n: "Pase de pecho y de rebote en movimiento", t: "reps", f: ["dribleo", "resistencia"], lv: [0, 3], s: 3, r: "10 c/tipo", rest: 45, tip: "Pasa firme a la altura del pecho del compañero." },
+    { n: "Tiro bajo fatiga (post-sprint)", t: "reps", f: ["tiro", "resistencia"], lv: [3, 5], s: 3, r: "6", rest: 90, tip: "Sprint corto y tiro inmediato: simula el final de un partido." },
+    { n: "1 contra 1 a media cancha", t: "tiempo", f: ["defensa", "dribleo"], lv: [1, 5], s: 3, r: "1 min", rest: 90, tip: "Ataca y defiende con intensidad de partido real." },
+  ],
+  basquetSinCancha: [
+    { n: "Sentadilla con salto", t: "reps", f: ["salto", "fuerza"], lv: [0, 4], s: 4, r: "8", rest: 90, tip: "Aterriza suave con rodillas alineadas." },
+    { n: "Sentadilla búlgara", t: "reps", f: ["fuerza"], lv: [1, 4], s: 3, r: "8 c/pierna", rest: 90, tip: "Torso erguido, la pierna de atrás solo se apoya." },
+    { n: "Zancadas con salto (alternas)", t: "reps", f: ["fuerza", "salto"], lv: [1, 5], s: 3, r: "8 c/lado", rest: 90, tip: "Cambia de pierna en el aire con control." },
+    { n: "Peso muerto a una pierna (sin peso)", t: "reps", f: ["fuerza"], lv: [0, 3], s: 3, r: "8 c/pierna", rest: 60, tip: "Cadera cuadrada, brazos como contrapeso." },
+    { n: "Elevación de talones", t: "reps", f: ["fuerza", "salto"], lv: [0, 5], s: 4, r: "15", rest: 45, tip: "Pantorrillas fuertes para más resorte en el salto." },
+    { n: "Sentadilla isométrica en pared", t: "tiempo", f: ["fuerza"], lv: [0, 3], s: 3, r: "40s", rest: 60, tip: "Muslos paralelos al suelo, espalda pegada a la pared." },
+    { n: "Salto vertical máximo", t: "reps", f: ["salto"], lv: [0, 5], s: 4, r: "5", rest: 120, tip: "Recupera completo entre saltos: calidad sobre cantidad." },
+    { n: "Salto al cajón", t: "reps", f: ["salto"], lv: [0, 4], s: 4, r: "5", rest: 90, tip: "Sube con potencia, baja caminando." },
+    { n: "Saltos de profundidad (depth jump)", t: "reps", f: ["salto"], lv: [3, 5], s: 3, r: "5", rest: 150, tip: "Cae de un escalón bajo y explota al instante." },
+    { n: "Saltos a una pierna (bounds)", t: "reps", f: ["salto", "agilidad"], lv: [2, 5], s: 3, r: "5 c/pierna", rest: 120, tip: "Busca distancia con aterrizaje estable." },
+    { n: "Skater jumps", t: "reps", f: ["agilidad", "salto"], lv: [1, 4], s: 3, r: "8 c/lado", rest: 90, tip: "Salta lateral de pierna a pierna con control." },
+    { n: "Escalera de agilidad (o líneas en el suelo)", t: "tiempo", f: ["agilidad"], lv: [0, 3], s: 3, r: "30s", rest: 60, tip: "Pies rápidos, mirada al frente, brazos activos." },
+    { n: "Ida y vuelta 5-10-5", t: "reps", f: ["agilidad"], lv: [1, 5], s: 4, r: "4", rest: 120, tip: "Frena bajando la cadera y explota al cambiar de dirección." },
+    { n: "Deslizamientos defensivos laterales", t: "tiempo", f: ["agilidad"], lv: [0, 4], s: 4, r: "30s", rest: 45, tip: "Nunca cruces los pies, cadera baja todo el tiempo." },
+    { n: "Plancha", t: "tiempo", f: ["core"], lv: [0, 3], s: 3, r: "40s", rest: 45, tip: "Cuerpo en línea recta, sin hundir la cadera." },
+    { n: "Plancha con toque de hombro", t: "reps", f: ["core"], lv: [1, 4], s: 3, r: "16", rest: 45, tip: "Cadera estable: no gires el torso al tocar el hombro." },
+    { n: "Russian twist", t: "reps", f: ["core"], lv: [0, 4], s: 3, r: "20", rest: 45, tip: "Gira desde el torso, pies elevados si puedes." },
+    { n: "Elevación de piernas colgado o tumbado", t: "reps", f: ["core"], lv: [1, 5], s: 3, r: "12", rest: 60, tip: "Baja las piernas con control, sin balancearte." },
+    { n: "Mountain climbers", t: "tiempo", f: ["core", "resistencia"], lv: [0, 3], s: 3, r: "30s", rest: 45, tip: "Cadera baja y estable, rodillas al pecho rápido." },
+    { n: "Burpees", t: "reps", f: ["resistencia", "salto"], lv: [0, 5], s: 4, r: "10", rest: 90, tip: "Termina cada repetición con un salto vertical." },
+    { n: "Sprint en el sitio (skipping alto)", t: "tiempo", f: ["resistencia"], lv: [0, 3], s: 3, r: "30s", rest: 45, tip: "Rodillas altas, ritmo constante y rápido." },
+    { n: "Circuito HIIT full body", t: "tiempo", f: ["resistencia"], lv: [1, 5], s: 4, r: "40s trabajo / 20s descanso", rest: 20, tip: "Máxima intensidad en cada bloque de trabajo." },
+    { n: "Jumping jacks", t: "tiempo", f: ["resistencia", "agilidad"], lv: [0, 2], s: 3, r: "40s", rest: 30, tip: "Ritmo constante, brazos y piernas sincronizados." },
   ],
 };
 
@@ -1857,7 +1964,7 @@ function rpeColor(avg) {
 }
 
 /* ─── Orden de disciplinas para agrupar récords ─── */
-const DISC_ORDER = ["gimnasio", "calistenia", "futbolGym", "futbolParque", "atletismo", "especial", "custom"];
+const DISC_ORDER = ["gimnasio", "calistenia", "futbolGym", "futbolParque", "basquetCancha", "basquetSinCancha", "atletismo", "especial", "custom"];
 
 /* ─── Récords personales por ejercicio (mejor marca histórica) ─── */
 function computeRecords(sessions) {
@@ -2296,6 +2403,19 @@ function fmtDate(ts) {
   return d.toLocaleDateString("es", { day: "numeric", month: "short" });
 }
 
+/* ─── Escalado real de dificultad por nivel (Iniciado→THE ONE) ───
+   setsAdd: series extra sobre la base del ejercicio
+   restMod: segundos que se restan al descanso (mayor nivel = descansos más cortos = más intensidad)
+   intensityLabel: etiqueta de intensidad relativa mostrada en la rutina */
+const LEVEL_SCALING = [
+  { setsAdd: 0, restMod: 0, intensityLabel: "Suave" },
+  { setsAdd: 0, restMod: -5, intensityLabel: "Moderada" },
+  { setsAdd: 1, restMod: -10, intensityLabel: "Exigente" },
+  { setsAdd: 1, restMod: -15, intensityLabel: "Alta" },
+  { setsAdd: 2, restMod: -20, intensityLabel: "Muy alta" },
+  { setsAdd: 2, restMod: -25, intensityLabel: "Máxima" },
+];
+
 function levelFromCount(count, thresholds) {
   let idx = 0;
   thresholds.forEach((t, i) => {
@@ -2346,17 +2466,18 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
 
-  const extraSets = effLvlIdx >= 3 ? 1 : 0;
+  const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
   return chosen.map((e) => {
-    let sets = e.s === 1 ? 1 : Math.min(5, e.s + extraSets);
-    let rest = e.rest;
+    let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
+    let rest = Math.max(10, e.rest + scaling.restMod);
     if (deloadActive) {
       sets = Math.max(1, Math.round(sets * 0.6));
+      rest = Math.round(rest * 1.3);
     } else if (phaseMods) {
       sets = Math.max(1, sets + phaseMods.setsModifier);
       rest = Math.max(0, rest + phaseMods.restModifier);
     }
-    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null };
+    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel };
   });
 }
 
@@ -2368,19 +2489,20 @@ function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
   const pool = ATLETISMO_EXDB[distance] || [];
   const target = Math.min(pool.length, 5 + (rnd() < 0.5 ? 1 : 0));
   const shuffled = [...pool].sort(() => rnd() - 0.5).slice(0, target);
-  const extraSets = effLvlIdx >= 3 ? 1 : 0;
+  const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
   return shuffled.map((e) => {
-    let sets = e.s === 1 ? 1 : Math.min(6, e.s + extraSets);
-    let rest = e.rest;
+    let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
+    let rest = Math.max(10, e.rest + scaling.restMod);
     if (deloadActive) {
       sets = Math.max(1, Math.round(sets * 0.6));
+      rest = Math.round(rest * 1.3);
     } else if (phaseMods) {
       sets = Math.max(1, sets + phaseMods.setsModifier);
       rest = Math.max(0, rest + phaseMods.restModifier);
     }
-    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: "velocidad" };
+    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: "velocidad", intensity: scaling.intensityLabel };
   });
 }
 
@@ -2430,7 +2552,7 @@ function buildPlanFor(discId, focusId, lvlIdx) {
 }
 
 /* ─── Plan del día inteligente ─── */
-const DAILY_DURATION = { gimnasio: 45, calistenia: 35, futbolGym: 60, futbolParque: 60, atletismo: 40, cuerpo: 20 };
+const DAILY_DURATION = { gimnasio: 45, calistenia: 35, futbolGym: 60, futbolParque: 60, basquetCancha: 55, basquetSinCancha: 45, atletismo: 40, cuerpo: 20 };
 
 function mostFrequentLevel(sessions) {
   const workouts = sessions.filter((s) => s.kind === "entreno");
@@ -2697,12 +2819,13 @@ const LIBRARY_FILTERS = [
   { id: "core", label: "Core" },
   { id: "atletismo", label: "Atletismo" },
   { id: "futbol", label: "Fútbol" },
+  { id: "basquet", label: "Básquetbol" },
   { id: "movilidad", label: "Movilidad" },
 ];
 
 const LIBRARY_FILTER_COLORS = {
   empuje: "#FFFFFF", tiron: C.cyan, piernas: C.green, core: C.yellow,
-  atletismo: C.purple, futbol: C.orange, movilidad: C.blue, todos: C.mut,
+  atletismo: C.purple, futbol: C.orange, basquet: "#A855F7", movilidad: C.blue, todos: C.mut,
 };
 
 function buildExerciseLibrary() {
@@ -2713,10 +2836,11 @@ function buildExerciseLibrary() {
     seen.add(n);
     list.push({ name: n, tip: tip || "", lv: lv || null, setsReps: setsReps || "", filterCat, demoCat: movementCategory(n), type: type || "reps" });
   };
-  ["gimnasio", "calistenia", "futbolGym", "futbolParque"].forEach((discId) => {
+  ["gimnasio", "calistenia", "futbolGym", "futbolParque", "basquetCancha", "basquetSinCancha"].forEach((discId) => {
     (EXDB[discId] || []).forEach((e) => {
       let filterCat;
       if (discId.startsWith("futbol")) filterCat = "futbol";
+      else if (discId.startsWith("basquet")) filterCat = "basquet";
       else if (e.f?.includes("piernas") || e.f?.includes("gluteos")) filterCat = "piernas";
       else if (e.f?.includes("core")) filterCat = "core";
       else if (e.f?.includes("tiron") || e.f?.includes("espalda")) filterCat = "tiron";
@@ -3570,6 +3694,7 @@ const HISTORY_FILTERS = [
   { id: "gimnasio", label: "Gimnasio" },
   { id: "calistenia", label: "Calistenia" },
   { id: "futbol", label: "Fútbol" },
+  { id: "basquet", label: "Básquetbol" },
   { id: "atletismo", label: "Atletismo" },
   { id: "cuerpo", label: "Cuerpo" },
   { id: "semana", label: "Esta semana" },
@@ -3582,6 +3707,7 @@ function matchesHistoryFilter(s, filterId) {
   if (filterId === "gimnasio") return s.disc === "gimnasio";
   if (filterId === "calistenia") return s.disc === "calistenia";
   if (filterId === "futbol") return s.disc === "futbolGym" || s.disc === "futbolParque";
+  if (filterId === "basquet") return s.disc === "basquetCancha" || s.disc === "basquetSinCancha";
   if (filterId === "atletismo") return s.disc === "atletismo";
   if (filterId === "semana") return s.ts >= startOfWeek();
   if (filterId === "mes") {
@@ -4210,6 +4336,7 @@ const TRAIN_CARDS = [
   { id: "calistenia", ...DISCIPLINES.calistenia },
   { id: "gimnasio", ...DISCIPLINES.gimnasio },
   { id: "futbol", ...FUTBOL_META },
+  { id: "basquetbol", ...BASQUET_META },
   { id: "atletismo", ...DISCIPLINES.atletismo },
 ];
 
@@ -5264,14 +5391,16 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   };
 
   const pickDisc = (id) => {
-    /* Modo sin equipo: fútbol siempre en parque, calistenia siempre en casa */
-    const finalId = id === "futbol" && noEquipment ? "futbolParque" : id;
+    /* Modo sin equipo: fútbol siempre en parque, básquet siempre sin cancha, calistenia siempre en casa */
+    let finalId = id === "futbol" && noEquipment ? "futbolParque" : id;
+    finalId = finalId === "basquetbol" && noEquipment ? "basquetSinCancha" : finalId;
     setDiscId(finalId);
     setFocusId("todo");
     setLvlIdx(null);
     setCalLocation(finalId === "calistenia" && noEquipment ? "casa" : null);
     setDistance(null);
     if (finalId === "futbol") onAccent(C.orange);
+    else if (finalId === "basquetbol") onAccent("#A855F7");
     else if (finalId === "atletismo") onAccent(C.purple);
     else onAccent(DISCIPLINES[finalId].color);
   };
@@ -5319,7 +5448,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     });
   };
 
-  const isConcreteDisc = discId && discId !== "futbol" && discId !== "atletismo";
+  const isConcreteDisc = discId && discId !== "futbol" && discId !== "basquetbol" && discId !== "atletismo";
   const disc = isConcreteDisc ? DISCIPLINES[discId] : null;
 
   const routine = useMemo(() => {
@@ -5523,6 +5652,29 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Registra acciones en tiempo real durante el partido</div>
           </div>
         </button>
+      </div>
+    );
+  }
+
+  /* ── Básquetbol: preguntar Con cancha o Sin cancha ── */
+  if (discId === "basquetbol") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Disciplinas
+        </button>
+        <div style={{ fontSize: 44, marginTop: 20 }}>🏀</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>¿Dónde entrenas hoy?</h2>
+        <p className="muted" style={{ marginTop: 6 }}>Elige tu entorno de hoy</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          {BASQUET_LOCATIONS.map((o) => (
+            <button key={o.id} onClick={() => setDiscId(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
+              <div style={{ fontSize: 30 }}>{o.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>{o.label}</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>{o.desc}</div>
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -6666,6 +6818,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <span style={{ color: plan.discColor, fontWeight: 800 }}>{ex.sets} series</span>
           <span style={{ color: C.mut }}> × </span>
           <span style={{ fontWeight: 800 }}>{ex.reps}</span>
+          {ex.intensity && (
+            <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 800, color: C.mut, background: C.surface, padding: "2px 8px", borderRadius: 99, border: `1px solid ${C.border}` }}>
+              {ex.intensity}
+            </span>
+          )}
         </p>
         <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>💡 {ex.tip}</p>
         {showSwipeHint && phase === "work" && ex.type !== "tiempo" && (
