@@ -177,10 +177,16 @@ input[type='number'] {
 /* ─── Components ─── */
 
 .card {
-  background: var(--card);
+  background: linear-gradient(135deg, var(--card2) 0%, var(--card) 100%);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.card:active,
+.chip:active,
+.btn-xl:active {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .chip {
@@ -483,6 +489,147 @@ input[type='number'] {
   position: fixed; inset: 0; background: #fff; z-index: 300; pointer-events: none;
   animation: whiteFlash 300ms ease-out forwards;
 }
+
+/* ─── Splash screen ─── */
+@keyframes splashF {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes splashFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes splashBar {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+@keyframes splashOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.splash-f {
+  animation: splashF 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  will-change: transform, opacity;
+}
+.splash-fade {
+  animation: splashFade 400ms ease both;
+  will-change: transform, opacity;
+}
+.splash-bar-fill {
+  animation: splashBar 1.2s ease both;
+}
+.splash-out {
+  animation: splashOut 300ms ease forwards;
+}
+
+/* ─── Ripple táctil ─── */
+@keyframes ripple {
+  to { transform: scale(2.5); opacity: 0; }
+}
+.ripple-el {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 500ms ease-out forwards;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* ─── Separador con gradiente ─── */
+.divider-gradient {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* ─── Glow en elementos activos ─── */
+.glow-card {
+  box-shadow: 0 0 15px var(--glow-color, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.tab.on {
+  box-shadow: inset 0 -3px 12px -6px var(--glow-color, transparent);
+}
+
+/* ─── Partículas de fondo (solo Inicio) ─── */
+.particle-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: #00e5ff;
+  will-change: transform;
+}
+@keyframes float-0 {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(15px, -20px); }
+  50% { transform: translate(-10px, -35px); }
+  75% { transform: translate(20px, -15px); }
+}
+@keyframes float-1 {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-18px, -12px); }
+  60% { transform: translate(12px, -28px); }
+  80% { transform: translate(-8px, -8px); }
+}
+@keyframes float-2 {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(10px, 18px); }
+  55% { transform: translate(-16px, 10px); }
+  80% { transform: translate(6px, -14px); }
+}
+@keyframes float-3 {
+  0%, 100% { transform: translate(0, 0); }
+  35% { transform: translate(-14px, -22px); }
+  65% { transform: translate(18px, -10px); }
+}
+@keyframes float-4 {
+  0%, 100% { transform: translate(0, 0); }
+  40% { transform: translate(22px, 6px); }
+  70% { transform: translate(-12px, -18px); }
+}
+@keyframes float-5 {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-8px, 20px); }
+  65% { transform: translate(16px, 8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .particle { animation: none !important; }
+  .splash-f, .splash-fade, .splash-bar-fill { animation-duration: 1ms !important; }
+}
+
+/* ─── Celebraciones por disciplina ─── */
+@keyframes barbellLift {
+  0% { transform: translateY(20px); opacity: 0; }
+  60% { transform: translateY(-5px); }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes runFinish {
+  from { transform: translateX(-40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes muscleUp {
+  0% { transform: translateY(15px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+@keyframes ballGoal {
+  from { transform: translateX(-30px) scale(0.5); }
+  to { transform: translateX(0) scale(1); }
+}
+@keyframes bodyGlow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+.celebrate-gimnasio { animation: barbellLift 1s ease-out both; }
+.celebrate-atletismo { animation: runFinish 0.8s ease-out both; }
+.celebrate-calistenia { animation: muscleUp 1s ease-in-out both; }
+.celebrate-futbol { animation: ballGoal 0.8s ease-out both; }
+.celebrate-cuerpo { animation: bodyGlow 2s ease-in-out infinite; }
 
 /* ─── Modo pantalla activa (entrenamiento en vivo): todo más grande, sin decoración ─── */
 .live-mode {

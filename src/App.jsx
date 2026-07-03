@@ -101,6 +101,394 @@ function sanitize(str) {
     .slice(0, 100); // máximo 100 caracteres
 }
 
+/* ─── Sistema tipográfico (v8: diseño premium) ─── */
+const TYPOGRAPHY = {
+  display: { fontSize: 36, fontWeight: 900, letterSpacing: -1, fontVariantNumeric: "tabular-nums" },
+  h1: { fontSize: 20, fontWeight: 800, letterSpacing: -0.5 },
+  h2: { fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" },
+  body: { fontSize: 13, fontWeight: 500, lineHeight: 1.5 },
+  caption: { fontSize: 11, fontWeight: 400 },
+  label: { fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" },
+};
+
+/* ─── Count-up animado para números que cambian ─── */
+function useCountUp(target, duration = 800) {
+  const [current, setCurrent] = useState(0);
+  const prevTarget = useRef(0);
+
+  useEffect(() => {
+    if (target === prevTarget.current) return undefined;
+    const start = prevTarget.current;
+    const diff = target - start;
+    const startTime = performance.now();
+    let raf;
+
+    const tick = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 4); // easeOutQuart
+      setCurrent(Math.round(start + diff * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+      else prevTarget.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+
+  return current;
+}
+
+/* ─── Formato inteligente de unidades y fechas ─── */
+function formatVolume(kg) {
+  if (kg >= 1000000) return `${(kg / 1000000).toFixed(1)}M kg`;
+  if (kg >= 1000) return `${(kg / 1000).toFixed(1)}t`;
+  return `${Math.round(kg)} kg`;
+}
+
+function volumeEquivalent(kg) {
+  if (kg >= 50000) return `${(kg / 5000).toFixed(1)} elefantes 🐘`;
+  if (kg >= 5000) return `${(kg / 80).toFixed(0)} personas 🧑`;
+  if (kg >= 1000) return `${(kg / 450).toFixed(1)} pianos 🎹`;
+  if (kg >= 200) return `${(kg / 80).toFixed(1)} personas 🧑`;
+  return `${Math.round(kg)} kg`;
+}
+
+function timeAgo(dateInput) {
+  const diff = Date.now() - new Date(dateInput).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30);
+  if (mins < 60) return "Hace poco";
+  if (hours < 24) return `Hace ${hours}h`;
+  if (days === 1) return "Ayer";
+  if (days < 7) return `Hace ${days} días`;
+  if (weeks === 1) return "Hace 1 semana";
+  if (weeks < 4) return `Hace ${weeks} semanas`;
+  if (months === 1) return "Hace 1 mes";
+  return `Hace ${months} meses`;
+}
+
+function formatDuration(mins) {
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
+
+function formatStreak(days) {
+  if (days === 0) return "0 días";
+  if (days === 1) return "1 día";
+  if (days < 7) return `${days} días`;
+  if (days < 30) return `${Math.floor(days / 7)} sem`;
+  if (days < 365) return `${Math.floor(days / 30)} meses`;
+  return `${(days / 365).toFixed(1)} años 🏆`;
+}
+
+/* ─── Splash screen inicial ─── */
+const MOTIVATIONAL_QUOTES = [
+  "El límite solo existe en tu cabeza.",
+  "Hoy entrenas. Mañana dominas.",
+  "Cada rep te acerca más al tope.",
+  "La disciplina supera al talento.",
+  "No hay atajos. Solo trabajo.",
+  "Tu único competidor eres tú de ayer.",
+  "Los campeones entrenan cuando nadie los ve.",
+  "La grandeza se construye en silencio.",
+];
+
+function Splash({ onDone }) {
+  const [quote] = useState(() => MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
+  const [fadingOut, setFadingOut] = useState(false);
+
+  useEffect(() => {
+    const hasName = !!store.get("name", "");
+    const duration = hasName ? 800 : 1500;
+    const fadeTimer = setTimeout(() => setFadingOut(true), Math.max(duration - 300, 0));
+    const doneTimer = setTimeout(onDone, duration);
+    return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      className={fadingOut ? "splash-out" : ""}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999, background: "#07070C",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10,
+      }}
+    >
+      <div className="splash-f" style={{ fontSize: 80, fontWeight: 900, color: "#00E5FF", lineHeight: 1 }}>F</div>
+      <div className="splash-fade" style={{ fontSize: 14, letterSpacing: 8, color: "#00E5FF", animationDelay: "300ms" }}>
+        F.A.S.E.
+      </div>
+      <p className="splash-fade" style={{ fontSize: 12, color: C.mut, textAlign: "center", padding: "0 30px", animationDelay: "600ms" }}>
+        {quote}
+      </p>
+      <div style={{ position: "absolute", bottom: 40, width: 120, height: 3, background: "#1a1a2e", borderRadius: 99, overflow: "hidden" }}>
+        <div className="splash-bar-fill" style={{ height: "100%", background: "#00E5FF", borderRadius: 99 }} />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Estado vacío diseñado, con ilustración SVG ─── */
+function EmptyState({ icon, title, subtitle, color = C.cyan }) {
+  return (
+    <div style={{ textAlign: "center", padding: "40px 16px" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, filter: `drop-shadow(0 0 12px ${color}25)` }}>
+        {icon}
+      </div>
+      <div style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>{title}</div>
+      {subtitle && <div style={{ color: C.mut, fontSize: 13, marginTop: 8 }}>{subtitle}</div>}
+    </div>
+  );
+}
+
+function EmptyHistoryIllustration() {
+  return (
+    <svg width="120" height="80" viewBox="0 0 120 80">
+      <line x1="0" y1="75" x2="120" y2="75" stroke="#2a2a3e" strokeWidth="2" />
+      <circle cx="85" cy="25" r="8" fill="none" stroke="#00E5FF" strokeWidth="2" />
+      <line x1="85" y1="33" x2="85" y2="55" stroke="#00E5FF" strokeWidth="2" />
+      <line x1="85" y1="42" x2="75" y2="52" stroke="#00E5FF" strokeWidth="2" />
+      <line x1="85" y1="42" x2="95" y2="38" stroke="#00E5FF" strokeWidth="2" />
+      <line x1="85" y1="55" x2="78" y2="68" stroke="#00E5FF" strokeWidth="2" />
+      <line x1="85" y1="55" x2="95" y2="65" stroke="#00E5FF" strokeWidth="2" />
+      <line x1="30" y1="20" x2="30" y2="75" stroke="#FFD600" strokeWidth="2" strokeDasharray="4,3" />
+      <circle cx="15" cy="72" r="10" fill="#FF7A2F" opacity="0.6" />
+    </svg>
+  );
+}
+
+function EmptyRecordsIllustration() {
+  return (
+    <svg width="80" height="100" viewBox="0 0 80 100">
+      <path d="M20,10 h40 v30 a20,20 0 0,1 -40,0 z" fill="none" stroke="#4E4E70" strokeWidth="2" />
+      <line x1="40" y1="60" x2="40" y2="75" stroke="#4E4E70" strokeWidth="2" />
+      <rect x="25" y="75" width="30" height="8" rx="4" fill="#4E4E70" />
+      <rect x="32" y="30" width="16" height="12" rx="3" fill="#FFD600" opacity="0.8" />
+      <path d="M35,30 a5,5 0 0,1 10,0" fill="none" stroke="#FFD600" strokeWidth="2" opacity="0.8" />
+    </svg>
+  );
+}
+
+function EmptyProgressIllustration() {
+  return (
+    <svg width="140" height="90" viewBox="0 0 140 90">
+      <polygon points="70,10 10,85 130,85" fill="none" stroke="#2a2a3e" strokeWidth="2" />
+      <polygon points="70,10 40,55 100,55" fill="#1a1a2e" />
+      <line x1="70" y1="10" x2="70" y2="30" stroke="#00E5FF" strokeWidth="2" />
+      <polygon points="70,10 90,18 70,26" fill="#00E5FF" />
+      <text x="70" y="72" fontSize="20" textAnchor="middle" opacity="0.4">⭐</text>
+    </svg>
+  );
+}
+
+function EmptyCommunityIllustration() {
+  return (
+    <svg width="100" height="80" viewBox="0 0 100 80">
+      <circle cx="35" cy="25" r="10" fill="none" stroke="#4E4E70" strokeWidth="2" />
+      <path d="M15,65 a20,20 0 0,1 40,0" fill="none" stroke="#4E4E70" strokeWidth="2" />
+      <line x1="70" y1="25" x2="90" y2="25" stroke="#00E5FF" strokeWidth="2.5" />
+      <line x1="80" y1="15" x2="80" y2="35" stroke="#00E5FF" strokeWidth="2.5" />
+    </svg>
+  );
+}
+
+/* ─── Skeleton loader ─── */
+function SkeletonCard({ lines = 2, height = 60 }) {
+  return (
+    <div className="card" style={{ position: "relative", height, overflow: "hidden" }}>
+      <div className="skeleton" />
+      <div style={{ position: "relative", opacity: 0 }}>
+        {Array.from({ length: lines }).map((_, i) => <div key={i}>&nbsp;</div>)}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Iconos SVG de navegación (reemplazan emojis) ─── */
+function IconHome({ color }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      <polyline points="9,22 9,12 15,12 15,22" />
+    </svg>
+  );
+}
+function IconTrain({ color }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
+      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" />
+    </svg>
+  );
+}
+function IconProgress({ color }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+      <line x1="2" y1="20" x2="22" y2="20" />
+    </svg>
+  );
+}
+function IconBody({ color }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
+      <circle cx="12" cy="5" r="2" />
+      <path d="M12 7v8" />
+      <path d="M8 10l4 2 4-2" />
+      <path d="M10 15l-2 5" />
+      <path d="M14 15l2 5" />
+    </svg>
+  );
+}
+function IconCommunity({ color }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  );
+}
+
+/* ─── Ripple + glow táctil, aplicado por delegación a .card/.btn-xl/.chip/.tab ─── */
+function createRipple(target, clientX, clientY, color) {
+  const rect = target.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const x = clientX - rect.left - size / 2;
+  const y = clientY - rect.top - size / 2;
+  const ripple = document.createElement("span");
+  ripple.className = "ripple-el";
+  ripple.style.width = `${size}px`;
+  ripple.style.height = `${size}px`;
+  ripple.style.left = `${x}px`;
+  ripple.style.top = `${y}px`;
+  ripple.style.background = color;
+  ripple.style.opacity = "0.15";
+  if (!target.style.position) target.style.position = "relative";
+  target.style.overflow = "hidden";
+  target.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 500);
+}
+
+function useGlobalTouchEffects() {
+  useEffect(() => {
+    const onPointerDown = (e) => {
+      const rippleTarget = e.target.closest(".card, .btn-xl, .chip, .tab");
+      if (!rippleTarget) return;
+      createRipple(rippleTarget, e.clientX, e.clientY, C.cyan);
+      const glowTarget = e.target.closest(".card, .btn-xl, .chip");
+      if (!glowTarget) return;
+      glowTarget.style.transition = "border-color 150ms ease, box-shadow 150ms ease";
+      glowTarget.style.borderColor = `${C.cyan}80`;
+      glowTarget.style.boxShadow = `0 0 12px ${C.cyan}30`;
+      clearTimeout(glowTarget._glowTimer);
+      glowTarget._glowTimer = setTimeout(() => {
+        glowTarget.style.transition = "border-color 300ms ease, box-shadow 300ms ease";
+        glowTarget.style.borderColor = "";
+        glowTarget.style.boxShadow = "";
+      }, 150);
+    };
+    document.addEventListener("pointerdown", onPointerDown, { passive: true });
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+}
+
+/* ─── Fondo de partículas sutiles (solo pantalla Inicio) ─── */
+function ParticleBackground() {
+  const [particles] = useState(() =>
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 2 + 1.5,
+      opacity: Math.random() * 0.05 + 0.03,
+      duration: Math.random() * 15 + 20,
+      delay: Math.random() * -20,
+      variant: i % 6,
+    }))
+  );
+  return (
+    <div className="particle-field" aria-hidden="true">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="particle"
+          style={{
+            left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, opacity: p.opacity,
+            animation: `float-${p.variant} ${p.duration}s ease-in-out infinite`, animationDelay: `${p.delay}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Celebración específica por disciplina (pantalla de felicitaciones) ─── */
+function DisciplineCelebration({ discId }) {
+  const style = { margin: "8px auto 0", display: "block" };
+  if (discId === "gimnasio") {
+    return (
+      <svg width="120" height="60" viewBox="0 0 120 60" className="celebrate-gimnasio" style={style}>
+        <rect x="20" y="28" width="80" height="4" rx="2" fill="#00E5FF" />
+        <rect x="10" y="18" width="12" height="24" rx="3" fill="#4E4E70" />
+        <rect x="98" y="18" width="12" height="24" rx="3" fill="#4E4E70" />
+      </svg>
+    );
+  }
+  if (discId === "atletismo") {
+    return (
+      <svg width="120" height="70" viewBox="0 0 120 70" className="celebrate-atletismo" style={style}>
+        <line x1="100" y1="10" x2="100" y2="65" stroke="#FFD600" strokeWidth="2" strokeDasharray="4,3" />
+        <circle cx="60" cy="20" r="7" fill="none" stroke="#00E5FF" strokeWidth="2" />
+        <line x1="60" y1="27" x2="60" y2="45" stroke="#00E5FF" strokeWidth="2" />
+        <line x1="60" y1="33" x2="50" y2="28" stroke="#00E5FF" strokeWidth="2" />
+        <line x1="60" y1="33" x2="72" y2="40" stroke="#00E5FF" strokeWidth="2" />
+        <line x1="60" y1="45" x2="48" y2="60" stroke="#00E5FF" strokeWidth="2" />
+        <line x1="60" y1="45" x2="70" y2="58" stroke="#00E5FF" strokeWidth="2" />
+      </svg>
+    );
+  }
+  if (discId === "calistenia") {
+    return (
+      <svg width="80" height="70" viewBox="0 0 80 70" className="celebrate-calistenia" style={style}>
+        <line x1="15" y1="10" x2="65" y2="10" stroke="#4E4E70" strokeWidth="3" />
+        <circle cx="40" cy="24" r="6" fill="none" stroke="#22FF88" strokeWidth="2" />
+        <line x1="40" y1="10" x2="40" y2="30" stroke="#22FF88" strokeWidth="2" />
+        <line x1="40" y1="18" x2="28" y2="12" stroke="#22FF88" strokeWidth="2" />
+        <line x1="40" y1="18" x2="52" y2="12" stroke="#22FF88" strokeWidth="2" />
+        <line x1="40" y1="30" x2="32" y2="45" stroke="#22FF88" strokeWidth="2" />
+        <line x1="40" y1="30" x2="48" y2="45" stroke="#22FF88" strokeWidth="2" />
+      </svg>
+    );
+  }
+  if (discId?.startsWith("futbol")) {
+    return (
+      <svg width="100" height="60" viewBox="0 0 100 60" className="celebrate-futbol" style={style}>
+        <path d="M75,10 v40 h20 M75,20 h15 M75,35 h15" fill="none" stroke="#4E4E70" strokeWidth="2" />
+        <circle cx="35" cy="30" r="10" fill="none" stroke="#FF7A2F" strokeWidth="2" />
+        <path d="M35,22 l4,6 -4,6 -4,-6z" fill="#FF7A2F" opacity="0.6" />
+      </svg>
+    );
+  }
+  if (discId === "cuerpo") {
+    return (
+      <svg width="80" height="80" viewBox="0 0 80 80" className="celebrate-cuerpo" style={style}>
+        <circle cx="40" cy="40" r="30" fill="none" stroke="#B084FF" strokeWidth="2" opacity="0.5" />
+        <circle cx="40" cy="22" r="6" fill="none" stroke="#B084FF" strokeWidth="2" />
+        <path d="M28,55 q12,-14 24,0" fill="none" stroke="#B084FF" strokeWidth="2" />
+      </svg>
+    );
+  }
+  return null;
+}
+
 /* ─── Niveles de entrenamiento ─── */
 const LEVELS = [
   { name: "Iniciado", emoji: "🔵", color: C.blue, desc: "Estoy empezando" },
@@ -1695,28 +2083,31 @@ function Heatmap({ sessions, color, freezes = [] }) {
   );
 }
 
-function WeekRing({ done, goal = 4, accent }) {
-  const pct = Math.min(1, done / goal);
-  const r = 15;
+function XPRingMini({ progress, roman, color }) {
+  const r = 8;
   const circ = 2 * Math.PI * r;
-  const color = pct >= 1 ? C.green : accent;
   return (
-    <svg width="40" height="40" viewBox="0 0 40 40" aria-label={`Meta semanal: ${done} de ${goal}`}>
-      <circle cx="20" cy="20" r={r} fill="none" stroke={C.border} strokeWidth="4" />
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-label={`Rango ${roman}`}>
+      <circle cx="10" cy="10" r={r} fill="none" stroke={C.border} strokeWidth="2" />
       <circle
-        cx="20" cy="20" r={r} fill="none" stroke={color} strokeWidth="4" strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
-        transform="rotate(-90 20 20)" style={{ transition: "stroke-dashoffset .5s ease, stroke .3s ease" }}
+        cx="10" cy="10" r={r} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={circ * (1 - progress)}
+        transform="rotate(-90 10 10)" style={{ transition: "stroke-dashoffset .5s ease" }}
       />
-      <text x="20" y="24" textAnchor="middle" fontSize="11" fontWeight="800" fill={color}>{done}</text>
+      <text x="10" y="13" textAnchor="middle" fontSize="7" fontWeight="800" fill={color}>{roman}</text>
     </svg>
   );
 }
 
 function StatBox({ label, value, accent }) {
+  const isNumeric = typeof value === "number" && Number.isFinite(value);
+  const animated = useCountUp(isNumeric ? value : 0);
+  const shown = isNumeric ? animated : value;
   return (
     <div className="card" style={{ flex: 1, textAlign: "center", padding: "14px 8px" }}>
-      <div style={{ fontSize: 24, fontWeight: 800, color: accent || C.text }}>{value}</div>
+      <div style={{ ...TYPOGRAPHY.h1, fontSize: 24, fontVariantNumeric: "tabular-nums", color: accent || C.text }}>
+        {shown}
+      </div>
       <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{label}</div>
     </div>
   );
@@ -2289,8 +2680,12 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
       {/* Historial reciente */}
       <div className="sec-title">Últimas sesiones</div>
       {recent.length === 0 && (
-        <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13 }}>
-          Aún no hay sesiones. ¡Hoy es el día perfecto para la primera! 🚀
+        <div className="card">
+          <EmptyState
+            icon={<EmptyHistoryIllustration />}
+            title="Aún no hay sesiones"
+            subtitle="¡Hoy es el día perfecto para la primera! 🚀"
+          />
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2316,7 +2711,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
                     {isBody ? "Acondicionamiento" : `${s.focusLabel} · ${LEVELS[s.levelIdx].emoji} ${LEVELS[s.levelIdx].name}`}
                   </div>
                 </div>
-                <span style={{ fontSize: 12, color: C.dim }}>{fmtDate(s.ts)}</span>
+                <span style={{ fontSize: 12, color: C.dim }}>{timeAgo(s.ts)}</span>
               </div>
               {menuId === s.id && (
                 <div className="card pop" style={{ position: "absolute", top: "100%", right: 8, zIndex: 30, padding: 6, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -3713,6 +4108,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
         {flashWhite && <div className="white-flash" />}
         <Confetti show={confetti} />
         <div className="unlock-pop" style={{ fontSize: 64 }}>{hero.emoji}</div>
+        <DisciplineCelebration discId={plan.discId} />
         <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>{title}</h2>
         <p style={{ color: C.mut, marginTop: 4, fontSize: 13 }}>Sesión de {plan.discLabel} completada</p>
 
@@ -3742,7 +4138,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
         )}
 
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <StatBox label="⏱ Tiempo" value={`${Math.floor(sessionSecs / 60)} min`} accent={C.cyan} />
+          <StatBox label="⏱ Tiempo" value={formatDuration(Math.floor(sessionSecs / 60))} accent={C.cyan} />
           <StatBox label="💪 Series" value={`${okSets}/${totalPlanned}`} accent={C.green} />
           <StatBox label="🔥 Racha" value={newStreak} accent={C.orange} />
         </div>
@@ -4378,6 +4774,7 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
   const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
   const globalLvl = LEVELS[globalIdx];
   const xpInfo = computeXP(sessions, unlocked.length, Math.max(longestStreakEver(sessions), streak));
+  const xpShown = useCountUp(xpInfo.xp, 1000);
   const gStats = computeGlobalStats(sessions);
   const hero = heroForStreak(streak);
   const bestStreak = Math.max(longestStreakEver(sessions), streak);
@@ -4436,20 +4833,20 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
         <div style={{ fontSize: 64 }}>{hero.emoji}</div>
         <div style={{ fontSize: 18, fontWeight: 900, marginTop: 6 }}>{name}</div>
         <div style={{ fontSize: 12, color: C.cyan, fontWeight: 700, marginTop: 2 }}>Código: {code}</div>
-        <div style={{ height: 1, background: C.border, margin: "14px 0" }} />
+        <hr className="divider-gradient" style={{ margin: "14px 0" }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
-          <p style={{ fontSize: 13 }}>🔥 Racha: {streak} días</p>
+          <p style={{ fontSize: 13 }}>🔥 Racha: {formatStreak(streak)}</p>
           <p style={{ fontSize: 13 }}>💪 Sesiones: {sessions.length}</p>
           <p style={{ fontSize: 13 }}>🏆 Nivel: {globalLvl.name}</p>
-          <p style={{ fontSize: 13 }}>⭐ XP: {xpInfo.xp} (Rango {xpInfo.roman})</p>
+          <p style={{ fontSize: 13 }}>⭐ XP: {xpShown} (Rango {xpInfo.roman})</p>
         </div>
-        <div style={{ height: 1, background: C.border, margin: "14px 0" }} />
+        <hr className="divider-gradient" style={{ margin: "14px 0" }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
           <p style={{ fontSize: 12, color: C.mut }}>Disciplina favorita: {DISCIPLINES[gStats.favDiscId]?.label || "—"}</p>
           <p style={{ fontSize: 12, color: C.mut }}>Ejercicio estrella: {gStats.favExercise || "—"}</p>
-          <p style={{ fontSize: 12, color: C.mut }}>Mejor racha: {bestStreak} días</p>
+          <p style={{ fontSize: 12, color: C.mut }}>Mejor racha: {formatStreak(bestStreak)}</p>
         </div>
-        <div style={{ height: 1, background: C.border, margin: "14px 0" }} />
+        <hr className="divider-gradient" style={{ margin: "14px 0" }} />
         <p style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>LOGROS</p>
         <div style={{ fontSize: 22 }}>
           {unlocked.length ? unlocked.slice(0, 8).map((a) => a.emoji).join(" ") : "—"}
@@ -4629,6 +5026,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   });
   const xpInfo = useMemo(() => computeXP(sessions, unlockedCount, bestStreak), [sessions, unlockedCount, bestStreak]);
   const globalStats = useMemo(() => computeGlobalStats(sessions), [sessions]);
+  const totalVolumeShown = useCountUp(globalStats.totalVolume, 1200);
 
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
@@ -4779,7 +5177,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
 
   if (showStats) {
     const s = globalStats;
-    const elephants = (s.totalVolume / 5000).toFixed(1);
     const favDisc = DISCIPLINES[s.favDiscId];
     return (
       <div className="screen">
@@ -4794,10 +5191,12 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
         </div>
 
         <div className="card" style={{ marginTop: 10, padding: "16px 14px" }}>
-          <div style={{ fontSize: 28, fontWeight: 900, color: C.green }}>{s.totalVolume} kg</div>
+          <div style={{ ...TYPOGRAPHY.display, color: C.green }}>
+            {formatVolume(totalVolumeShown)}
+          </div>
           {s.totalVolume > 0 && (
             <div style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
-              Has levantado el peso de {elephants} elefantes 🐘 (1 elefante ≈ 5,000 kg)
+              Has levantado el peso de {volumeEquivalent(s.totalVolume)}
             </div>
           )}
         </div>
@@ -4889,7 +5288,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {[...hist.rows].reverse().map((r, i) => (
             <div key={i} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px" }}>
-              <span style={{ fontSize: 12, color: C.mut }}>{fmtDate(r.ts)}</span>
+              <span style={{ fontSize: 12, color: C.mut }}>{timeAgo(r.ts)}</span>
               <span style={{ fontSize: 12, fontWeight: 700 }}>
                 {r.weight > 0 ? `${r.weight} kg × ${r.reps}` : `${r.reps} reps`}
               </span>
@@ -4951,6 +5350,17 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           )}
           <div style={{ fontSize: 12, color: C.dim, marginTop: 14 }}>Toca para ver el detalle ›</div>
         </button>
+
+        {sessions.length === 0 && (
+          <div className="card" style={{ marginTop: 10 }}>
+            <EmptyState
+              icon={<EmptyProgressIllustration />}
+              title="Tu progreso empieza aquí"
+              subtitle="Completa sesiones para ver tus estadísticas y gráficas."
+              color={C.cyan}
+            />
+          </div>
+        )}
 
         <div className="card" style={{ marginTop: 10, padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -5025,8 +5435,13 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
 
         <div className="sec-title">🏆 Mis récords</div>
         {records.length === 0 ? (
-          <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13 }}>
-            Completa tu primera sesión para empezar a registrar récords.
+          <div className="card">
+            <EmptyState
+              icon={<EmptyRecordsIllustration />}
+              title="Sin récords todavía"
+              subtitle="Completa tu primera sesión para empezar a registrarlos."
+              color={C.yellow}
+            />
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -5044,7 +5459,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
                     <div style={{ fontSize: 11, color: C.mut }}>
-                      {r.weight > 0 ? `${r.weight} kg × ${r.reps} reps` : `${r.reps} reps`} · {fmtDate(r.ts)}
+                      {r.weight > 0 ? `${r.weight} kg × ${r.reps} reps` : `${r.reps} reps`} · {timeAgo(r.ts)}
                     </div>
                   </div>
                   {isNew && (
@@ -5346,7 +5761,7 @@ function Community({ name, sessions, streak, freezes }) {
       const discLabel = DISCIPLINES[s.disc]?.label || s.focusLabel || "Entreno";
       const lvlName = LEVELS[s.levelIdx]?.name || "";
       return {
-        id: s.id, hero, text: `${name} completó ${okSets} series de ${discLabel} nivel ${lvlName} en ${durMin} minutos 💪`,
+        id: s.id, hero, text: `${name} completó ${okSets} series de ${discLabel} nivel ${lvlName} en ${formatDuration(durMin)} 💪`,
         ts: s.ts,
       };
     });
@@ -5399,6 +5814,15 @@ function Community({ name, sessions, streak, freezes }) {
           )}
 
           <div className="sec-title">Tabla de clasificación</div>
+          {friends.length === 0 && (
+            <div className="card" style={{ marginBottom: 8 }}>
+              <EmptyState
+                icon={<EmptyCommunityIllustration />}
+                title="Aún no tienes amigos importados"
+                subtitle="Pide su código y pégalo arriba para comparar tu progreso."
+              />
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {board.map((f, i) => (
               <div key={f.code} className="card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
@@ -5441,8 +5865,12 @@ function Community({ name, sessions, streak, freezes }) {
       {tab === "feed" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
           {feed.length === 0 ? (
-            <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13 }}>
-              Completa sesiones para ver tu feed de actividad.
+            <div className="card">
+              <EmptyState
+                icon={<EmptyCommunityIllustration />}
+                title="Sin actividad todavía"
+                subtitle="Completa sesiones para ver tu feed de actividad."
+              />
             </div>
           ) : feed.map((post) => (
             <div key={post.id} className="card" style={{ padding: "12px 14px" }}>
@@ -5450,7 +5878,7 @@ function Community({ name, sessions, streak, freezes }) {
                 <span style={{ fontSize: 26 }}>{post.hero.emoji}</span>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 12, lineHeight: 1.4 }}>{post.text}</p>
-                  <p style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{fmtDate(post.ts)}</p>
+                  <p style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{timeAgo(post.ts)}</p>
                 </div>
               </div>
               <button
@@ -5643,11 +6071,11 @@ function Body({ onComplete }) {
 /* ═══════════════════ APP RAÍZ ═══════════════════ */
 
 const TABS = [
-  { id: "inicio", label: "Inicio", icon: "🏠" },
-  { id: "entrenar", label: "Entrenar", icon: "💪" },
-  { id: "progreso", label: "Progreso", icon: "📈" },
-  { id: "cuerpo", label: "Cuerpo", icon: "🧘" },
-  { id: "comunidad", label: "Comunidad", icon: "👥" },
+  { id: "inicio", label: "Inicio", Icon: IconHome },
+  { id: "entrenar", label: "Entrenar", Icon: IconTrain },
+  { id: "progreso", label: "Progreso", Icon: IconProgress },
+  { id: "cuerpo", label: "Cuerpo", Icon: IconBody },
+  { id: "comunidad", label: "Comunidad", Icon: IconCommunity },
 ];
 
 /* Función (no objeto estático) para que refleje el tema activo al vuelo */
@@ -5656,6 +6084,9 @@ function getTabAccent(tabId) {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
+  const [calculating, setCalculating] = useState(true);
+  useGlobalTouchEffects();
   const [name, setName] = useState(() => store.get("name", ""));
   const [mode, setMode] = useState(() => store.get("mode", "guiado"));
   const [sessions, setSessions] = useState(() => {
@@ -5813,7 +6244,27 @@ export default function App() {
     setAccent(getTabAccent(t));
   };
 
+  /* Skeleton loaders breves: al entrar a una pestaña (más si el historial es grande) */
+  useEffect(() => {
+    const t = setTimeout(() => setCalculating(false), sessions.length > 50 ? 500 : 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
   const streak = useMemo(() => calcStreak(sessions, freezes), [sessions, freezes]);
+  const headerAchCount = useMemo(() => computeAchievements(sessions, freezes).list.filter((a) => a.unlocked).length, [sessions, freezes]);
+  const headerXpInfo = useMemo(
+    () => computeXP(sessions, headerAchCount, Math.max(longestStreakEver(sessions), streak)),
+    [sessions, headerAchCount, streak]
+  );
+  const headerDateLabel = useMemo(() => {
+    const now = new Date();
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1).replace(".", "");
+    const weekday = cap(now.toLocaleDateString("es", { weekday: "short" }));
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = cap(now.toLocaleDateString("es", { month: "short" }));
+    return `${weekday} ${day} ${month}`;
+  }, []);
 
   /* Recordatorio diario: mejor esfuerzo del lado del cliente (revisa mientras la
      app está abierta; no es un push real en segundo plano sin servidor). */
@@ -5906,6 +6357,8 @@ export default function App() {
 
   const touchStartX = useRef(null);
 
+  if (loading) return <Splash onDone={() => setLoading(false)} />;
+
   if (!name) return <Welcome onDone={saveName} />;
 
   if (showTheme) {
@@ -5986,48 +6439,43 @@ export default function App() {
           {toast}
         </div>
       )}
-      <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease" }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: accent, transition: "color .3s ease" }}>
-            F.A.S.E.
+      <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease", flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* Izquierda: identidad */}
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 1 }}>
+              <span style={{ color: C.cyan }}>F</span><span style={{ color: C.dim }}>.A.S.E.</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 1 }}>
+              Hola, {name}
+              {noEquipment && (
+                <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, color: C.cyan, background: "rgba(0,229,255,0.12)", padding: "2px 6px", borderRadius: 99 }}>
+                  Sin equipo
+                </span>
+              )}
+            </div>
           </div>
-          <div style={{ fontSize: 13, fontWeight: 800 }}>
-            Hola, {name}
-            {noEquipment && (
-              <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, color: C.cyan, background: "rgba(0,229,255,0.12)", padding: "2px 6px", borderRadius: 99 }}>
-                Sin equipo
-              </span>
-            )}
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
-          {installPrompt && !appInstalled && (
-            <button
-              onClick={installApp}
-              aria-label="Instalar app"
-              style={{
-                background: "#00E5FF", color: "#000", border: "none", borderRadius: 20,
-                padding: "6px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-              }}
-            >
-              📲 Instalar
-            </button>
-          )}
-          <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <WeekRing done={weekCount} goal={weeklyGoal} accent={accent} />
-            <button
-              onClick={() => setEditingGoal((v) => !v)}
-              style={{ fontSize: 12, color: C.dim, padding: 4 }}
-              aria-label="Editar meta semanal"
-            >
-              ✏️
+
+          {/* Centro: fecha y meta semanal */}
+          <div style={{ position: "relative", textAlign: "center" }}>
+            <button onClick={() => setEditingGoal((v) => !v)} aria-label="Ver o editar meta semanal" style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: C.mut, fontWeight: 700 }}>{headerDateLabel}</div>
+              <div style={{ width: 60, height: 3, background: C.border, borderRadius: 99, overflow: "hidden", marginTop: 4 }}>
+                <div
+                  style={{
+                    height: "100%", width: `${Math.min(100, (weekCount / weeklyGoal) * 100)}%`, borderRadius: 99,
+                    background: weekCount >= weeklyGoal ? C.green : weekCount > 0 ? accent : C.dim,
+                    transition: "width .5s ease, background .3s ease",
+                  }}
+                />
+              </div>
+              <div style={{ fontSize: 9, color: C.dim, marginTop: 3 }}>{weekCount}/{weeklyGoal} sesiones</div>
             </button>
             {editingGoal && (
               <div
                 className="card fade-up"
                 style={{
-                  position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 50,
+                  position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 6, zIndex: 50,
                   display: "flex", gap: 4, padding: 8,
                 }}
               >
@@ -6047,31 +6495,43 @@ export default function App() {
               </div>
             )}
           </div>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6, background: "rgba(255,122,47,0.12)",
-            border: "1px solid rgba(255,122,47,0.35)", borderRadius: 99, padding: "6px 12px",
-          }}>
-            <span className="flame" style={{ fontSize: 15 }}>🔥</span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: C.orange }}>{streak}</span>
+
+          {/* Derecha: estado */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {streak > 0 && (
+              <span style={{ fontSize: 13, fontWeight: 800, color: C.orange, display: "flex", alignItems: "center", gap: 3 }}>
+                <span className="flame">🔥</span>{streak}
+              </span>
+            )}
+            <XPRingMini progress={headerXpInfo.progress} roman={headerXpInfo.roman} color={accent} />
+            <button onClick={() => setShowProfileCard(true)} aria-label="Mi perfil" style={{ fontSize: 22, lineHeight: 1 }}>
+              {heroForStreak(streak).emoji}
+            </button>
           </div>
-          <button
-            onClick={toggleEquipment}
-            aria-label="Alternar modo sin equipo"
-            style={{ fontSize: 16, padding: 4 }}
-          >
+        </div>
+
+        {/* Fila secundaria: accesos rápidos */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+          {installPrompt && !appInstalled && (
+            <button
+              onClick={installApp}
+              aria-label="Instalar app"
+              style={{
+                background: "#00E5FF", color: "#000", border: "none", borderRadius: 20,
+                padding: "5px 12px", fontWeight: 800, fontSize: 11, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+              }}
+            >
+              📲 Instalar
+            </button>
+          )}
+          <button onClick={toggleEquipment} aria-label="Alternar modo sin equipo" style={{ fontSize: 15, padding: 4 }}>
             {noEquipment ? "🎒" : "🏋️"}
           </button>
-          <button
-            onClick={toggleContrast}
-            aria-label="Alternar modo alto contraste"
-            style={{ fontSize: 16, padding: 4 }}
-          >
+          <button onClick={toggleContrast} aria-label="Alternar modo alto contraste" style={{ fontSize: 15, padding: 4 }}>
             {highContrast ? "🌙" : "☀️"}
           </button>
-          <button onClick={() => setShowTheme(true)} aria-label="Mi estilo" style={{ fontSize: 16, padding: 4 }}>🎨</button>
-          <button onClick={() => setShowProfileCard(true)} aria-label="Mi perfil" style={{ fontSize: 16, padding: 4 }}>
-            {heroForStreak(streak).emoji}
-          </button>
+          <button onClick={() => setShowTheme(true)} aria-label="Mi estilo" style={{ fontSize: 15, padding: 4 }}>🎨</button>
         </div>
       </header>
 
@@ -6089,34 +6549,55 @@ export default function App() {
           if (nextIdx >= 0 && nextIdx < TABS.length) changeTab(TABS[nextIdx].id);
         }}
       >
-        {tab === "inicio" && (
-          <Home
-            name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
-            onTrain={() => changeTab("entrenar")} mode={mode}
-            onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
-            broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
-            challenge={challenge} onDeleteSession={deleteSession} freezes={freezes}
-          />
+        {calculating ? (
+          <div className="screen">
+            <SkeletonCard height={90} />
+            <div style={{ marginTop: 10 }}><SkeletonCard height={70} /></div>
+            <div style={{ marginTop: 10 }}><SkeletonCard height={70} /></div>
+          </div>
+        ) : (
+          <>
+            {tab === "inicio" && (
+              <div style={{ position: "relative" }}>
+                {!highContrast && <ParticleBackground />}
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  <Home
+                    name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
+                    onTrain={() => changeTab("entrenar")} mode={mode}
+                    onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
+                    broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
+                    challenge={challenge} onDeleteSession={deleteSession} freezes={freezes}
+                  />
+                </div>
+              </div>
+            )}
+            {tab === "entrenar" && (
+              <Train
+                onStart={setLive} onAccent={(c) => setAccent(c || getTabAccent("entrenar"))} totalSessions={sessions.length}
+                noEquipment={noEquipment} onSaveSpecial={saveSession}
+                sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
+              />
+            )}
+            {tab === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive} />}
+            {tab === "cuerpo" && <Body onComplete={completeBody} />}
+            {tab === "comunidad" && <Community name={name} sessions={sessions} streak={streak} freezes={freezes} />}
+          </>
         )}
-        {tab === "entrenar" && (
-          <Train
-            onStart={setLive} onAccent={(c) => setAccent(c || getTabAccent("entrenar"))} totalSessions={sessions.length}
-            noEquipment={noEquipment} onSaveSpecial={saveSession}
-            sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
-          />
-        )}
-        {tab === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive} />}
-        {tab === "cuerpo" && <Body onComplete={completeBody} />}
-        {tab === "comunidad" && <Community name={name} sessions={sessions} streak={streak} freezes={freezes} />}
       </div>
 
       <nav className="tabbar">
-        {TABS.map((t) => (
-          <button key={t.id} className={`tab ${tab === t.id ? "on" : ""}`} onClick={() => changeTab(t.id)}>
-            <span className="ico">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id} className={`tab ${active ? "on" : ""}`} onClick={() => changeTab(t.id)}
+              style={{ "--glow-color": `${accent}50` }}
+            >
+              <span className="ico"><t.Icon color={active ? accent : C.dim} /></span>
+              {t.label}
+            </button>
+          );
+        })}
       </nav>
 
       {showIOSHint && (
