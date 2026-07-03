@@ -101,6 +101,17 @@ function sanitize(str) {
     .slice(0, 100); // máximo 100 caracteres
 }
 
+/* Igual que sanitize() pero para texto libre más largo (notas de sesión) */
+function sanitizeNote(str) {
+  if (typeof str !== "string") return "";
+  return str
+    .replace(/[<>"']/g, "")
+    .replace(/javascript:/gi, "")
+    .replace(/on\w+=/gi, "")
+    .trim()
+    .slice(0, 300);
+}
+
 /* ─── Sistema tipográfico (v8: diseño premium) ─── */
 const TYPOGRAPHY = {
   display: { fontSize: 36, fontWeight: 900, letterSpacing: -1, fontVariantNumeric: "tabular-nums" },
@@ -184,6 +195,84 @@ function formatStreak(days) {
   if (days < 30) return `${Math.floor(days / 7)} sem`;
   if (days < 365) return `${Math.floor(days / 30)} meses`;
   return `${(days / 365).toFixed(1)} años 🏆`;
+}
+
+/* ─── Tips del día (rotan uno por día) ─── */
+const DAILY_TIPS = [
+  "El músculo crece en el descanso, no en el gym.",
+  "Progresión de carga: añade 2.5kg cuando completes todas las series con buena técnica.",
+  "La técnica primero, el peso después. Siempre.",
+  "3 sesiones consistentes superan a 6 sesiones irregulares.",
+  "El calentamiento no es opcional si quieres durar años entrenando.",
+  "Los isquiotibiales son el músculo más lesionado en el fútbol. Entrena el curl nórdico.",
+  "La velocidad se entrena descansado. Sprints con CNS fresco.",
+  "En gimnasio: los últimos 2 reps de cada serie son los que generan adaptación.",
+  "Fuerza + velocidad = potencia. Entrena las dos.",
+  "El dolor muscular al día siguiente (agujetas) no indica un buen entrenamiento.",
+  "Duerme 7-9 horas. Es el mejor suplemento que existe.",
+  "El estrés crónico eleva el cortisol y dificulta ganar músculo.",
+  "Hidratación: orina amarillo claro = bien hidratado.",
+  "Un día de descanso no te hace perder músculo. Te hace crecer.",
+  "El foam roller antes de entrenar mejora el rango de movimiento.",
+  "La constancia supera al talento. Siempre.",
+  "Un entrenamiento malo es mejor que ningún entrenamiento.",
+  "No compares tu capítulo 1 con el capítulo 20 de otro.",
+  "La motivación te arranca. El hábito te mantiene.",
+  "Visualiza la sesión antes de empezarla. Los atletas de élite lo hacen.",
+  "El mayor atleta es el que sigue cuando no tiene ganas.",
+  "Come proteína en cada comida principal.",
+  "Los carbohidratos son el combustible del entrenamiento, no el enemigo.",
+  "El ayuno antes de entrenar reduce la intensidad que puedes aplicar.",
+  "Post-entreno: proteína + carbohidrato en las primeras 2 horas.",
+  "La creatina monohidratada es el suplemento más estudiado y seguro.",
+  "Calienta las articulaciones antes de cargar peso, no solo los músculos.",
+  "La respiración correcta en cada rep mejora tu estabilidad y tu fuerza.",
+  "Entrenar al fallo en cada serie no es necesario para progresar.",
+  "El core no son solo abdominales: es todo el cilindro de presión.",
+  "Registra tus pesos. Lo que no mides, no mejora.",
+  "La movilidad de tobillo es la base de una buena sentadilla.",
+  "No hay músculo débil, hay músculo poco entrenado.",
+  "El descanso entre series importa tanto como el ejercicio mismo.",
+  "Cambia de rutina cada 6-8 semanas para seguir progresando.",
+  "El calzado plano ayuda a la estabilidad en sentadilla y peso muerto.",
+  "Estirar en frío no previene lesiones; el calentamiento activo sí ayuda.",
+  "La postura frente a la pantalla afecta tu técnica en el gimnasio.",
+  "Escuchar a tu cuerpo no es debilidad, es inteligencia de entrenamiento.",
+  "Un buen calentamiento reduce el riesgo de lesión más que cualquier estiramiento.",
+  "La fuerza de agarre predice más de lo que crees sobre tu progreso general.",
+  "Entrena primero lo que más te cuesta, cuando tienes más energía.",
+  "El sueño de mala calidad reduce tu fuerza al día siguiente más que el cansancio muscular.",
+  "La regla del 10%: no aumentes el volumen semanal más de un 10% de golpe.",
+  "El calentamiento específico (con el propio movimiento) es mejor que solo cardio general.",
+  "Beber agua durante el entrenamiento mantiene tu rendimiento en sesiones largas.",
+  "La simetría entre lados del cuerpo se entrena, no se asume.",
+  "Un plan de entrenamiento sin objetivo claro rara vez se sostiene en el tiempo.",
+  "El sobreentrenamiento se nota primero en el ánimo, no en el cuerpo.",
+  "Cuenta tempos: bajar controlado también construye fuerza.",
+  "La flexibilidad y la movilidad no son lo mismo; entrena ambas.",
+  "Celebra los pequeños progresos: son la prueba de que el sistema funciona.",
+  "El calentamiento mental cuenta: llega con la cabeza puesta en la sesión.",
+  "La consistencia mensual importa más que la intensidad de un solo día.",
+  "Entrena el lado no dominante un poco más para equilibrar tu cuerpo.",
+  "El café antes de entrenar puede mejorar tu rendimiento si lo toleras bien.",
+  "No hay atajos para la resistencia cardiovascular: se construye con tiempo.",
+  "Anota cómo te sentiste en cada sesión; los patrones te dirán mucho.",
+  "La recuperación activa (caminar, movilidad suave) acelera la siguiente sesión.",
+  "El objetivo no es entrenar más, es entrenar mejor y con más frecuencia sostenible.",
+  "Cada atleta de élite empezó exactamente donde tú estás ahora.",
+];
+
+/* Día del año (1-366), usado para rotar el tip diario */
+function dayOfYear(d = new Date()) {
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+}
+
+/* Otorga XP de bonificación acumulada (agua, enfriamiento) de forma persistente y sin duplicar */
+function awardBonusXpOnce(guardKey, amount) {
+  if (store.get(guardKey, false)) return;
+  store.set(guardKey, true);
+  store.set("bonus_xp", store.get("bonus_xp", 0) + amount);
 }
 
 /* ─── Splash screen inicial ─── */
@@ -426,6 +515,147 @@ function ParticleBackground() {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+/* ─── Calentamiento y enfriamiento (no se registran en el historial) ─── */
+function warmupKeyFor(discId) {
+  if (discId === "gimnasio") return "gimnasio";
+  if (discId === "calistenia") return "calistenia";
+  if (discId?.startsWith("futbol")) return "futbol";
+  if (discId === "atletismo") return "atletismo";
+  if (discId === "cuerpo") return "cuerpo";
+  return "calistenia";
+}
+
+const WARMUP_ROUTINES = {
+  gimnasio: [
+    { name: "Movilidad de hombros (círculos adelante y atrás)", mode: "tiempo", duration: 30 },
+    { name: "Sentadilla de calentamiento con peso corporal", mode: "reps", reps: 20 },
+    { name: "Rotaciones de cadera (cada lado)", mode: "tiempo", duration: 30 },
+    { name: "Puente de glúteos", mode: "reps", reps: 15 },
+    { name: "Jumping jacks o saltos suaves", mode: "tiempo", duration: 45 },
+  ],
+  calistenia: [
+    { name: "Rotaciones de muñeca y hombro", mode: "tiempo", duration: 30 },
+    { name: "Circles de hombro en barra o sin barra", mode: "reps", reps: 20 },
+    { name: "Sentadilla profunda sostenida", mode: "tiempo", duration: 30 },
+    { name: "Flexiones lentas de calentamiento (muy despacio)", mode: "reps", reps: 5 },
+    { name: "Skipping en el lugar", mode: "tiempo", duration: 45 },
+  ],
+  futbol: [
+    { name: "Trote suave en el lugar", mode: "tiempo", duration: 45 },
+    { name: "Rotaciones de tobillo (20 por pie)", mode: "reps", reps: 20 },
+    { name: "Skipping alto", mode: "tiempo", duration: 30 },
+    { name: "Apertura y cierre de cadera lateral (cada lado)", mode: "reps", reps: 15 },
+    { name: "Sprint al 50% — 20m x 3", mode: "reps", reps: 3 },
+  ],
+  atletismo: [
+    { name: "Trote muy suave", mode: "tiempo", duration: 180 },
+    { name: "Skipping A (rodillas al frente)", mode: "tiempo", duration: 30 },
+    { name: "Skipping B (talones atrás)", mode: "tiempo", duration: 30 },
+    { name: "Zancadas dinámicas caminando (cada pierna)", mode: "reps", reps: 10 },
+    { name: "Aceleraciones progresivas al 60% (20m)", mode: "reps", reps: 3 },
+  ],
+  cuerpo: [
+    { name: "Respiración diafragmática", mode: "reps", reps: 5 },
+    { name: "Gato-camello en cuadrupedia", mode: "reps", reps: 10 },
+    { name: "Apertura torácica en el suelo (cada lado)", mode: "reps", reps: 8 },
+    { name: "Rotaciones de cuello suaves (cada lado)", mode: "reps", reps: 10 },
+    { name: "Estiramiento de cadena posterior", mode: "tiempo", duration: 30 },
+  ],
+};
+
+const COOLDOWN_ROUTINES = {
+  gimnasio: [
+    { name: "Estiramiento de pecho (marco de puerta o brazos abiertos)", mode: "tiempo", duration: 45 },
+    { name: "Estiramiento de espalda (abrazo de rodillas al pecho)", mode: "tiempo", duration: 45 },
+    { name: "Estiramiento de cuádriceps de pie (cada pierna)", mode: "tiempo", duration: 30 },
+  ],
+  calistenia: [
+    { name: "Estiramiento de hombros cruzado al pecho (cada lado)", mode: "tiempo", duration: 30 },
+    { name: "Flexión hacia adelante — tocar puntas de pies", mode: "tiempo", duration: 45 },
+    { name: "Postura del niño (child's pose)", mode: "tiempo", duration: 60 },
+  ],
+  futbol: [
+    { name: "Estiramiento de isquiotibiales sentado", mode: "tiempo", duration: 45 },
+    { name: "Estiramiento de cadera — figura 4 (cada lado)", mode: "tiempo", duration: 30 },
+    { name: "Pantorrilla contra pared (cada pierna)", mode: "tiempo", duration: 30 },
+  ],
+  atletismo: [
+    { name: "Estiramiento de isquiotibiales sentado", mode: "tiempo", duration: 45 },
+    { name: "Estiramiento de cadera — figura 4 (cada lado)", mode: "tiempo", duration: 30 },
+    { name: "Pantorrilla contra pared (cada pierna)", mode: "tiempo", duration: 30 },
+  ],
+  cuerpo: [
+    { name: "Savasana — tumbado relajado", mode: "tiempo", duration: 60 },
+    { name: "Respiración 4-7-8", mode: "reps", reps: 4 },
+    { name: "Estiramiento suave de cuello (cada lado)", mode: "tiempo", duration: 30 },
+  ],
+};
+
+/* Flujo guiado genérico (un ejercicio a la vez): usado por calentamiento y enfriamiento */
+function GuidedMiniFlow({ title, subtitle, color, exercises, onDone }) {
+  const [idx, setIdx] = useState(0);
+
+  const advance = () => {
+    if (idx + 1 >= exercises.length) onDone();
+    else setIdx((i) => i + 1);
+  };
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 24 }}>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>{title}</p>
+      <p className="muted" style={{ marginTop: 2 }}>{subtitle}</p>
+      <GuidedStep key={idx} ex={exercises[idx]} index={idx} total={exercises.length} color={color} onAdvance={advance} />
+      <button onClick={onDone} style={{ marginTop: 16, color: C.dim, fontSize: 12, fontWeight: 600 }}>Saltar el resto</button>
+    </div>
+  );
+}
+
+/* Un paso del flujo guiado; se remonta (key={idx}) al cambiar de ejercicio para reiniciar su propio timer */
+function GuidedStep({ ex, index, total, color, onAdvance }) {
+  const [secondsLeft, setSecondsLeft] = useState(ex.mode === "tiempo" ? ex.duration : 0);
+  const [running, setRunning] = useState(false);
+  const secRef = useRef(secondsLeft);
+
+  useEffect(() => {
+    if (!running || ex.mode !== "tiempo") return undefined;
+    const t = setInterval(() => {
+      secRef.current -= 1;
+      if (secRef.current <= 0) {
+        tripleBeep();
+        setRunning(false);
+        setSecondsLeft(0);
+        onAdvance();
+      } else {
+        setSecondsLeft(secRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+
+  return (
+    <div className="card" style={{ marginTop: 20, padding: "26px 16px" }}>
+      <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>{index + 1} / {total}</p>
+      <p style={{ fontSize: 16, fontWeight: 800, marginTop: 8 }}>{ex.name}</p>
+      {ex.mode === "tiempo" ? (
+        <>
+          <div style={{ fontSize: 42, fontWeight: 900, marginTop: 14, color, fontVariantNumeric: "tabular-nums" }}>{secondsLeft}s</div>
+          {!running ? (
+            <button className="btn-xl" onClick={() => setRunning(true)} style={{ marginTop: 14, background: color, color: "#07070C" }}>▶ Empezar</button>
+          ) : (
+            <button className="btn-xl" onClick={onAdvance} style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>Siguiente ›</button>
+          )}
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 30, fontWeight: 900, marginTop: 14, color }}>{ex.reps} reps</div>
+          <button className="btn-xl" onClick={onAdvance} style={{ marginTop: 14, background: color, color: "#07070C" }}>✓ Listo</button>
+        </>
+      )}
     </div>
   );
 }
@@ -1437,12 +1667,16 @@ function computeXP(sessions, achievementsUnlockedCount, bestStreak) {
   const totalSets = workouts.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.filter((st) => st.ok).length, 0), 0);
   const perfectSessions = workouts.filter((s) => s.exercises.every((e) => e.sets.length > 0 && e.sets.every((st) => st.ok))).length;
   const recordsBonus = computeRecords(sessions).length * 200;
+  const cooldownBonus = workouts.filter((s) => s.cooldownBonus).length * 50;
+  const otherBonus = store.get("bonus_xp", 0); // agua y otras bonificaciones acumuladas
   const xp = workouts.length * 100
     + totalSets * 10
     + perfectSessions * 150
     + achievementsUnlockedCount * 300
     + Math.floor(bestStreak / 7) * 500
-    + recordsBonus;
+    + recordsBonus
+    + cooldownBonus
+    + otherBonus;
   const rankIdx = Math.min(XP_RANKS.length - 1, Math.floor(xp / 1000));
   const intoRank = xp - rankIdx * 1000;
   return { xp, rankIdx, rankName: XP_RANKS[rankIdx], roman: XP_ROMAN[rankIdx], progress: rankIdx === XP_RANKS.length - 1 ? 1 : intoRank / 1000 };
@@ -1771,6 +2005,187 @@ function planFromSession(session) {
     exercises: genRoutine(session.disc, focusId, session.levelIdx, seed, { noBar }),
     calLocation: session.calLocation,
   };
+}
+
+/* Construye un plan de sesión a partir de disciplina/enfoque/nivel elegidos (no de un registro previo) */
+function buildPlanFor(discId, focusId, lvlIdx) {
+  const seed = seedNow();
+  if (discId === "atletismo") {
+    const distId = focusId || "1000m";
+    const dist = DISTANCES.find((d) => d.id === distId) || DISTANCES[0];
+    return {
+      discId: "atletismo", discLabel: "Atletismo", discColor: C.purple, discIcon: "🏃",
+      focusLabel: dist.label, lvlIdx,
+      exercises: genAtletismoRoutine(distId, lvlIdx, seed),
+    };
+  }
+  const disc = DISCIPLINES[discId];
+  if (!disc) return null;
+  const focus = disc.focuses.find((f) => f.id === focusId) || disc.focuses[0];
+  return {
+    discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon,
+    focusLabel: focus.label, lvlIdx,
+    exercises: genRoutine(discId, focus.id, lvlIdx, seed),
+  };
+}
+
+/* ─── Plan del día inteligente ─── */
+const DAILY_DURATION = { gimnasio: 45, calistenia: 35, futbolGym: 60, futbolParque: 60, atletismo: 40, cuerpo: 20 };
+
+function mostFrequentLevel(sessions) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  if (!workouts.length) return 0;
+  const counts = {};
+  workouts.forEach((s) => { counts[s.levelIdx] = (counts[s.levelIdx] || 0) + 1; });
+  return Number(Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]);
+}
+
+function leastUsedDiscipline(sessions) {
+  const cutoff = Date.now() - 7 * 86400000;
+  const order = ["calistenia", "gimnasio", "futbolGym", "futbolParque", "atletismo"];
+  const counts = {};
+  order.forEach((d) => { counts[d] = 0; });
+  sessions.filter((s) => s.kind === "entreno" && s.ts >= cutoff).forEach((s) => {
+    if (counts[s.disc] !== undefined) counts[s.disc]++;
+  });
+  return Object.entries(counts).sort((a, b) => a[1] - b[1])[0][0];
+}
+
+function focusGroupOf(label) {
+  const l = (label || "").toLowerCase();
+  if (/pecho|hombro|brazo/.test(l)) return "empuje";
+  if (/espalda/.test(l)) return "tiron";
+  if (/pierna|glúte|gluteo/.test(l)) return "piernas";
+  return "otro";
+}
+
+/* Devuelve una lista de sugerencias (la primera es la principal; "ver otro plan" rota entre el resto) */
+function dailyPlanCandidates(sessions) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const lvlIdx = mostFrequentLevel(sessions);
+
+  if (!workouts.length) {
+    return [{ discId: "calistenia", focusId: "todo", lvlIdx: 0, reason: "Es tu primera vez. Empecemos con calistenia." }];
+  }
+
+  const streakDays = calcStreak(sessions, []);
+  if (streakDays >= 5) {
+    return [
+      { discId: "cuerpo", focusId: null, lvlIdx, reason: `Llevas ${streakDays} días seguidos entrenando. Hoy toca descanso activo.` },
+      { discId: leastUsedDiscipline(sessions), focusId: "todo", lvlIdx, reason: "Alternativa si prefieres seguir activo." },
+    ];
+  }
+
+  const yestKey = dayKey(Date.now() - 86400000);
+  const yesterday = [...workouts].reverse().find((s) => dayKey(s.ts) === yestKey);
+
+  if (!yesterday) {
+    const leastId = leastUsedDiscipline(sessions);
+    const label = DISCIPLINES[leastId]?.label || "Calistenia";
+    return [
+      { discId: leastId, focusId: "todo", lvlIdx, reason: `No entrenaste ayer. Retoma con ${label}, tu disciplina menos trabajada esta semana.` },
+      { discId: "calistenia", focusId: "todo", lvlIdx, reason: "O si prefieres, un full body de calistenia." },
+    ];
+  }
+
+  if (yesterday.disc === "gimnasio") {
+    const grp = focusGroupOf(yesterday.focusLabel);
+    if (grp === "empuje") {
+      return [
+        { discId: "gimnasio", focusId: "espalda", lvlIdx, reason: "Ayer trabajaste pecho/hombros/brazos, hoy toca espalda." },
+        { discId: "calistenia", focusId: "tiron", lvlIdx, reason: "Alternativa: tirón en calistenia." },
+      ];
+    }
+    if (grp === "tiron") {
+      return [
+        { discId: "gimnasio", focusId: "piernas", lvlIdx, reason: "Ayer trabajaste espalda/bíceps, hoy toca piernas." },
+        { discId: "calistenia", focusId: "piernas", lvlIdx, reason: "Alternativa: piernas en calistenia." },
+      ];
+    }
+    if (grp === "piernas") {
+      return [
+        { discId: "gimnasio", focusId: "sup", lvlIdx, reason: "Ayer trabajaste piernas, hoy toca parte superior." },
+        { discId: "futbolGym", focusId: "todo", lvlIdx, reason: "Alternativa: fútbol." },
+      ];
+    }
+    return [{ discId: "gimnasio", focusId: "todo", lvlIdx, reason: "Sigue con tu rutina de gimnasio." }];
+  }
+
+  if (yesterday.disc === "calistenia") {
+    return [
+      { discId: "gimnasio", focusId: "todo", lvlIdx, reason: "Ayer hiciste calistenia, hoy prueba gimnasio." },
+      { discId: "atletismo", focusId: "1000m", lvlIdx, reason: "Alternativa: atletismo." },
+    ];
+  }
+
+  if (yesterday.disc === "atletismo") {
+    return [{ discId: "cuerpo", focusId: null, lvlIdx, reason: "Ayer fue atletismo, hoy toca movilidad y cuerpo." }];
+  }
+
+  if (yesterday.disc === "futbolGym" || yesterday.disc === "futbolParque") {
+    return [
+      { discId: "gimnasio", focusId: "todo", lvlIdx, reason: "Ayer jugaste fútbol, hoy fuerza en gimnasio." },
+      { discId: "cuerpo", focusId: null, lvlIdx, reason: "Alternativa: descanso activo." },
+    ];
+  }
+
+  return [{ discId: "calistenia", focusId: "todo", lvlIdx, reason: "Sigue sumando sesiones." }];
+}
+
+function dailyMessageForToday() {
+  const messages = {
+    1: "Nueva semana, nueva oportunidad 💪",
+    3: "Mitad de semana — no aflojes",
+    5: "Cierra la semana con todo 🔥",
+    6: "El fin de semana también es tuyo",
+    0: "Descanso activo o prepárate para mañana",
+  };
+  return messages[new Date().getDay()] || "Cada sesión suma";
+}
+
+function levelUpHint(sessions, lvlIdx) {
+  const workouts = sessions.filter((s) => s.kind === "entreno").slice(-3);
+  if (workouts.length < 3 || lvlIdx >= LEVELS.length - 1) return null;
+  const rates = workouts.map((s) => {
+    const sets = s.exercises.flatMap((e) => e.sets);
+    return sets.length ? sets.filter((st) => st.ok).length / sets.length : 0;
+  });
+  const avg = rates.reduce((a, b) => a + b, 0) / rates.length;
+  return avg > 0.8 ? LEVELS[lvlIdx + 1].name : null;
+}
+
+function getDailyPlan(sessions) {
+  const today = todayKey();
+  const candidates = dailyPlanCandidates(sessions);
+  const cached = store.get("daily_plan", null);
+  if (cached && cached.date === today) {
+    return { plan: cached.plan, index: cached.index, candidates };
+  }
+  const plan = candidates[0];
+  store.set("daily_plan", { date: today, plan, index: 0 });
+  return { plan, index: 0, candidates };
+}
+
+function describeDailyPlan(plan) {
+  if (plan.discId === "cuerpo") {
+    return { label: "Cuerpo · Movilidad", focusLabel: null, color: C.purple, icon: "🧘" };
+  }
+  if (plan.discId === "atletismo") {
+    const dist = DISTANCES.find((d) => d.id === plan.focusId);
+    return { label: "Atletismo", focusLabel: dist?.label || null, color: C.purple, icon: "🏃" };
+  }
+  const disc = DISCIPLINES[plan.discId];
+  if (!disc) return { label: plan.discId, focusLabel: null, color: C.cyan, icon: "💪" };
+  const focus = disc.focuses.find((f) => f.id === plan.focusId);
+  return { label: disc.label, focusLabel: focus && focus.id !== "todo" ? focus.label : null, color: disc.color, icon: disc.icon };
+}
+
+function rotateDailyPlan(candidates, index) {
+  const today = todayKey();
+  const nextIndex = (index + 1) % candidates.length;
+  const plan = candidates[nextIndex];
+  store.set("daily_plan", { date: today, plan, index: nextIndex });
+  return { plan, index: nextIndex };
 }
 
 /* ─── Mapa muscular (zonas por enfoque) ─── */
@@ -2404,11 +2819,96 @@ function Welcome({ onDone }) {
   );
 }
 
+/* ─── Detalle de una sesión del historial (stats + nota) ─── */
+function SessionDetail({ session, onBack }) {
+  const isBody = session.kind === "cuerpo";
+  const disc = isBody ? null : DISCIPLINES[session.disc];
+  const allSets = isBody ? [] : session.exercises.flatMap((e) => e.sets);
+  const okSets = allSets.filter((s) => s.ok).length;
+  const volume = Math.round(allSets.filter((s) => s.ok).reduce((a, s) => a + s.weight * s.reps, 0));
+  const d = new Date(session.ts);
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>
+        {isBody ? "🧘 Cuerpo" : `${disc?.icon || "💪"} ${disc?.label || session.disc}`}
+      </h2>
+      <p className="muted" style={{ marginTop: 2 }}>
+        {d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })} · {d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+      </p>
+
+      {!isBody && (
+        <>
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <StatBox label="Series" value={`${okSets}/${allSets.length}`} accent={C.green} />
+            <StatBox label="Volumen" value={formatVolume(volume)} accent={C.cyan} />
+            <StatBox label="Duración" value={formatDuration(session.durationMin || 0)} accent={C.orange} />
+          </div>
+          <div className="sec-title">Ejercicios</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {session.exercises.map((e, i) => {
+              const maxW = Math.max(0, ...e.sets.map((s) => s.weight));
+              return (
+                <div key={i} className="card" style={{ padding: "10px 12px" }}>
+                  <p style={{ fontSize: 13, fontWeight: 700 }}>{e.name}</p>
+                  <p style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>
+                    {e.sets.filter((s) => s.ok).length}/{e.sets.length} series{maxW > 0 ? ` · ${maxW} kg máx` : ""}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <div className="sec-title">📝 Nota</div>
+      <div className="card">
+        <p style={{ fontSize: 13, color: session.note ? C.text : C.dim, fontStyle: session.note ? "normal" : "italic" }}>
+          {session.note || "No agregaste ninguna nota en esta sesión."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [] }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [] }) {
   const [menuId, setMenuId] = useState(null);
   const [tappedHero, setTappedHero] = useState(null);
+  const [detailSession, setDetailSession] = useState(null);
   const longPressRef = useRef(null);
+
+  /* Plan del día */
+  const [dailyPlanState, setDailyPlanState] = useState(() => getDailyPlan(sessions));
+  const dailyLevelUp = useMemo(() => levelUpHint(sessions, dailyPlanState.plan.lvlIdx), [sessions, dailyPlanState.plan.lvlIdx]);
+  const dailyMsg = useMemo(() => dailyMessageForToday(), []);
+  const rotatePlan = () => setDailyPlanState((st) => ({ ...rotateDailyPlan(st.candidates, st.index), candidates: st.candidates }));
+
+  /* Agua */
+  const [waterGoal, setWaterGoal] = useState(() => store.get("water_goal", 8));
+  const [waterCount, setWaterCount] = useState(() => store.get("water_" + todayKey(), 0));
+  const [showWaterGoal, setShowWaterGoal] = useState(false);
+  const addWater = () => {
+    const next = Math.min(waterGoal, waterCount + 1);
+    setWaterCount(next);
+    store.set("water_" + todayKey(), next);
+    if (next >= waterGoal) awardBonusXpOnce("water_bonus_" + todayKey(), 25);
+  };
+
+  /* Tip del día */
+  const [tipState, setTipState] = useState(() => {
+    const today = todayKey();
+    const cached = store.get("tip_state", null);
+    if (cached && cached.date === today) return cached;
+    const next = { date: today, index: dayOfYear() % DAILY_TIPS.length };
+    store.set("tip_state", next);
+    return next;
+  });
+  const nextTip = () => {
+    const next = { date: todayKey(), index: (tipState.index + 1) % DAILY_TIPS.length };
+    setTipState(next);
+    store.set("tip_state", next);
+  };
   const startLongPress = (id) => {
     longPressRef.current = setTimeout(() => setMenuId(id), 500);
   };
@@ -2454,6 +2954,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
     todaySessions.filter((s) => s.kind === "entreno").flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((st) => st.ok)
       .reduce((a, st) => a + st.weight * st.reps, 0)
   );
+
+  if (detailSession) return <SessionDetail session={detailSession} onBack={() => setDetailSession(null)} />;
 
   return (
     <div className="screen">
@@ -2580,6 +3082,55 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
         </div>
       )}
 
+      {/* Plan del día inteligente */}
+      {(() => {
+        const dp = dailyPlanState.plan;
+        const info = describeDailyPlan(dp);
+        const duration = DAILY_DURATION[dp.discId] || 40;
+        return (
+          <div
+            className="card fade-up"
+            style={{
+              marginTop: 12, padding: 16,
+              background: `linear-gradient(135deg, ${info.color}22 0%, ${C.card2} 60%)`,
+              border: `1px solid ${info.color}55`,
+            }}
+          >
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 32, lineHeight: 1 }}>{info.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 11, color: C.dim, fontWeight: 700, letterSpacing: 1 }}>HOY TE SUGERIMOS</p>
+                <p style={{ fontSize: 11, color: info.color, fontWeight: 700, marginTop: 1 }}>{dailyMsg}</p>
+                <p style={{ fontSize: 15, fontWeight: 900, marginTop: 2 }}>
+                  {info.label}{info.focusLabel ? ` · ${info.focusLabel}` : ""}
+                </p>
+                <p style={{ fontSize: 12, fontWeight: 700, marginTop: 2, color: LEVELS[dp.lvlIdx]?.color }}>
+                  {LEVELS[dp.lvlIdx]?.emoji} {LEVELS[dp.lvlIdx]?.name} · ~{duration} min
+                </p>
+                <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>{dp.reason}</p>
+                {dailyLevelUp && (
+                  <p style={{ fontSize: 11, color: C.yellow, marginTop: 6, fontWeight: 700 }}>
+                    ¿Listo para subir? Prueba {dailyLevelUp} 🔥
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              className="btn-xl"
+              onClick={() => onStartPlan?.(dp.discId, dp.focusId, dp.lvlIdx)}
+              style={{ marginTop: 12, background: info.color, color: "#07070C", fontSize: 14 }}
+            >
+              ▶ Empezar este plan
+            </button>
+            {dailyPlanState.candidates.length > 1 && (
+              <button onClick={rotatePlan} style={{ marginTop: 8, color: C.mut, fontSize: 12, fontWeight: 700 }}>
+                Ver otro plan 🔄
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Racha (o mensaje motivacional si se rompió) */}
       {pro ? (
         <div className="card" style={{ marginTop: 12, padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2632,6 +3183,54 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
         <StatBox label="Racha actual" value={streak} accent={C.orange} />
         <StatBox label="Esta semana" value={week} accent={C.cyan} />
         <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
+      </div>
+
+      {/* Contador de agua */}
+      <div className="card" style={{ marginTop: 12, padding: "13px 14px", borderColor: waterCount >= waterGoal ? "#0099FF88" : undefined }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={{ fontSize: 13, fontWeight: 800 }}>💧 Agua hoy</p>
+          <button onClick={() => setShowWaterGoal((v) => !v)} style={{ fontSize: 13, fontWeight: 900, color: "#0099FF" }}>
+            {waterCount} / {waterGoal} vasos
+          </button>
+        </div>
+        {showWaterGoal && (
+          <div className="chip-wrap" style={{ marginTop: 8 }}>
+            {[6, 7, 8, 10, 12].map((n) => (
+              <button
+                key={n} className={`chip ${waterGoal === n ? "on" : ""}`}
+                style={waterGoal === n ? { background: "#0099FF" } : {}}
+                onClick={() => { setWaterGoal(n); store.set("water_goal", n); setShowWaterGoal(false); }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 4, flex: 1, flexWrap: "wrap" }}>
+            {Array.from({ length: waterGoal }).map((_, i) => (
+              <span key={i} style={{ fontSize: 18, color: i < waterCount ? "#0099FF" : "#1a1a2e" }}>🥤</span>
+            ))}
+          </div>
+          <button
+            onClick={addWater}
+            disabled={waterCount >= waterGoal}
+            aria-label="Sumar vaso de agua"
+            style={{
+              width: 44, height: 44, borderRadius: 14, fontSize: 22, fontWeight: 900, flexShrink: 0,
+              background: waterCount >= waterGoal ? C.surface : "#0099FF", color: waterCount >= waterGoal ? C.dim : "#07070C",
+            }}
+          >
+            +
+          </button>
+        </div>
+        {waterCount >= waterGoal ? (
+          <p style={{ fontSize: 12, color: "#0099FF", fontWeight: 700, marginTop: 8 }}>¡Meta de agua alcanzada! 🎉</p>
+        ) : new Date().getHours() >= 15 && waterCount < 4 ? (
+          <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.yellow}66`, background: "rgba(255,214,0,0.08)" }}>
+            <p style={{ fontSize: 11, color: C.yellow, fontWeight: 700 }}>⚠️ Llevas solo {waterCount} vasos. ¡Hidratación importante!</p>
+          </div>
+        ) : null}
       </div>
 
       {/* Heatmap de actividad */}
@@ -2715,7 +3314,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
               </div>
               {menuId === s.id && (
                 <div className="card pop" style={{ position: "absolute", top: "100%", right: 8, zIndex: 30, padding: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-                  <button onClick={() => setMenuId(null)} style={{ fontSize: 12, padding: "6px 10px", textAlign: "left" }}>Ver detalles</button>
+                  <button onClick={() => { setDetailSession(s); setMenuId(null); }} style={{ fontSize: 12, padding: "6px 10px", textAlign: "left" }}>Ver detalles</button>
                   <button
                     onClick={() => { onDeleteSession?.(s.id); setMenuId(null); }}
                     style={{ fontSize: 12, padding: "6px 10px", textAlign: "left", color: C.red }}
@@ -2728,6 +3327,26 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
           );
         })}
       </div>
+
+      {/* Tip del día */}
+      {(() => {
+        const accents = [C.cyan, C.green, C.orange, C.purple, C.yellow];
+        const tipColor = accents[tipState.index % accents.length];
+        return (
+          <div className="card" style={{ marginTop: 16, padding: "13px 14px", borderLeft: `4px solid ${tipColor}` }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 20 }}>💡</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 11, color: C.dim, fontWeight: 700, letterSpacing: 1 }}>TIP DEL DÍA</p>
+                <p style={{ fontSize: 13, color: C.mut, marginTop: 4, lineHeight: 1.4 }}>{DAILY_TIPS[tipState.index]}</p>
+                <button onClick={nextTip} style={{ fontSize: 11, color: tipColor, fontWeight: 700, marginTop: 6 }}>
+                  Siguiente tip ›
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -3298,6 +3917,170 @@ function ChallengeScreen({ challenge, sessions, streak, onSave, onBack }) {
   );
 }
 
+/* ─── Modo viaje: circuitos fijos de 20 min, sin equipo ─── */
+const TRAVEL_CIRCUITS = {
+  low: {
+    tierLabel: "Iniciado — Guerrero",
+    rounds: 3,
+    exercises: [
+      { name: "Sentadilla sumo lenta", reps: 12 },
+      { name: "Flexiones de rodilla o completas", reps: 10 },
+      { name: "Plancha", seconds: 30 },
+      { name: "Zancada estática (cada pierna)", reps: 10 },
+      { name: "Superman en el suelo — extensión dorsal", reps: 12 },
+    ],
+  },
+  mid: {
+    tierLabel: "Campeón — Élite",
+    rounds: 4,
+    exercises: [
+      { name: "Sentadilla con salto", reps: 10 },
+      { name: "Flexiones explosivas", reps: 8 },
+      { name: "Mountain climbers", seconds: 30 },
+      { name: "Pistol squat asistido (cada pierna)", reps: 6 },
+      { name: "Plancha con toque de hombro", reps: 20 },
+      { name: "Burpees", reps: 6 },
+    ],
+  },
+  high: {
+    tierLabel: "Leyenda — THE ONE",
+    rounds: 5,
+    exercises: [
+      { name: "Flexiones arqueras (cada lado)", reps: 6 },
+      { name: "Sentadilla pistol completa (cada pierna)", reps: 5 },
+      { name: "Plancha con extensión de brazo (cada lado)", reps: 10 },
+      { name: "Burpee con salto máximo", reps: 8 },
+      { name: "Abdominales V-up", reps: 12 },
+      { name: "Superman con rotación (cada lado)", reps: 10 },
+    ],
+  },
+};
+
+function travelTierForLevel(lvlIdx) {
+  if (lvlIdx <= 1) return "low";
+  if (lvlIdx <= 3) return "mid";
+  return "high";
+}
+
+function TravelMode({ onFinish, onSave }) {
+  const [lvlIdx, setLvlIdx] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(20 * 60);
+  const [roundsDone, setRoundsDone] = useState(0);
+  const [offeredExtra, setOfferedExtra] = useState(false);
+  const [done, setDone] = useState(false);
+  const secRef = useRef(20 * 60);
+
+  const tier = lvlIdx !== null ? TRAVEL_CIRCUITS[travelTierForLevel(lvlIdx)] : null;
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => {
+      secRef.current -= 1;
+      if (secRef.current <= 0) {
+        tripleBeep();
+        setSecondsLeft(0);
+        setRunning(false);
+        setDone(true);
+      } else {
+        setSecondsLeft(secRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const finish = () => {
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "viaje",
+      focusLabel: "Modo viaje", levelIdx: lvlIdx,
+      durationMin: Math.round((20 * 60 - secondsLeft) / 60),
+      exercises: [{ name: `Modo viaje — ${tier.tierLabel}`, sets: [{ weight: 0, reps: roundsDone, ok: true }] }],
+    });
+    onFinish();
+  };
+
+  const completeRound = () => {
+    const next = roundsDone + 1;
+    setRoundsDone(next);
+    if (next >= tier.rounds && !offeredExtra) {
+      setOfferedExtra(true);
+      setRunning(false);
+    }
+  };
+
+  if (lvlIdx === null) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 12 }}>✈️</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Modo viaje</h2>
+        <p className="muted" style={{ marginTop: 6, padding: "0 12px", lineHeight: 1.5 }}>
+          Sin equipo, en poco espacio, sin ruido 🤫<br />Rutinas de 20 minutos para cualquier lugar
+        </p>
+        <div className="sec-title">Elige tu nivel</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {LEVELS.map((l, i) => (
+            <button key={l.name} className="card" onClick={() => setLvlIdx(i)} style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px 14px" }}>
+              <span style={{ fontSize: 20 }}>{l.emoji}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: l.color }}>{l.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 60 }}>✈️</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>¡Viaje completado!</h2>
+        <div style={{ fontSize: 36, fontWeight: 900, color: C.green, marginTop: 10 }}>{roundsDone} rondas</div>
+        <button className="btn-xl" onClick={finish} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>VOLVER</button>
+      </div>
+    );
+  }
+
+  if (offeredExtra) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div style={{ fontSize: 40 }}>🎉</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¡Terminaste antes de tiempo!</h2>
+        <p className="muted" style={{ marginTop: 4 }}>¿Una ronda más?</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button className="btn-xl" onClick={() => setDone(true)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>Terminar</button>
+          <button className="btn-xl" onClick={() => { setOfferedExtra(false); setRunning(true); }} style={{ background: C.green, color: "#07070C" }}>Una ronda más</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 16 }}>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>MODO VIAJE · {tier.tierLabel}</p>
+      <div style={{ fontSize: 48, fontWeight: 900, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
+        {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:{String(secondsLeft % 60).padStart(2, "0")}
+      </div>
+      <div className="card" style={{ marginTop: 14, textAlign: "left" }}>
+        <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>CIRCUITO · {tier.rounds} RONDAS</p>
+        {tier.exercises.map((e, i) => (
+          <p key={i} style={{ fontSize: 12, marginTop: 4 }}>{i + 1}. {e.name} — {e.seconds ? `${e.seconds}s` : `${e.reps} reps`}</p>
+        ))}
+      </div>
+      <div style={{ fontSize: 36, fontWeight: 900, color: C.cyan, marginTop: 16 }}>{roundsDone} / {tier.rounds}</div>
+      <p style={{ fontSize: 11, color: C.dim }}>rondas completadas</p>
+      <button className="btn-xl" onClick={completeRound} style={{ marginTop: 10, background: C.cyan, color: "#07070C" }}>✓ RONDA COMPLETA</button>
+      {!running ? (
+        <button className="btn-xl" onClick={() => setRunning(true)} style={{ marginTop: 10, background: C.green, color: "#07070C" }}>▶ INICIAR TIEMPO</button>
+      ) : (
+        <button className="btn-xl" onClick={() => setDone(true)} style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
+          TERMINAR AHORA
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge }) {
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
@@ -3309,7 +4092,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [trainCards] = useState(() => orderedTrainCards());
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
-  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos"
+  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje"
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -3422,6 +4205,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   if (special === "amrap") return <AmrapMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
+  if (special === "viaje") return <TravelMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "reto") {
     return (
       <ChallengeScreen
@@ -3483,6 +4267,13 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           <div>
             <div style={{ fontSize: 13, fontWeight: 800 }}>Reto Personal</div>
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{challenge ? "Ver progreso de tu reto activo" : "Crea un desafío contra ti mismo"}</div>
+          </div>
+        </button>
+        <button className="card" onClick={() => setSpecial("viaje")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `2px dashed ${C.border}` }}>
+          <span style={{ fontSize: 24 }}>✈️</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Modo viaje</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
           </div>
         </button>
 
@@ -3828,10 +4619,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 }
 
 /* ─── SESIÓN ACTIVA ─── */
-function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onToggleVoice, onViewStats }) {
+function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
-  const [phase, setPhase] = useState("work"); // work | rest | exdone | finished
+  const [phase, setPhase] = useState("warmupPrompt"); // warmupPrompt | warmup | work | rest | exdone | coolPrompt | cooldown | finished
   const [restLeft, setRestLeft] = useState(0);
   const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
   const [weight, setWeight] = useState("");
@@ -3845,6 +4636,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   const [flashWhite, setFlashWhite] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [ambientOn, setAmbientOn] = useState(() => store.get("ambient", false));
+  const [justWarmedUp, setJustWarmedUp] = useState(false);
+  const [pendingLogs, setPendingLogs] = useState(null);
+  const [lastRecord, setLastRecord] = useState(null);
+  const [noteText, setNoteText] = useState("");
+  const [noteSaved, setNoteSaved] = useState(false);
   const wakeLockRef = useRef(null);
   const ambientRef = useRef(null);
 
@@ -3864,6 +4660,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   };
 
   useEffect(() => () => { if (wakeLockRef.current) wakeLockRef.current.release(); }, []);
+
+  useEffect(() => {
+    if (!justWarmedUp) return undefined;
+    const t = setTimeout(() => setJustWarmedUp(false), 2500);
+    return () => clearTimeout(t);
+  }, [justWarmedUp]);
 
   /* Sonido ambiental de fondo, mezclado con los beeps existentes */
   useEffect(() => {
@@ -3893,7 +4695,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [startTs] = useState(() => Date.now());
+  /* El cronómetro real arranca cuando empieza el trabajo (no cuenta el calentamiento) */
+  const [startTs, setStartTs] = useState(null);
+  const beginWork = () => {
+    setStartTs(Date.now());
+    setPhase("work");
+  };
 
   const ex = plan.exercises[exIdx];
   const isLastEx = exIdx === plan.exercises.length - 1;
@@ -3906,6 +4713,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
 
   /* Cronómetro global de la sesión */
   useEffect(() => {
+    if (!startTs) return undefined;
     const t = setInterval(() => setSessionSecs(Math.floor((Date.now() - startTs) / 1000)), 1000);
     return () => clearInterval(t);
   }, [startTs]);
@@ -3998,6 +4806,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   };
 
   const finishSession = (finalLogs) => {
+    setPendingLogs(finalLogs);
+    setPhase("coolPrompt");
+  };
+
+  const completeSession = (finalLogs, gotCooldownBonus) => {
     const record = {
       id: Date.now(),
       ts: Date.now(),
@@ -4008,9 +4821,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
       calLocation: plan.calLocation,
       durationMin: Math.round(sessionSecs / 60),
       sesionRapida: sessionSecs < 300,
+      cooldownBonus: !!gotCooldownBonus,
       exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i] })),
     };
     onSave(record);
+    setLastRecord(record);
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     if (voiceOn) speak(`¡Sesión completada! Eres un ${LEVELS[plan.lvlIdx]?.name || ""}`);
     popConfetti();
@@ -4063,6 +4878,63 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const quit = () => setShowExitConfirm(true);
 
+  /* Calentamiento opcional antes de la sesión (no se registra en el historial) */
+  if (phase === "warmupPrompt") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div style={{ fontSize: 40 }}>🔥</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 10 }}>Calentamiento — 5 min</h2>
+        <p className="muted" style={{ marginTop: 6 }}>Prepara tu cuerpo para {plan.discLabel}</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          <button className="btn-xl" onClick={beginWork} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>
+            Saltar
+          </button>
+          <button className="btn-xl" onClick={() => setPhase("warmup")} style={{ background: plan.discColor || C.cyan, color: "#07070C" }}>
+            Empezar calentamiento
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "warmup") {
+    return (
+      <GuidedMiniFlow
+        title="🔥 Calentamiento" subtitle={`Preparando ${plan.discLabel}`} color={plan.discColor || C.cyan}
+        exercises={WARMUP_ROUTINES[warmupKeyFor(plan.discId)]}
+        onDone={() => { setJustWarmedUp(true); beginWork(); }}
+      />
+    );
+  }
+
+  /* Enfriamiento opcional al terminar, antes de la pantalla de felicitaciones */
+  if (phase === "coolPrompt") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div style={{ fontSize: 40 }}>🧊</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Hacer enfriamiento? (Recomendado)</h2>
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          <button className="btn-xl" onClick={() => completeSession(pendingLogs, false)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>
+            Saltar — ver resultados
+          </button>
+          <button className="btn-xl" onClick={() => setPhase("cooldown")} style={{ background: C.cyan, color: "#07070C" }}>
+            Sí, 3 min
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "cooldown") {
+    return (
+      <GuidedMiniFlow
+        title="🧊 Enfriamiento" subtitle="Recuperación activa" color={C.cyan}
+        exercises={COOLDOWN_ROUTINES[warmupKeyFor(plan.discId)]}
+        onDone={() => completeSession(pendingLogs, true)}
+      />
+    );
+  }
+
   /* Felicitaciones — resumen épico post-sesión */
   if (phase === "finished") {
     const allSets = logs.flat();
@@ -4111,6 +4983,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
         <DisciplineCelebration discId={plan.discId} />
         <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>{title}</h2>
         <p style={{ color: C.mut, marginTop: 4, fontSize: 13 }}>Sesión de {plan.discLabel} completada</p>
+
+        {lastRecord?.cooldownBonus && (
+          <div className="card pop" style={{ marginTop: 12, borderColor: `${C.cyan}55`, background: "rgba(0,229,255,0.08)" }}>
+            <p style={{ fontSize: 12, color: C.cyan, fontWeight: 700 }}>Recuperación activa completada ✨ · +50 XP</p>
+          </div>
+        )}
 
         {sessionSecs < 300 && (
           <div className="card" style={{ marginTop: 12, borderColor: `${C.orange}55`, background: "rgba(255,122,47,0.08)" }}>
@@ -4175,6 +5053,37 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
             )}
           </div>
         )}
+
+        {!noteSaved ? (
+          <div className="card" style={{ marginTop: 14, textAlign: "left" }}>
+            <p style={{ fontSize: 13, fontWeight: 800 }}>📝 ¿Cómo te sentiste? (opcional)</p>
+            <textarea
+              className="input"
+              style={{ marginTop: 8, background: "#0f0f18", border: "1px solid #26263A", resize: "none", fontSize: 13 }}
+              rows={3} maxLength={300}
+              placeholder="Ej: Me sentí con mucha energía, el peso fue fácil, el tobillo bien..."
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+            />
+            <p style={{ fontSize: 10, color: C.dim, textAlign: "right", marginTop: 2 }}>{noteText.length}/300</p>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 4 }}>
+              <button
+                onClick={() => {
+                  const clean = sanitizeNote(noteText);
+                  if (clean && lastRecord) onSaveNote?.(lastRecord.id, clean);
+                  setNoteSaved(true);
+                }}
+                disabled={!noteText.trim()}
+                style={{ fontSize: 12, fontWeight: 700, color: C.cyan, padding: "8px 4px" }}
+              >
+                Guardar nota
+              </button>
+              <button onClick={() => setNoteSaved(true)} style={{ fontSize: 12, color: C.dim, fontWeight: 600 }}>Saltar</button>
+            </div>
+          </div>
+        ) : noteText.trim() ? (
+          <p style={{ fontSize: 11, color: C.green, marginTop: 10, fontWeight: 700 }}>Nota guardada ✓</p>
+        ) : null}
 
         <button
           className="btn-xl"
@@ -4307,6 +5216,13 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
       {showStep4 && (
         <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, textAlign: "center", padding: 14, borderColor: `${C.green}66` }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>¡Perfecto! La sesión empieza ahora</p>
+        </div>
+      )}
+      {justWarmedUp && (
+        <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, textAlign: "center", padding: 14, borderColor: `${plan.discColor || C.cyan}66` }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: plan.discColor || C.cyan }}>
+            ¡Listo! Cuerpo preparado 🔥 — Empezando {plan.discLabel}
+          </p>
         </div>
       )}
       {!liveMode && (
@@ -4994,6 +5910,235 @@ function OneRM({ onBack }) {
 }
 
 /* ─── PROGRESO ─── */
+/* ─── Peso corporal semanal ─── */
+function getWeightLog() {
+  return store.get("weight_log", []);
+}
+
+function saveWeightEntry(weightKg) {
+  const log = getWeightLog();
+  const today = todayKey();
+  const existingIdx = log.findIndex((e) => dayKey(new Date(e.date).getTime()) === today);
+  if (existingIdx >= 0) {
+    if (!window.confirm("Ya registraste tu peso hoy. ¿Actualizar el registro de hoy?")) return log;
+    const next = [...log];
+    next[existingIdx] = { date: new Date().toISOString(), weight: weightKg };
+    store.set("weight_log", next);
+    return next;
+  }
+  let next = [...log, { date: new Date().toISOString(), weight: weightKg }];
+  if (next.length > 52) next = next.slice(next.length - 52);
+  store.set("weight_log", next);
+  return next;
+}
+
+function WeightSection() {
+  const [log, setLog] = useState(() => getWeightLog());
+  const [input, setInput] = useState("");
+  const [now] = useState(() => Date.now());
+
+  const submit = () => {
+    const w = parseFloat(input);
+    if (!(w > 0)) return;
+    setLog(saveWeightEntry(w));
+    setInput("");
+  };
+
+  if (!log.length) {
+    return (
+      <div className="card" style={{ marginTop: 10 }}>
+        <p style={{ fontSize: 13, fontWeight: 800 }}>⚖️ Mi peso</p>
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Registra tu peso para ver tu evolución</p>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <input
+            className="input" type="number" inputMode="decimal" placeholder="Ej. 72.5 kg"
+            value={input} onChange={(e) => setInput(e.target.value)} style={{ flex: 1, padding: 10, fontSize: 13 }}
+          />
+          <button className="btn-xl" onClick={submit} disabled={!input} style={{ width: "auto", padding: "0 18px", background: C.cyan, color: "#07070C", fontSize: 13 }}>
+            Guardar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const last8 = log.slice(-8);
+  const weights = last8.map((e) => e.weight);
+  const minW = Math.min(...weights) - 5;
+  const maxW = Math.max(...weights) + 5;
+  const range = Math.max(1, maxW - minW);
+  const todayStr = todayKey();
+
+  const first = log[0].weight;
+  const lastVal = log[log.length - 1].weight;
+  const sinceStart = lastVal - first;
+
+  const monthAgo = now - 30 * 86400000;
+  const beforeMonth = [...log].reverse().find((e) => new Date(e.date).getTime() < monthAgo);
+  const thisMonthDiff = lastVal - (beforeMonth ? beforeMonth.weight : first);
+
+  const trendDiff = log.length >= 2 ? lastVal - log[log.length - 2].weight : 0;
+  const trend = Math.abs(trendDiff) < 0.3 ? "Estable" : trendDiff > 0 ? "Subiendo" : "Bajando";
+
+  const fmtDiff = (n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)} kg`;
+
+  return (
+    <div className="card" style={{ marginTop: 10 }}>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>⚖️ Mi peso</p>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 90, marginTop: 12 }}>
+        {last8.map((e, i) => {
+          const h = Math.max(4, Math.round(((e.weight - minW) / range) * 90));
+          const prev = last8[i - 1];
+          const isToday = dayKey(new Date(e.date).getTime()) === todayStr;
+          const color = !prev || e.weight === prev.weight ? C.mut : e.weight > prev.weight ? C.orange : "#0099FF";
+          return (
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: 90 }}>
+              <div style={{ width: "100%", height: h, borderRadius: 4, background: color, border: isToday ? `2px solid ${C.cyan}` : "none" }} />
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <input
+          className="input" type="number" inputMode="decimal" placeholder="Nuevo registro (kg)"
+          value={input} onChange={(e) => setInput(e.target.value)} style={{ flex: 1, padding: 10, fontSize: 13 }}
+        />
+        <button className="btn-xl" onClick={submit} disabled={!input} style={{ width: "auto", padding: "0 16px", background: C.cyan, color: "#07070C", fontSize: 12 }}>
+          Guardar
+        </button>
+      </div>
+      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+        <p style={{ fontSize: 12, color: C.mut }}>Desde que empezaste: <strong style={{ color: C.text }}>{fmtDiff(sinceStart)}</strong></p>
+        <p style={{ fontSize: 12, color: C.mut }}>Este mes: <strong style={{ color: C.text }}>{fmtDiff(thisMonthDiff)}</strong></p>
+        <p style={{ fontSize: 12, color: C.mut }}>Tendencia: <strong style={{ color: C.text }}>{trend}</strong></p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Comparativa temporal: esta semana vs la anterior ─── */
+function weekComparisonStats(sessions) {
+  const thisWeekStart = startOfWeek();
+  const lastWeekStart = thisWeekStart - 7 * 86400000;
+  const thisWeekList = sessions.filter((s) => s.ts >= thisWeekStart);
+  const lastWeekList = sessions.filter((s) => s.ts >= lastWeekStart && s.ts < thisWeekStart);
+  const statsFor = (list) => {
+    const workouts = list.filter((s) => s.kind === "entreno");
+    const sets = workouts.flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((st) => st.ok);
+    const volume = Math.round(sets.reduce((a, st) => a + st.weight * st.reps, 0));
+    const activeDays = new Set(list.map((s) => dayKey(s.ts))).size;
+    return { sessions: list.length, volume, series: sets.length, activeDays };
+  };
+  return { thisWeek: statsFor(thisWeekList), lastWeek: statsFor(lastWeekList), hasLastWeekData: lastWeekList.length > 0 };
+}
+
+function WeekComparisonCard({ sessions }) {
+  const { thisWeek, lastWeek, hasLastWeekData } = useMemo(() => weekComparisonStats(sessions), [sessions]);
+  if (!hasLastWeekData) {
+    return (
+      <div className="card" style={{ marginTop: 10 }}>
+        <p style={{ fontSize: 13, fontWeight: 800 }}>📊 Esta semana vs anterior</p>
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 6 }}>Completa esta semana para ver la comparativa 📅</p>
+      </div>
+    );
+  }
+  const rows = [
+    { label: "Sesiones", a: thisWeek.sessions, b: lastWeek.sessions, unit: "" },
+    { label: "Volumen", a: thisWeek.volume, b: lastWeek.volume, unit: " kg" },
+    { label: "Series", a: thisWeek.series, b: lastWeek.series, unit: "" },
+    { label: "Días activos", a: thisWeek.activeDays, b: lastWeek.activeDays, unit: "" },
+  ];
+  return (
+    <div className="card" style={{ marginTop: 10 }}>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>📊 Esta semana vs anterior</p>
+      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+        {rows.map((r) => {
+          const diff = r.a - r.b;
+          const pct = r.b > 0 ? Math.round((diff / r.b) * 100) : null;
+          const same = diff === 0;
+          const improved = diff > 0;
+          const color = same ? C.mut : improved ? C.green : C.orange;
+          const emoji = same ? "➡️" : improved ? (r.label === "Volumen" ? "📈" : "✅") : "⚠️";
+          const diffText = same ? "Igual" : pct !== null ? `${diff > 0 ? "+" : ""}${pct}%` : `${diff > 0 ? "+" : ""}${diff}`;
+          return (
+            <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+              <span style={{ color: C.mut, flex: 1 }}>{r.label}</span>
+              <span style={{ width: 60, textAlign: "right", fontWeight: 700 }}>{r.a}{r.unit}</span>
+              <span style={{ width: 60, textAlign: "right", color: C.dim }}>{r.b}{r.unit}</span>
+              <span style={{ width: 70, textAlign: "right", color, fontWeight: 800 }}>{diffText} {emoji}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Análisis de punto débil ─── */
+const GROUP_TO_PLAN = {
+  Pecho: { discId: "gimnasio", focusId: "pecho" },
+  Espalda: { discId: "gimnasio", focusId: "espalda" },
+  Piernas: { discId: "gimnasio", focusId: "piernas" },
+  Hombros: { discId: "gimnasio", focusId: "hombros" },
+  Brazos: { discId: "gimnasio", focusId: "brazos" },
+  Atletismo: { discId: "atletismo", focusId: "1000m" },
+  "Fútbol": { discId: "futbolParque", focusId: "todo" },
+  Calistenia: { discId: "calistenia", focusId: "todo" },
+};
+
+function findWeakPoint(sessions) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  if (!workouts.length) return null;
+  const counts = {};
+  Object.keys(GROUP_TO_PLAN).forEach((g) => { counts[g] = 0; });
+  const gimFocusToGroup = { pecho: "Pecho", espalda: "Espalda", piernas: "Piernas", hombros: "Hombros", brazos: "Brazos" };
+  workouts.forEach((s) => {
+    if (s.disc === "gimnasio") {
+      const focusId = DISCIPLINES.gimnasio.focuses.find((f) => f.label === s.focusLabel)?.id;
+      const key = gimFocusToGroup[focusId];
+      if (key) counts[key]++;
+    } else if (s.disc === "atletismo") counts.Atletismo++;
+    else if (s.disc === "futbolGym" || s.disc === "futbolParque") counts["Fútbol"]++;
+    else if (s.disc === "calistenia") counts.Calistenia++;
+  });
+  const entries = Object.entries(counts);
+  const minCount = Math.min(...entries.map(([, c]) => c));
+  const maxCount = Math.max(...entries.map(([, c]) => c));
+  if (maxCount - minCount <= 1) return { balanced: true };
+  const weakest = entries.find(([, c]) => c === minCount)[0];
+  return { balanced: false, weakest, count: minCount };
+}
+
+function WeakPointCard({ sessions, onTrain }) {
+  const weak = useMemo(() => findWeakPoint(sessions), [sessions]);
+  if (!weak) return null;
+  return (
+    <div className="card" style={{ marginTop: 10 }}>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>🎯 Tu punto débil</p>
+      {weak.balanced ? (
+        <p style={{ fontSize: 12, color: C.green, marginTop: 6, fontWeight: 700 }}>¡Entrenamiento equilibrado! Sigue así 🏆</p>
+      ) : (
+        <>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 6 }}>
+            Llevas {weak.count} {weak.count === 1 ? "sesión" : "sesiones"} sin trabajar <strong style={{ color: C.text }}>{weak.weakest}</strong>.
+          </p>
+          <p style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>Los atletas completos no tienen puntos débiles.</p>
+          <button
+            className="btn-xl"
+            onClick={() => {
+              const target = GROUP_TO_PLAN[weak.weakest];
+              if (target) onTrain?.(target.discId, target.focusId);
+            }}
+            style={{ marginTop: 10, background: C.orange, color: "#07070C", fontSize: 13 }}
+          >
+            Trabajar {weak.weakest} ahora →
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
@@ -5386,6 +6531,17 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
             <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mi plan</div>
           </button>
         </div>
+
+        <WeekComparisonCard sessions={sessions} />
+        <WeakPointCard
+          sessions={sessions}
+          onTrain={(discId, focusId) => {
+            const lvlIdx = mostFrequentLevel(sessions);
+            const p = buildPlanFor(discId, focusId, lvlIdx);
+            if (p) onQuickStart?.(p);
+          }}
+        />
+        <WeightSection />
 
         <button
           className="btn-xl"
@@ -6355,6 +7511,12 @@ export default function App() {
     store.set("sessions", next);
   };
 
+  const updateSessionNote = (id, note) => {
+    const next = sessions.map((s) => (s.id === id ? { ...s, note } : s));
+    setSessions(next);
+    store.set("sessions", next);
+  };
+
   const touchStartX = useRef(null);
 
   if (loading) return <Splash onDone={() => setLoading(false)} />;
@@ -6386,6 +7548,7 @@ export default function App() {
         streak={streak}
         sessions={sessions}
         onSave={saveSession}
+        onSaveNote={updateSessionNote}
         onClose={() => { setLive(null); setTab("inicio"); }}
         onViewStats={() => { setLive(null); setTab("progreso"); }}
         voiceOn={voiceOn}
@@ -6565,6 +7728,11 @@ export default function App() {
                     name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
                     onTrain={() => changeTab("entrenar")} mode={mode}
                     onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
+                    onStartPlan={(discId, focusId, lvlIdx) => {
+                      if (discId === "cuerpo") { changeTab("cuerpo"); return; }
+                      const p = buildPlanFor(discId, focusId, lvlIdx);
+                      if (p) setLive(p);
+                    }}
                     broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
                     challenge={challenge} onDeleteSession={deleteSession} freezes={freezes}
                   />
