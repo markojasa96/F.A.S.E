@@ -596,6 +596,62 @@ const COOLDOWN_ROUTINES = {
 };
 
 /* Flujo guiado genérico (un ejercicio a la vez): usado por calentamiento y enfriamiento */
+/* ─── Respiración guiada pre-sesión (2 ciclos de 14s: inhala/mantén/exhala/descansa) ─── */
+const BREATH_PHASES = [
+  { key: "inhala", label: "Inhala", duration: 4000, color: "#00E5FF", fontSize: 18 },
+  { key: "manten", label: "Mantén", duration: 4000, color: "#F2F2F8", fontSize: 16 },
+  { key: "exhala", label: "Exhala", duration: 4000, color: "#60A5FA", fontSize: 18 },
+  { key: "descansa", label: "Descansa", duration: 2000, color: "#8A8AAD", fontSize: 14 },
+];
+
+function BreathingScreen({ onDone, voiceOn }) {
+  const [step, setStep] = useState(0);
+  const totalSteps = BREATH_PHASES.length * 2;
+  const showReady = step >= totalSteps;
+  const phase = BREATH_PHASES[step % BREATH_PHASES.length];
+  const cycle = Math.min(2, Math.floor(step / BREATH_PHASES.length) + 1);
+
+  useEffect(() => {
+    if (showReady) {
+      const t = setTimeout(onDone, 1000);
+      return () => clearTimeout(t);
+    }
+    if (voiceOn) {
+      try {
+        const u = new SpeechSynthesisUtterance(`${phase.label.toLowerCase()}...`);
+        u.lang = "es-ES"; u.rate = 0.7; u.pitch = 0.9;
+        window.speechSynthesis.speak(u);
+      } catch { /* voz no disponible */ }
+    }
+    const t = setTimeout(() => setStep((s) => s + 1), phase.duration);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  if (showReady) {
+    return (
+      <div className="fade-up" style={{ minHeight: "100svh", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", background: "#07070C" }}>
+        <p style={{ fontSize: 20, fontWeight: 900, color: C.green }}>Sistema nervioso listo ⚡</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", background: "#07070C" }}>
+      <button onClick={onDone} style={{ position: "absolute", top: 16, right: 16, fontSize: 12, color: C.dim, fontWeight: 700 }}>Saltar →</button>
+      <svg viewBox="0 0 200 200" width="200" height="200">
+        <circle
+          cx="100" cy="100" r="60" fill="none" stroke="#00E5FF" strokeWidth="2"
+          style={{ animation: "breathe 14s ease-in-out infinite", filter: "drop-shadow(0 0 20px #00E5FF40)" }}
+        />
+        <circle cx="100" cy="100" r="40" fill="#00E5FF08" style={{ animation: "breatheInner 14s ease-in-out infinite" }} />
+        <text x="100" y="95" textAnchor="middle" fontSize={phase.fontSize} fontWeight="800" fill={phase.color}>{phase.label}</text>
+      </svg>
+      <p style={{ fontSize: 12, color: C.dim, marginTop: 20 }}>Ciclo {cycle} de 2</p>
+    </div>
+  );
+}
+
 function GuidedMiniFlow({ title, subtitle, color, exercises, onDone }) {
   const [idx, setIdx] = useState(0);
 
@@ -1919,6 +1975,8 @@ function levelFromCount(count, thresholds) {
 
 /* ─── Generador de rutinas (5-8 ejercicios, con variación por semilla) ─── */
 function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
+  const deloadActive = !!store.get("deload_active", null);
+  const effLvlIdx = deloadActive ? Math.max(0, lvlIdx - 1) : lvlIdx;
   const rnd = mulberry32(seed);
   const db = EXDB[discId];
   const focus = DISCIPLINES[discId].focuses.find((f) => f.id === focusId);
@@ -1927,7 +1985,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const matchEquip = (e) => !(opts.noEquip && discId === "gimnasio") || !requiresGymEquipment(e.n);
   const matchAll = (e) => matchFocus(e) && matchBar(e) && matchEquip(e);
 
-  let pool = db.filter((e) => matchAll(e) && e.lv[0] <= lvlIdx && lvlIdx <= e.lv[1]);
+  let pool = db.filter((e) => matchAll(e) && e.lv[0] <= effLvlIdx && effLvlIdx <= e.lv[1]);
   if (pool.length < 5) pool = db.filter(matchAll);
   /* Si el enfoque elegido no tiene alternativas sin barra/equipo, prioriza
      respetar el equipo disponible antes que el enfoque exacto. */
@@ -1936,7 +1994,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
 
   const target = Math.max(
     5,
-    Math.min(8, Math.min(pool.length, 5 + (lvlIdx >= 2 ? 1 : 0) + (lvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0)))
+    Math.min(8, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0)))
   );
 
   const shuffled = [...pool].sort(() => rnd() - 0.5);
@@ -1954,34 +2012,28 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     if (!chosen.includes(e)) chosen.push(e);
   }
 
-  const extraSets = lvlIdx >= 3 ? 1 : 0;
-  return chosen.map((e) => ({
-    name: e.n,
-    type: e.t,
-    sets: e.s === 1 ? 1 : Math.min(5, e.s + extraSets),
-    reps: e.r,
-    rest: e.rest,
-    tip: e.tip,
-    tag: e.f ? e.f[0] : null,
-  }));
+  const extraSets = effLvlIdx >= 3 ? 1 : 0;
+  return chosen.map((e) => {
+    let sets = e.s === 1 ? 1 : Math.min(5, e.s + extraSets);
+    if (deloadActive) sets = Math.max(1, Math.round(sets * 0.6));
+    return { name: e.n, type: e.t, sets, reps: e.r, rest: e.rest, tip: e.tip, tag: e.f ? e.f[0] : null };
+  });
 }
 
 /* Generador de rutinas de Atletismo (no usa enfoque, la distancia ya filtra) */
 function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
+  const deloadActive = !!store.get("deload_active", null);
+  const effLvlIdx = deloadActive ? Math.max(0, lvlIdx - 1) : lvlIdx;
   const rnd = mulberry32(seed);
   const pool = ATLETISMO_EXDB[distance] || [];
   const target = Math.min(pool.length, 5 + (rnd() < 0.5 ? 1 : 0));
   const shuffled = [...pool].sort(() => rnd() - 0.5).slice(0, target);
-  const extraSets = lvlIdx >= 3 ? 1 : 0;
-  return shuffled.map((e) => ({
-    name: e.n,
-    type: e.t,
-    sets: e.s === 1 ? 1 : Math.min(6, e.s + extraSets),
-    reps: e.r,
-    rest: e.rest,
-    tip: e.tip,
-    tag: "velocidad",
-  }));
+  const extraSets = effLvlIdx >= 3 ? 1 : 0;
+  return shuffled.map((e) => {
+    let sets = e.s === 1 ? 1 : Math.min(6, e.s + extraSets);
+    if (deloadActive) sets = Math.max(1, Math.round(sets * 0.6));
+    return { name: e.n, type: e.t, sets, reps: e.r, rest: e.rest, tip: e.tip, tag: "velocidad" };
+  });
 }
 
 /* Reconstruye un plan de sesión a partir de un registro del historial (para "Repetir última sesión") */
@@ -2186,6 +2238,262 @@ function rotateDailyPlan(candidates, index) {
   const plan = candidates[nextIndex];
   store.set("daily_plan", { date: today, plan, index: nextIndex });
   return { plan, index: nextIndex };
+}
+
+/* ─── Deload automático ─── */
+function shouldDeload(sessions) {
+  const workouts = [...sessions.filter((s) => s.kind === "entreno")].sort((a, b) => a.ts - b.ts).slice(-40);
+  if (!workouts.length) return false;
+  const weeks = [];
+  let currentWeek = [];
+  let lastTs = null;
+  workouts.forEach((s) => {
+    if (lastTs === null) {
+      currentWeek.push(s);
+    } else {
+      const daysDiff = (s.ts - lastTs) / 86400000;
+      if (daysDiff <= 7) currentWeek.push(s);
+      else { weeks.push(currentWeek); currentWeek = [s]; }
+    }
+    lastTs = s.ts;
+  });
+  if (currentWeek.length) weeks.push(currentWeek);
+  const activeWeeks = weeks.filter((w) => w.length >= 3);
+  return activeWeeks.length >= 4;
+}
+
+function DeloadBanner({ sessions }) {
+  const [expanded, setExpanded] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const refresh = () => setNow(Date.now());
+
+  const active = store.get("deload_active", null);
+  const skipped = store.get("deload_skipped", null);
+  const suggestNow = !active && shouldDeload(sessions) && (!skipped || now - skipped > 14 * 86400000);
+  const daysIn = active ? Math.floor((now - active.startTs) / 86400000) : null;
+  const completed = active && daysIn >= 7;
+
+  if (completed) {
+    return (
+      <div className="card pop" style={{ marginTop: 12, textAlign: "center", borderColor: C.green, background: "rgba(34,255,136,0.08)" }}>
+        <div style={{ fontSize: 30 }}>🏆</div>
+        <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>Deload completado.</p>
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Tu cuerpo está listo para romper récords.</p>
+        <button
+          className="btn-xl"
+          onClick={() => {
+            awardBonusXpOnce(`deload_bonus_${active.startTs}`, 500);
+            store.set("deload_active", null);
+            refresh();
+          }}
+          style={{ marginTop: 10, background: C.green, color: "#07070C", fontSize: 12 }}
+        >
+          Continuar (+500 XP)
+        </button>
+      </div>
+    );
+  }
+
+  if (active) {
+    return (
+      <div className="card" style={{ marginTop: 12, borderColor: `${C.yellow}66`, background: "rgba(255,214,0,0.06)" }}>
+        <p style={{ fontSize: 12, color: C.yellow, fontWeight: 700 }}>🔄 Semana de deload — día {daysIn + 1} de 7</p>
+        <p style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Peso ligero, técnica perfecta. Tus rutinas tienen 40% menos series esta semana.</p>
+      </div>
+    );
+  }
+
+  if (!suggestNow) return null;
+
+  return (
+    <div className="card" style={{ marginTop: 12, border: "2px solid #FFD700" }}>
+      <p style={{ fontSize: 14, fontWeight: 900, color: "#FFD700" }}>🔄 SEMANA DE DELOAD SUGERIDA</p>
+      <p style={{ fontSize: 12, color: C.text, marginTop: 6 }}>Llevas 4 semanas de entrenamiento intenso.</p>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>Tu sistema nervioso necesita recuperarse.</p>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>Esta semana: mismos ejercicios, 40% menos volumen.</p>
+      <button onClick={() => setExpanded((v) => !v)} style={{ fontSize: 11, color: C.cyan, fontWeight: 700, marginTop: 8 }}>
+        {expanded ? "Ocultar explicación ▲" : "¿Por qué hacer deload? ▼"}
+      </button>
+      {expanded && (
+        <p style={{ fontSize: 11, color: C.mut, marginTop: 6, lineHeight: 1.5 }}>
+          El deload no es flojera. Es cuando el cuerpo asimila las adaptaciones de las últimas semanas.
+          Los atletas de élite hacen deload cada 4-6 semanas. Después del deload rendirás mejor que antes.
+        </p>
+      )}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button
+          className="btn-xl"
+          onClick={() => { store.set("deload_active", { startTs: Date.now() }); refresh(); }}
+          style={{ background: "#FFD700", color: "#07070C", fontSize: 12 }}
+        >
+          ✅ Hacer deload esta semana
+        </button>
+        <button
+          className="btn-xl"
+          onClick={() => { store.set("deload_skipped", Date.now()); refresh(); }}
+          style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 12 }}
+        >
+          Saltar esta vez
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Biblioteca de ejercicios ─── */
+const LIBRARY_FILTERS = [
+  { id: "todos", label: "Todos" },
+  { id: "empuje", label: "Empuje" },
+  { id: "tiron", label: "Tirón" },
+  { id: "piernas", label: "Piernas" },
+  { id: "core", label: "Core" },
+  { id: "atletismo", label: "Atletismo" },
+  { id: "futbol", label: "Fútbol" },
+  { id: "movilidad", label: "Movilidad" },
+];
+
+const LIBRARY_FILTER_COLORS = {
+  empuje: "#FFFFFF", tiron: C.cyan, piernas: C.green, core: C.yellow,
+  atletismo: C.purple, futbol: C.orange, movilidad: C.blue, todos: C.mut,
+};
+
+function buildExerciseLibrary() {
+  const list = [];
+  const seen = new Set();
+  const push = (n, tip, lv, setsReps, filterCat, type) => {
+    if (seen.has(n)) return;
+    seen.add(n);
+    list.push({ name: n, tip: tip || "", lv: lv || null, setsReps: setsReps || "", filterCat, demoCat: movementCategory(n), type: type || "reps" });
+  };
+  ["gimnasio", "calistenia", "futbolGym", "futbolParque"].forEach((discId) => {
+    (EXDB[discId] || []).forEach((e) => {
+      let filterCat;
+      if (discId.startsWith("futbol")) filterCat = "futbol";
+      else if (e.f?.includes("piernas") || e.f?.includes("gluteos")) filterCat = "piernas";
+      else if (e.f?.includes("core")) filterCat = "core";
+      else if (e.f?.includes("tiron") || e.f?.includes("espalda")) filterCat = "tiron";
+      else if (e.f?.includes("empuje") || e.f?.includes("pecho") || e.f?.includes("hombros") || e.f?.includes("brazos")) filterCat = "empuje";
+      else {
+        const mc = movementCategory(e.n);
+        filterCat = mc === "sentadilla" ? "piernas" : mc;
+      }
+      push(e.n, e.tip, e.lv, `${e.s} x ${e.r}`, filterCat, e.t);
+    });
+  });
+  Object.values(ATLETISMO_EXDB).forEach((arr) => arr.forEach((e) => push(e.n, e.tip, null, `${e.s} x ${e.r}`, "atletismo", e.t)));
+  BODY_SECTIONS.forEach((sec) => sec.items.forEach((it) => push(it.n, "", null, it.d, "movilidad", "tiempo")));
+  return list;
+}
+
+function LibraryExerciseCard({ ex, onOpen }) {
+  const color = LIBRARY_FILTER_COLORS[ex.filterCat] || C.mut;
+  const diffEmoji = ex.lv ? LEVELS[Math.min(5, Math.round((ex.lv[0] + ex.lv[1]) / 2))]?.emoji : "⚡";
+  return (
+    <button className="card" onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left" }}>
+      <svg viewBox="0 0 130 100" width="60" height="40" style={{ flexShrink: 0, background: "#1A1A2E", borderRadius: 8 }}>
+        <StickFigure category={ex.demoCat} color={color} />
+      </svg>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.name}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color, background: `${color}22`, padding: "2px 6px", borderRadius: 99 }}>
+            {LIBRARY_FILTERS.find((f) => f.id === ex.filterCat)?.label || ex.filterCat}
+          </span>
+          <span style={{ fontSize: 11 }}>{diffEmoji}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ExerciseLibrary({ sessions, onAddToRoutine, onBack }) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("todos");
+  const [detail, setDetail] = useState(null);
+  const all = useMemo(() => buildExerciseLibrary(), []);
+
+  const filtered = all.filter((ex) => {
+    if (filter !== "todos" && ex.filterCat !== filter) return false;
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return ex.name.toLowerCase().includes(q) || ex.tip.toLowerCase().includes(q);
+  });
+
+  if (detail) {
+    const history = exerciseHistory(sessions, detail.name);
+    const color = LIBRARY_FILTER_COLORS[detail.filterCat] || C.cyan;
+    return (
+      <div className="screen">
+        <button onClick={() => setDetail(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Biblioteca</button>
+        <div className="card" style={{ marginTop: 10, textAlign: "center" }}>
+          <svg viewBox="0 0 130 100" style={{ width: "60%", maxWidth: 160 }}>
+            <StickFigure category={detail.demoCat} color={color} />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>{detail.name}</h2>
+        <span style={{ fontSize: 11, fontWeight: 800, color, background: `${color}22`, padding: "3px 8px", borderRadius: 99 }}>
+          {LIBRARY_FILTERS.find((f) => f.id === detail.filterCat)?.label}
+        </span>
+        {detail.tip && (
+          <div className="card" style={{ marginTop: 12 }}>
+            <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>TÉCNICA</p>
+            <p style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>{detail.tip}</p>
+          </div>
+        )}
+        {detail.setsReps && (
+          <div className="card" style={{ marginTop: 10 }}>
+            <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>SETS Y REPS SUGERIDOS</p>
+            <p style={{ fontSize: 13, marginTop: 4 }}>{detail.setsReps}</p>
+          </div>
+        )}
+        <button
+          className="btn-xl" onClick={() => onAddToRoutine(detail)}
+          style={{ marginTop: 14, background: color, color: "#07070C", fontSize: 13 }}
+        >
+          Añadir a mi rutina →
+        </button>
+        {history.rows.length > 0 && (
+          <div className="card" style={{ marginTop: 10 }}>
+            <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>TU HISTORIAL</p>
+            <p style={{ fontSize: 13, marginTop: 4 }}>
+              {history.rows.length} {history.rows.length === 1 ? "registro" : "registros"} · última vez {timeAgo(history.rows[history.rows.length - 1].ts)}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Entrenar</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📚 Biblioteca</h2>
+      <input
+        className="input" placeholder="Buscar ejercicio..." value={query}
+        onChange={(e) => setQuery(e.target.value)} style={{ marginTop: 10, position: "sticky", top: 0, zIndex: 10 }}
+      />
+      <div className="chip-wrap" style={{ marginTop: 10 }}>
+        {LIBRARY_FILTERS.map((f) => (
+          <button
+            key={f.id} className={`chip ${filter === f.id ? "on" : ""}`}
+            style={filter === f.id ? { background: LIBRARY_FILTER_COLORS[f.id] } : {}}
+            onClick={() => setFilter(f.id)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+        {filtered.length === 0 ? (
+          <p style={{ fontSize: 13, color: C.mut, textAlign: "center", marginTop: 20 }}>
+            No encontramos &quot;{query}&quot;. ¿Quieres sugerirlo? (próximamente)
+          </p>
+        ) : (
+          filtered.map((ex) => <LibraryExerciseCard key={ex.name} ex={ex} onOpen={() => setDetail(ex)} />)
+        )}
+      </div>
+    </div>
+  );
 }
 
 /* ─── Mapa muscular (zonas por enfoque) ─── */
@@ -2871,11 +3179,157 @@ function SessionDetail({ session, onBack }) {
   );
 }
 
+/* ─── Historial completo con filtros ─── */
+const HISTORY_FILTERS = [
+  { id: "todas", label: "Todas" },
+  { id: "gimnasio", label: "Gimnasio" },
+  { id: "calistenia", label: "Calistenia" },
+  { id: "futbol", label: "Fútbol" },
+  { id: "atletismo", label: "Atletismo" },
+  { id: "cuerpo", label: "Cuerpo" },
+  { id: "semana", label: "Esta semana" },
+  { id: "mes", label: "Este mes" },
+];
+
+function matchesHistoryFilter(s, filterId) {
+  if (filterId === "todas") return true;
+  if (filterId === "cuerpo") return s.kind === "cuerpo";
+  if (filterId === "gimnasio") return s.disc === "gimnasio";
+  if (filterId === "calistenia") return s.disc === "calistenia";
+  if (filterId === "futbol") return s.disc === "futbolGym" || s.disc === "futbolParque";
+  if (filterId === "atletismo") return s.disc === "atletismo";
+  if (filterId === "semana") return s.ts >= startOfWeek();
+  if (filterId === "mes") {
+    const m = new Date(); m.setDate(1); m.setHours(0, 0, 0, 0);
+    return s.ts >= m.getTime();
+  }
+  return true;
+}
+
+const HISTORY_SORTS = [
+  { id: "recent", label: "Más reciente" },
+  { id: "volume", label: "Más volumen" },
+  { id: "duration", label: "Más duración" },
+];
+
+function FullHistory({ sessions, onDelete, onBack }) {
+  const [filter, setFilter] = useState("todas");
+  const [sortBy, setSortBy] = useState("recent");
+  const [detail, setDetail] = useState(null);
+  const [menuId, setMenuId] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
+
+  const records = useMemo(() => computeRecords(sessions), [sessions]);
+  const recordTsSet = useMemo(() => new Set(records.map((r) => r.ts)), [records]);
+
+  const sorted = useMemo(() => {
+    const filtered = sessions.filter((s) => matchesHistoryFilter(s, filter));
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "volume") return sessionVolume(b) - sessionVolume(a);
+      if (sortBy === "duration") return (b.durationMin || 0) - (a.durationMin || 0);
+      return b.ts - a.ts;
+    });
+  }, [sessions, filter, sortBy]);
+
+  if (detail) return <SessionDetail session={detail} onBack={() => setDetail(null)} />;
+
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Inicio</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>Historial — {sessions.length} sesiones totales</h2>
+
+      <div className="chip-wrap" style={{ marginTop: 10 }}>
+        {HISTORY_FILTERS.map((f) => (
+          <button key={f.id} className={`chip ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
+        ))}
+      </div>
+      <div className="chip-wrap" style={{ marginTop: 8 }}>
+        {HISTORY_SORTS.map((o) => (
+          <button
+            key={o.id} className={`chip ${sortBy === o.id ? "on" : ""}`}
+            style={sortBy === o.id ? { background: C.cyan } : {}} onClick={() => setSortBy(o.id)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+        {sorted.length === 0 ? (
+          <p style={{ fontSize: 13, color: C.mut, textAlign: "center", marginTop: 20 }}>No hay sesiones con este filtro.</p>
+        ) : (
+          sorted.map((s) => {
+            const isBody = s.kind === "cuerpo";
+            const disc = isBody ? null : DISCIPLINES[s.disc];
+            const sec = isBody ? BODY_SECTIONS.find((b) => b.id === s.section) : null;
+            const vol = isBody ? 0 : sessionVolume(s);
+            const okSets = isBody ? 0 : s.exercises.flatMap((e) => e.sets).filter((st) => st.ok).length;
+            const totalSets = isBody ? 0 : s.exercises.flatMap((e) => e.sets).length;
+            return (
+              <div key={s.id} style={{ position: "relative" }}>
+                <button className="card" onClick={() => setDetail(s)} style={{ width: "100%", textAlign: "left", padding: "12px 14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{isBody ? sec?.icon || "🧘" : disc?.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>{isBody ? `Cuerpo · ${sec?.name || ""}` : disc?.label}</span>
+                        {recordTsSet.has(s.ts) && <span style={{ fontSize: 12 }}>🏆</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>
+                        {timeAgo(s.ts)}{!isBody ? ` · ${LEVELS[s.levelIdx]?.name || ""}` : ""}
+                        {!isBody && s.durationMin ? ` · ${formatDuration(s.durationMin)}` : ""}
+                        {!isBody && totalSets ? ` · ${okSets}/${totalSets} series` : ""}
+                        {vol > 0 ? ` · ${formatVolume(vol)}` : ""}
+                      </div>
+                      {s.note && (
+                        <div style={{ fontSize: 11, color: C.dim, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          📝 {s.note}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      role="button" tabIndex={0} aria-label="Más opciones"
+                      onClick={(e) => { e.stopPropagation(); setMenuId(menuId === s.id ? null : s.id); }}
+                      style={{ fontSize: 16, padding: 4 }}
+                    >
+                      ···
+                    </span>
+                  </div>
+                </button>
+                {menuId === s.id && (
+                  <div className="card pop" style={{ position: "absolute", top: "100%", right: 8, zIndex: 30, padding: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                    <button onClick={() => { setDetail(s); setMenuId(null); }} style={{ fontSize: 12, padding: "6px 10px", textAlign: "left" }}>Ver detalle</button>
+                    <button onClick={() => { setConfirmId(s.id); setMenuId(null); }} style={{ fontSize: 12, padding: "6px 10px", textAlign: "left", color: C.red }}>Eliminar sesión</button>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {confirmId && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="card" style={{ textAlign: "center", padding: 20, maxWidth: 300 }}>
+            <p style={{ fontSize: 14, fontWeight: 800 }}>¿Eliminar esta sesión?</p>
+            <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>No se puede deshacer.</p>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button className="btn-xl" onClick={() => setConfirmId(null)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>Cancelar</button>
+              <button className="btn-xl" onClick={() => { onDelete(confirmId); setConfirmId(null); }} style={{ background: C.red, color: "#fff" }}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── INICIO ─── */
 function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [] }) {
   const [menuId, setMenuId] = useState(null);
   const [tappedHero, setTappedHero] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
+  const [showFullHistory, setShowFullHistory] = useState(false);
   const longPressRef = useRef(null);
 
   /* Plan del día */
@@ -2956,6 +3410,9 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   );
 
   if (detailSession) return <SessionDetail session={detailSession} onBack={() => setDetailSession(null)} />;
+  if (showFullHistory) {
+    return <FullHistory sessions={sessions} onDelete={onDeleteSession} onBack={() => setShowFullHistory(false)} />;
+  }
 
   return (
     <div className="screen">
@@ -3130,6 +3587,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           </div>
         );
       })()}
+
+      <DeloadBanner sessions={sessions} />
 
       {/* Racha (o mensaje motivacional si se rompió) */}
       {pro ? (
@@ -3327,6 +3786,11 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           );
         })}
       </div>
+      {sessions.length > 0 && (
+        <button onClick={() => setShowFullHistory(true)} style={{ marginTop: 10, color: C.cyan, fontSize: 12, fontWeight: 700, width: "100%", textAlign: "center", padding: "6px 0" }}>
+          Ver todo el historial →
+        </button>
+      )}
 
       {/* Tip del día */}
       {(() => {
@@ -3962,6 +4426,200 @@ function travelTierForLevel(lvlIdx) {
   return "high";
 }
 
+/* ─── Modo dueto: sesión alternada entre dos personas con un solo celular ─── */
+const DUET_DISCIPLINES = [
+  { id: "calistenia", label: "Calistenia", icon: "🤸", color: C.green },
+  { id: "gimnasio", label: "Gimnasio", icon: "🏋️", color: C.cyan },
+];
+
+function DuetMode({ onFinish, onSave, name }) {
+  const [step, setStep] = useState("name"); // name | discipline | level | session | results
+  const [partnerName, setPartnerName] = useState("");
+  const [discId, setDiscId] = useState(null);
+  const [plan, setPlan] = useState(null);
+  const [exIdx, setExIdx] = useState(0);
+  const [setInEx, setSetInEx] = useState(0);
+  const [globalSetCount, setGlobalSetCount] = useState(0);
+  const [logsA, setLogsA] = useState([]);
+  const [logsB, setLogsB] = useState([]);
+  const [reps, setReps] = useState("");
+  const [weight, setWeight] = useState("");
+
+  const turn = globalSetCount % 2 === 0 ? "A" : "B";
+  const turnName = turn === "A" ? sanitize(name) || "Jugador 1" : partnerName;
+  const turnColor = turn === "A" ? C.cyan : C.green;
+  const turnEmoji = turn === "A" ? "🔵" : "🟢";
+
+  const pickLevel = (i) => {
+    const seed = seedNow();
+    const disc = DISCIPLINES[discId];
+    const exercises = genRoutine(discId, "todo", i, seed);
+    const newPlan = { discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, lvlIdx: i, exercises };
+    setPlan(newPlan);
+    setLogsA(exercises.map(() => []));
+    setLogsB(exercises.map(() => []));
+    setStep("session");
+  };
+
+  const logSet = () => {
+    const entry = { reps: parseInt(reps, 10) || 0, weight: parseFloat(weight) || 0, ok: true };
+    if (turn === "A") setLogsA((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
+    else setLogsB((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
+    setReps(""); setWeight("");
+    const ex = plan.exercises[exIdx];
+    const isLastEx = exIdx === plan.exercises.length - 1;
+    const isLastSetOfEx = setInEx + 1 >= ex.sets;
+    setGlobalSetCount((c) => c + 1);
+    if (isLastSetOfEx) {
+      if (isLastEx) { setStep("results"); return; }
+      setExIdx((i) => i + 1);
+      setSetInEx(0);
+    } else {
+      setSetInEx((s) => s + 1);
+    }
+  };
+
+  const statsFor = (logs) => {
+    const flat = logs.flat();
+    const volume = Math.round(flat.reduce((a, s) => a + s.weight * s.reps, 0));
+    const bestSet = flat.length ? Math.max(...flat.map((s) => s.weight)) : 0;
+    return { series: flat.length, volume, bestSet };
+  };
+
+  const finishDuet = () => {
+    const statsA = statsFor(logsA);
+    const statsB = statsFor(logsB);
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: plan.discId,
+      focusLabel: `Dueto con ${partnerName}`, levelIdx: plan.lvlIdx,
+      exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: logsA[i] })),
+    });
+    const duetHistory = store.get("duet_history", []);
+    duetHistory.push({
+      ts: Date.now(), partner: partnerName, disc: plan.discId,
+      statsA, statsB, winner: statsA.volume === statsB.volume ? null : (statsA.volume > statsB.volume ? "A" : "B"),
+    });
+    store.set("duet_history", duetHistory.slice(-52));
+    onFinish();
+  };
+
+  if (step === "name") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 16 }}>👥</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Modo dueto</h2>
+        <p className="muted" style={{ marginTop: 6 }}>¿Cómo se llama tu compañero/a?</p>
+        <input
+          className="input" placeholder="Nombre del compañero" value={partnerName}
+          onChange={(e) => setPartnerName(e.target.value)} style={{ marginTop: 14 }} maxLength={24}
+        />
+        <button
+          className="btn-xl" disabled={!partnerName.trim()} onClick={() => setStep("discipline")}
+          style={{ marginTop: 14, background: C.cyan, color: "#07070C" }}
+        >
+          Empezar dueto
+        </button>
+      </div>
+    );
+  }
+
+  if (step === "discipline") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={() => setStep("name")} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Atrás</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>{sanitize(name) || "Jugador 1"} + {partnerName}</h2>
+        <p className="muted" style={{ marginTop: 6 }}>Elige la disciplina</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+          {DUET_DISCIPLINES.map((d) => (
+            <button key={d.id} className="card" onClick={() => { setDiscId(d.id); setStep("level"); }} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "14px" }}>
+              <span style={{ fontSize: 24 }}>{d.icon}</span>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>{d.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "level") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={() => setStep("discipline")} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Atrás</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Nivel de la sesión</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+          {LEVELS.map((l, i) => (
+            <button key={l.name} className="card" onClick={() => pickLevel(i)} style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px 14px" }}>
+              <span style={{ fontSize: 20 }}>{l.emoji}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: l.color }}>{l.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "results") {
+    const statsA = statsFor(logsA);
+    const statsB = statsFor(logsB);
+    const winnerName = statsA.volume === statsB.volume ? null : (statsA.volume > statsB.volume ? (sanitize(name) || "Jugador 1") : partnerName);
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <div className="pop" style={{ fontSize: 50 }}>🏁</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 10 }}>{sanitize(name) || "Jugador 1"} vs {partnerName}</h2>
+        <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.dim, fontWeight: 700 }}>
+            <span>{sanitize(name) || "Jugador 1"} 🔵</span><span>{partnerName} 🟢</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 13 }}>
+            <span>Series: {statsA.series}</span><span>{statsB.series}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13 }}>
+            <span>Volumen: {statsA.volume}kg</span><span>{statsB.volume}kg</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13 }}>
+            <span>Mejor serie: {statsA.bestSet}kg</span><span>{statsB.bestSet}kg</span>
+          </div>
+        </div>
+        {winnerName ? (
+          <p style={{ fontSize: 16, fontWeight: 900, color: C.yellow, marginTop: 16 }}>GANADOR: {winnerName} 🏆</p>
+        ) : (
+          <p style={{ fontSize: 14, fontWeight: 800, color: C.mut, marginTop: 16 }}>¡Empate! 🤝</p>
+        )}
+        <button className="btn-xl" onClick={finishDuet} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>
+          VOLVER AL INICIO
+        </button>
+      </div>
+    );
+  }
+
+  const ex = plan.exercises[exIdx];
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <div style={{ padding: "10px 16px", borderRadius: 14, background: `${turnColor}18`, border: `1px solid ${turnColor}55` }}>
+        <p style={{ fontSize: 13, fontWeight: 900, color: turnColor }}>TURNO DE: {turnName.toUpperCase()} {turnEmoji}</p>
+      </div>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 14 }}>Ejercicio {exIdx + 1} de {plan.exercises.length}</p>
+      <h2 style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>{ex.name}</h2>
+      <p style={{ fontSize: 12, color: C.dim, marginTop: 2 }}>Set {setInEx + 1} de {ex.sets} — sugerido: {ex.reps}</p>
+      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>PESO (KG)</label>
+          <input className="input" type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 4 }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>REPS</label>
+          <input className="input" type="number" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} style={{ marginTop: 4 }} />
+        </div>
+      </div>
+      <button className="btn-xl" onClick={logSet} disabled={!reps} style={{ marginTop: 16, background: turnColor, color: "#07070C" }}>
+        ✓ Set completado — pasa el celular
+      </button>
+      <button onClick={onFinish} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 600 }}>Terminar dueto</button>
+    </div>
+  );
+}
+
 function TravelMode({ onFinish, onSave }) {
   const [lvlIdx, setLvlIdx] = useState(null);
   const [running, setRunning] = useState(false);
@@ -4081,7 +4739,7 @@ function TravelMode({ onFinish, onSave }) {
   );
 }
 
-function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge }) {
+function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge, name }) {
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
@@ -4092,7 +4750,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [trainCards] = useState(() => orderedTrainCards());
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
-  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje"
+  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "dueto"
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -4206,6 +4864,24 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "viaje") return <TravelMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
+  if (special === "biblioteca") {
+    return (
+      <ExerciseLibrary
+        sessions={sessions}
+        onBack={() => setSpecial(null)}
+        onAddToRoutine={(ex) => {
+          setSpecial(null);
+          setBuilderMode({
+            name: "",
+            exercises: [{ name: ex.name, type: ex.type, tip: ex.tip, sets: 3, reps: ex.type === "tiempo" ? "30s" : "10", rest: 60 }],
+          });
+        }}
+      />
+    );
+  }
+  if (special === "dueto") {
+    return <DuetMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} name={name || "Tú"} />;
+  }
   if (special === "reto") {
     return (
       <ChallengeScreen
@@ -4274,6 +4950,20 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           <div>
             <div style={{ fontSize: 13, fontWeight: 800 }}>Modo viaje</div>
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
+          </div>
+        </button>
+        <button className="card" onClick={() => setSpecial("dueto")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+          <span style={{ fontSize: 24 }}>👥</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Modo dueto</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Entrena en pareja con un solo celular</div>
+          </div>
+        </button>
+        <button className="card" onClick={() => setSpecial("biblioteca")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+          <span style={{ fontSize: 24 }}>📚</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Biblioteca</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Explora todos los ejercicios disponibles</div>
           </div>
         </button>
 
@@ -4619,10 +5309,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 }
 
 /* ─── SESIÓN ACTIVA ─── */
-function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats }) {
+function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats, name }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
-  const [phase, setPhase] = useState("warmupPrompt"); // warmupPrompt | warmup | work | rest | exdone | coolPrompt | cooldown | finished
+  const [phase, setPhase] = useState("warmupPrompt"); // warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
   const [restLeft, setRestLeft] = useState(0);
   const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
   const [weight, setWeight] = useState("");
@@ -4641,6 +5331,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [lastRecord, setLastRecord] = useState(null);
   const [noteText, setNoteText] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
+  const [summaryCopied, setSummaryCopied] = useState(false);
   const wakeLockRef = useRef(null);
   const ambientRef = useRef(null);
 
@@ -4886,7 +5577,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 10 }}>Calentamiento — 5 min</h2>
         <p className="muted" style={{ marginTop: 6 }}>Prepara tu cuerpo para {plan.discLabel}</p>
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button className="btn-xl" onClick={beginWork} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>
+          <button className="btn-xl" onClick={() => setPhase("breathing")} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>
             Saltar
           </button>
           <button className="btn-xl" onClick={() => setPhase("warmup")} style={{ background: plan.discColor || C.cyan, color: "#07070C" }}>
@@ -4902,9 +5593,13 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       <GuidedMiniFlow
         title="🔥 Calentamiento" subtitle={`Preparando ${plan.discLabel}`} color={plan.discColor || C.cyan}
         exercises={WARMUP_ROUTINES[warmupKeyFor(plan.discId)]}
-        onDone={() => { setJustWarmedUp(true); beginWork(); }}
+        onDone={() => { setJustWarmedUp(true); setPhase("breathing"); }}
       />
     );
+  }
+
+  if (phase === "breathing") {
+    return <BreathingScreen onDone={beginWork} voiceOn={voiceOn} />;
   }
 
   /* Enfriamiento opcional al terminar, antes de la pantalla de felicitaciones */
@@ -5102,6 +5797,56 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         >
           {copied ? "¡Copiado!" : "📤 Compartir"}
         </button>
+        <button
+          className="btn-xl"
+          onClick={async () => {
+            const d = new Date();
+            const dateStr = d.toLocaleDateString("es", { day: "numeric", month: "long" });
+            const timeStr = d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+            const lvlName = LEVELS[plan.lvlIdx]?.name || "";
+            const sep = "━━━━━━━━━━━━━━━━━━━━━━";
+            const exLines = plan.exercises.map((e, i) => {
+              const okLogsForEx = (logs[i] || []).filter((l) => l.ok);
+              if (!okLogsForEx.length) return `- ${e.name}: 0 series`;
+              const lastReps = okLogsForEx[okLogsForEx.length - 1].reps;
+              const maxW = Math.max(...okLogsForEx.map((l) => l.weight));
+              return maxW > 0
+                ? `- ${e.name}: ${okLogsForEx.length}x${lastReps} — ${maxW}kg ✓`
+                : `- ${e.name}: ${okLogsForEx.length}x${lastReps} ✓`;
+            }).join("\n");
+            const text = [
+              sep, "⚡ F.A.S.E. — SESIÓN COMPLETADA", sep,
+              `👤 ${name || ""} | ${hero.emoji} ${hero.name}`,
+              `📅 ${dateStr} | ${timeStr}`,
+              `🏋️ ${plan.discLabel} — ${plan.focusLabel || ""}`,
+              `📊 Nivel: ${lvlName}`,
+              `⏱ Duración: ${Math.round(sessionSecs / 60)} min`,
+              sep, "💪 EJERCICIOS:", exLines, sep, "📈 RESUMEN:",
+              `Series completadas: ${okSets}/${totalPlanned}`,
+              `Volumen total: ${volume}kg`,
+              `🔥 Racha actual: ${newStreak} días`,
+              newRecord ? `🏆 NUEVO RÉCORD: ${newRecord.name} — ${newRecord.weight > 0 ? `${newRecord.weight}kg` : `${newRecord.reps} reps`}` : null,
+              sep, "f-a-s-e.vercel.app",
+            ].filter(Boolean).join("\n");
+            try {
+              await navigator.clipboard.writeText(text);
+              setSummaryCopied(true);
+              setTimeout(() => setSummaryCopied(false), 2500);
+            } catch {
+              /* portapapeles no disponible */
+            }
+          }}
+          style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+        >
+          📋 Copiar resumen
+        </button>
+        {summaryCopied && (
+          <div style={{ position: "fixed", bottom: 24, left: 20, right: 20, zIndex: 300, display: "flex", justifyContent: "center" }}>
+            <div className="card pop" style={{ padding: "10px 16px", background: C.card2 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>¡Resumen copiado! Compártelo donde quieras 📤</p>
+            </div>
+          </div>
+        )}
         {onViewStats && (
           <button
             className="btn-xl"
@@ -5223,6 +5968,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <p style={{ fontSize: 13, fontWeight: 800, color: plan.discColor || C.cyan }}>
             ¡Listo! Cuerpo preparado 🔥 — Empezando {plan.discLabel}
           </p>
+        </div>
+      )}
+      {store.get("deload_active", null) && (
+        <div style={{ textAlign: "center", padding: "6px 0", fontSize: 11, fontWeight: 700, color: C.yellow }}>
+          🔄 Semana de deload — peso ligero, técnica perfecta
         </div>
       )}
       {!liveMode && (
@@ -5575,7 +6325,271 @@ function PlanWizard({ onBack, onGenerate }) {
   );
 }
 
-/* ─── Pantalla "Mi estilo": temas visuales ─── */
+/* ─── Configuración ─── */
+function SettingsToggle({ on, onClick, "aria-label": ariaLabel }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={ariaLabel}
+      aria-pressed={on}
+      style={{
+        width: 44, height: 26, borderRadius: 99, position: "relative", flexShrink: 0,
+        background: on ? C.cyan : C.surface, border: `1px solid ${on ? C.cyan : C.border}`,
+        transition: "background .2s ease, border-color .2s ease",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute", top: 2, left: on ? 20 : 2, width: 20, height: 20, borderRadius: "50%",
+          background: on ? "#07070C" : C.dim, transition: "left .2s ease",
+        }}
+      />
+    </button>
+  );
+}
+
+function SettingsRow({ label, children }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0" }}>
+      <span style={{ fontSize: 13, color: C.text }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function SettingsScreen({
+  name, onRename, weeklyGoal, onSetWeeklyGoal, mode, onSetMode,
+  highContrast, onToggleContrast, noEquipment, onToggleEquipment,
+  voiceOn, onToggleVoice, themeId, onSelectTheme,
+  sessions, onCleanOld, onWipeAll, onBack,
+}) {
+  const [profile, setProfile] = useState(() => store.get("profile", {}));
+  const [height, setHeight] = useState(() => store.get("height", ""));
+  const [ambientOn, setAmbientOn] = useState(() => store.get("ambient", false));
+  const [vibrationOn, setVibrationOn] = useState(() => store.get("vibration_on", true));
+  const [reminderOn, setReminderOn] = useState(() => store.get("reminder_enabled", false));
+  const [reminderHour, setReminderHour] = useState(() => store.get("reminder_hour", 17));
+  const [waterReminderOn, setWaterReminderOn] = useState(() => store.get("water_reminder_enabled", false));
+  const [nameInput, setNameInput] = useState(name);
+  const [wipeStep, setWipeStep] = useState(0);
+  const [wipeText, setWipeText] = useState("");
+  const fileRef = useRef(null);
+  const weightLog = getWeightLog();
+  const currentWeight = weightLog.length ? weightLog[weightLog.length - 1].weight : null;
+
+  const handleRestoreFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        if (!isValidBackup(parsed)) throw new Error("formato inválido");
+        if (!window.confirm("Esto reemplazará todos tus datos actuales. ¿Continuar?")) return;
+        applyBackup(parsed);
+        window.location.reload();
+      } catch {
+        alert("Archivo de backup inválido o corrupto.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>⚙️ Configuración</h2>
+
+      <div className="sec-title">Perfil</div>
+      <div className="card">
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>NOMBRE</label>
+        <input className="input" value={nameInput} maxLength={24} onChange={(e) => setNameInput(e.target.value)} style={{ marginTop: 4 }} />
+        <button
+          className="btn-xl" onClick={() => onRename(nameInput)} disabled={!nameInput.trim()}
+          style={{ marginTop: 8, background: C.cyan, color: "#07070C", fontSize: 12 }}
+        >
+          Guardar nombre
+        </button>
+
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 14, display: "block" }}>OBJETIVO PRINCIPAL</label>
+        <div className="chip-wrap" style={{ marginTop: 6 }}>
+          {GOAL_OPTIONS.map((g) => (
+            <button
+              key={g.id} className={`chip ${profile.goal === g.id ? "on" : ""}`}
+              onClick={() => { const next = { ...profile, goal: g.id }; setProfile(next); store.set("profile", next); }}
+            >
+              {g.emoji} {g.label}
+            </button>
+          ))}
+        </div>
+
+        <SettingsRow label="Peso corporal actual">
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{currentWeight ? `${currentWeight} kg` : "—"}</span>
+        </SettingsRow>
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 6, display: "block" }}>ALTURA (CM)</label>
+        <input
+          className="input" type="number" value={height}
+          onChange={(e) => { setHeight(e.target.value); store.set("height", e.target.value); }}
+          style={{ marginTop: 4 }}
+        />
+      </div>
+
+      <div className="sec-title">Preferencias</div>
+      <div className="card">
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>TEMA VISUAL</label>
+        <div className="chip-wrap" style={{ marginTop: 6 }}>
+          {THEMES.map((t) => (
+            <button
+              key={t.id} className={`chip ${themeId === t.id ? "on" : ""}`}
+              onClick={() => !t.locked && onSelectTheme(t.id)} style={{ opacity: t.locked ? 0.4 : 1 }}
+            >
+              {t.emoji} {t.name}
+            </button>
+          ))}
+        </div>
+        <SettingsRow label="Modo Control Total (sin gamificación)">
+          <SettingsToggle on={mode === "pro"} onClick={() => onSetMode(mode === "pro" ? "guiado" : "pro")} aria-label="Alternar modo control total" />
+        </SettingsRow>
+        <SettingsRow label="Voz en sesiones 🔊">
+          <SettingsToggle on={voiceOn} onClick={onToggleVoice} aria-label="Alternar voz en sesiones" />
+        </SettingsRow>
+        <SettingsRow label="Sonido ambiental 🎵">
+          <SettingsToggle
+            on={ambientOn} aria-label="Alternar sonido ambiental"
+            onClick={() => { const n = !ambientOn; setAmbientOn(n); store.set("ambient", n); }}
+          />
+        </SettingsRow>
+        <SettingsRow label="Vibración 📳">
+          <SettingsToggle
+            on={vibrationOn} aria-label="Alternar vibración"
+            onClick={() => { const n = !vibrationOn; setVibrationOn(n); store.set("vibration_on", n); }}
+          />
+        </SettingsRow>
+        <SettingsRow label="Alto contraste ☀️">
+          <SettingsToggle on={highContrast} onClick={onToggleContrast} aria-label="Alternar alto contraste" />
+        </SettingsRow>
+        <SettingsRow label="Modo sin equipo 🎒">
+          <SettingsToggle on={noEquipment} onClick={onToggleEquipment} aria-label="Alternar modo sin equipo" />
+        </SettingsRow>
+      </div>
+
+      <div className="sec-title">Recordatorios</div>
+      <div className="card">
+        <SettingsRow label="Recordatorio diario de entrenar">
+          <SettingsToggle
+            on={reminderOn} aria-label="Alternar recordatorio diario"
+            onClick={async () => {
+              const next = !reminderOn;
+              if (next && window.Notification) {
+                try { await Notification.requestPermission(); } catch { /* no disponible */ }
+              }
+              setReminderOn(next);
+              store.set("reminder_enabled", next);
+            }}
+          />
+        </SettingsRow>
+        {reminderOn && (
+          <div className="chip-wrap" style={{ marginTop: 6 }}>
+            {[6, 7, 8, 9, 17, 18, 19, 20, 21].map((h) => (
+              <button
+                key={h} className={`chip ${reminderHour === h ? "on" : ""}`}
+                onClick={() => { setReminderHour(h); store.set("reminder_hour", h); }}
+              >
+                {h}:00
+              </button>
+            ))}
+          </div>
+        )}
+        <SettingsRow label="Recordatorio de agua (cada 2h)">
+          <SettingsToggle
+            on={waterReminderOn} aria-label="Alternar recordatorio de agua"
+            onClick={() => { const n = !waterReminderOn; setWaterReminderOn(n); store.set("water_reminder_enabled", n); }}
+          />
+        </SettingsRow>
+      </div>
+
+      <div className="sec-title">Meta semanal</div>
+      <div className="card">
+        <SettingsRow label="Días objetivo">
+          <div style={{ display: "flex", gap: 4 }}>
+            {[2, 3, 4, 5, 6].map((n) => (
+              <button
+                key={n} onClick={() => onSetWeeklyGoal(n)}
+                style={{
+                  width: 28, height: 28, borderRadius: 8, fontSize: 12, fontWeight: 800,
+                  background: n === weeklyGoal ? C.cyan : C.surface, color: n === weeklyGoal ? "#07070C" : C.text,
+                }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </SettingsRow>
+      </div>
+
+      <div className="sec-title">Datos</div>
+      <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <button className="btn-xl" onClick={() => exportCSV(sessions)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 12 }}>
+          📥 Exportar todo (CSV)
+        </button>
+        <button className="btn-xl" onClick={downloadBackupFile} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 12 }}>
+          💾 Crear backup completo
+        </button>
+        <button className="btn-xl" onClick={() => fileRef.current?.click()} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 12 }}>
+          📂 Restaurar backup
+        </button>
+        <input ref={fileRef} type="file" accept="application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
+        <button
+          className="btn-xl"
+          onClick={() => { if (window.confirm("¿Eliminar sesiones de hace más de 6 meses? No se puede deshacer.")) onCleanOld(); }}
+          style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.red, fontSize: 12 }}
+        >
+          🗑️ Limpiar sesiones antiguas (+6 meses)
+        </button>
+
+        {wipeStep === 0 && (
+          <button
+            className="btn-xl" onClick={() => setWipeStep(1)}
+            style={{ background: "rgba(255,59,92,0.12)", border: `1px solid ${C.red}`, color: C.red, fontSize: 12 }}
+          >
+            ☠️ Borrar todos mis datos
+          </button>
+        )}
+        {wipeStep === 1 && (
+          <div className="card" style={{ borderColor: C.red }}>
+            <p style={{ fontSize: 12, color: C.red, fontWeight: 700 }}>¿Estás seguro? Perderás todo tu progreso.</p>
+            <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+              <button onClick={() => setWipeStep(0)} style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>Cancelar</button>
+              <button onClick={() => setWipeStep(2)} style={{ fontSize: 12, color: C.red, fontWeight: 800 }}>Continuar</button>
+            </div>
+          </div>
+        )}
+        {wipeStep === 2 && (
+          <div className="card" style={{ borderColor: C.red }}>
+            <p style={{ fontSize: 12, color: C.red, fontWeight: 700 }}>Escribe BORRAR para confirmar</p>
+            <input className="input" value={wipeText} onChange={(e) => setWipeText(e.target.value)} style={{ marginTop: 6 }} />
+            <button
+              className="btn-xl" disabled={wipeText !== "BORRAR"} onClick={onWipeAll}
+              style={{ marginTop: 8, background: C.red, color: "#fff", fontSize: 12 }}
+            >
+              Borrar definitivamente
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="sec-title">Acerca de</div>
+      <div className="card" style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 13, fontWeight: 800 }}>F.A.S.E. v3.0</p>
+        <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Formación Atlética y Sistemas de Entrenamiento</p>
+        <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Desarrollado con 💪 para atletas serios</p>
+        <p style={{ fontSize: 11, color: C.cyan, marginTop: 6 }}>f-a-s-e.vercel.app</p>
+      </div>
+    </div>
+  );
+}
+
 function ThemeScreen({ sessions, freezes, activeThemeId, onSelect, onBack }) {
   const stats = useMemo(() => computeAchievementStats(sessions, freezes), [sessions, freezes]);
   return (
@@ -6016,6 +7030,173 @@ function WeightSection() {
   );
 }
 
+/* ─── Calculadora de macros ─── */
+const MACRO_GOALS = [
+  { id: "muscle", label: "Ganar músculo (superávit)", emoji: "💪" },
+  { id: "fat", label: "Perder grasa (déficit)", emoji: "🔥" },
+  { id: "maintain", label: "Mantenimiento", emoji: "⚖️" },
+  { id: "performance", label: "Rendimiento deportivo", emoji: "⚡" },
+];
+
+const MACRO_ACTIVITY = [
+  { id: "sedentary", label: "Sedentario", desc: "Oficina, poco ejercicio", emoji: "🛋️", mult: 1.2 },
+  { id: "light", label: "Ligero", desc: "1-3 días/semana", emoji: "🚶", mult: 1.375 },
+  { id: "moderate", label: "Moderado", desc: "3-5 días/semana", emoji: "🏃", mult: 1.55 },
+  { id: "active", label: "Muy activo", desc: "6-7 días/semana", emoji: "💪", mult: 1.725 },
+  { id: "athlete", label: "Atleta", desc: "2 sesiones diarias", emoji: "⚡", mult: 1.9 },
+];
+
+function MacrosCalculator({ sessions, onBack }) {
+  const savedWeightLog = getWeightLog();
+  const savedWeight = savedWeightLog.length ? savedWeightLog[savedWeightLog.length - 1].weight : null;
+  const [result, setResult] = useState(() => store.get("macros", null));
+  const [step, setStep] = useState(() => (store.get("macros", null) ? 0 : 1));
+  const [weight, setWeight] = useState(savedWeight || "");
+  const [height, setHeight] = useState(() => store.get("height", "") || "");
+  const [age, setAge] = useState("");
+  const [sex, setSex] = useState("m");
+  const [goal, setGoal] = useState(null);
+  const [activity, setActivity] = useState(() => {
+    const cutoff = Date.now() - 28 * 86400000;
+    const perWeek = sessions.filter((s) => s.kind === "entreno" && s.ts >= cutoff).length / 4;
+    return perWeek >= 3 ? "moderate" : perWeek >= 1 ? "light" : "sedentary";
+  });
+
+  const imc = weight && height ? parseFloat(weight) / (parseFloat(height) / 100) ** 2 : null;
+
+  const calculate = () => {
+    const w = parseFloat(weight);
+    const h = parseFloat(height);
+    const a = parseInt(age, 10) || 30;
+    if (!(w > 0) || !(h > 0)) return;
+    store.set("height", height);
+    const tmb = sex === "f" ? 10 * w + 6.25 * h - 5 * a - 161 : 10 * w + 6.25 * h - 5 * a + 5;
+    const mult = MACRO_ACTIVITY.find((x) => x.id === activity)?.mult || 1.55;
+    const tdee = tmb * mult;
+    const gm = {
+      muscle: { calories: tdee + 300, protein: w * 2.0, carbsCals: tdee * 0.45, fatCals: tdee * 0.25 },
+      fat: { calories: tdee - 400, protein: w * 2.2, carbsCals: tdee * 0.35, fatCals: tdee * 0.25 },
+      maintain: { calories: tdee, protein: w * 1.8, carbsCals: tdee * 0.45, fatCals: tdee * 0.30 },
+      performance: { calories: tdee + 200, protein: w * 1.8, carbsCals: tdee * 0.55, fatCals: tdee * 0.20 },
+    }[goal || "maintain"];
+    const r = {
+      calories: Math.round(gm.calories), protein: Math.round(gm.protein),
+      carbs: Math.round(gm.carbsCals / 4), fat: Math.round(gm.fatCals / 9),
+    };
+    store.set("macros", r);
+    setResult(r);
+    setStep(0);
+  };
+
+  if (step === 0 && result) {
+    return (
+      <div className="screen">
+        <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🧮 Mis macros</h2>
+        <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+          <div className="card" style={{ flex: "1 1 45%", textAlign: "center", padding: "16px 8px" }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.orange }}>{result.calories}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🔥 kcal/día</div>
+          </div>
+          <div className="card" style={{ flex: "1 1 45%", textAlign: "center", padding: "16px 8px" }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.red }}>{result.protein}g</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🥩 proteína</div>
+          </div>
+          <div className="card" style={{ flex: "1 1 45%", textAlign: "center", padding: "16px 8px" }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.yellow }}>{result.carbs}g</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🍚 carbohidratos</div>
+          </div>
+          <div className="card" style={{ flex: "1 1 45%", textAlign: "center", padding: "16px 8px" }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.green }}>{result.fat}g</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🥑 grasas</div>
+          </div>
+        </div>
+        <div className="card" style={{ marginTop: 12 }}>
+          <p style={{ fontSize: 12, color: C.mut }}>Tu proteína diaria = {Math.round(result.protein / 31)} pechugas de pollo 🍗</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>o {Math.round(result.protein / 6)} huevos 🥚</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>o {Math.round(result.protein / 25)} latas de atún 🐟</p>
+        </div>
+        <button className="btn-xl" onClick={() => setStep(1)} style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 13 }}>
+          Recalcular
+        </button>
+        <p style={{ fontSize: 10, color: C.dim, textAlign: "center", marginTop: 14, lineHeight: 1.4 }}>
+          Cálculo estimado basado en fórmulas estándar. Para un plan personalizado consulta un nutriólogo.
+        </p>
+      </div>
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <div className="screen">
+        <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🧮 Mis macros</h2>
+        <p className="muted" style={{ marginTop: 2 }}>Paso 1 — Datos básicos</p>
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 14, display: "block" }}>PESO (KG)</label>
+        <input className="input" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 4 }} />
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>ALTURA (CM)</label>
+        <input className="input" type="number" value={height} onChange={(e) => setHeight(e.target.value)} style={{ marginTop: 4 }} />
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>EDAD</label>
+        <input className="input" type="number" value={age} onChange={(e) => setAge(e.target.value)} style={{ marginTop: 4 }} />
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>SEXO (PARA EL CÁLCULO)</label>
+        <div className="chip-wrap" style={{ marginTop: 6 }}>
+          <button className={`chip ${sex === "m" ? "on" : ""}`} onClick={() => setSex("m")}>Hombre</button>
+          <button className={`chip ${sex === "f" ? "on" : ""}`} onClick={() => setSex("f")}>Mujer</button>
+        </div>
+        {imc && <p style={{ fontSize: 12, color: C.mut, marginTop: 10 }}>IMC: {imc.toFixed(1)} (informativo, sin juicio de valor)</p>}
+        <button
+          className="btn-xl" onClick={() => setStep(2)} disabled={!weight || !height || !age}
+          style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}
+        >
+          Continuar
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <div className="screen">
+        <button onClick={() => setStep(1)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>¿Qué quieres lograr?</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+          {MACRO_GOALS.map((g) => (
+            <button
+              key={g.id} className="card" onClick={() => { setGoal(g.id); setStep(3); }}
+              style={{ textAlign: "left", display: "flex", gap: 12, alignItems: "center", border: goal === g.id ? `2px solid ${C.cyan}` : undefined }}
+            >
+              <span style={{ fontSize: 22 }}>{g.emoji}</span>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{g.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen">
+      <button onClick={() => setStep(2)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>Nivel de actividad</h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+        {MACRO_ACTIVITY.map((a) => (
+          <button
+            key={a.id} className="card" onClick={() => setActivity(a.id)}
+            style={{ textAlign: "left", display: "flex", gap: 12, alignItems: "center", border: activity === a.id ? `2px solid ${C.cyan}` : undefined }}
+          >
+            <span style={{ fontSize: 22 }}>{a.emoji}</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{a.label}</div>
+              <div style={{ fontSize: 11, color: C.mut }}>{a.desc}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+      <button className="btn-xl" onClick={calculate} style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}>Calcular mis macros</button>
+    </div>
+  );
+}
+
 /* ─── Comparativa temporal: esta semana vs la anterior ─── */
 function weekComparisonStats(sessions) {
   const thisWeekStart = startOfWeek();
@@ -6139,6 +7320,97 @@ function WeakPointCard({ sessions, onTrain }) {
   );
 }
 
+/* ─── Detector de meseta (plateau) ─── */
+const PLATEAU_SUGGESTIONS = [
+  { title: "Cambia el esquema de series", desc: "Si hacías 4x8, prueba 5x5 con +5kg. El sistema nervioso necesita nuevo estímulo.", action: "Cambiar esquema" },
+  { title: "Semana de deload", desc: "Baja el peso al 60% por una semana. Luego vuelve más fuerte. Es ciencia.", action: "Ver deload" },
+  { title: "Cambia el ejercicio temporalmente", desc: "Sustituye por una variación 4 semanas. Vuelve y romperás el récord.", action: "Ver alternativas" },
+  { title: "Revisa tu descanso y nutrición", desc: "La meseta a veces no es de entrenamiento. ¿Duermes 7-9h? ¿Comes suficiente proteína?", action: "Ver tips" },
+];
+
+function getPlateauSuggestion(exercise) {
+  return PLATEAU_SUGGESTIONS[exercise.length % PLATEAU_SUGGESTIONS.length];
+}
+
+function detectPlateau(sessions, exerciseName) {
+  const relevant = sessions
+    .filter((s) => s.kind === "entreno" && s.exercises.some((e) => e.name === exerciseName))
+    .slice(-6);
+  if (relevant.length < 4) return null;
+
+  const weights = relevant.map((s) => {
+    const ex = s.exercises.find((e) => e.name === exerciseName);
+    const okWeights = ex.sets.filter((st) => st.ok).map((st) => st.weight || 0);
+    return okWeights.length ? Math.max(...okWeights) : 0;
+  });
+
+  const recent = weights.slice(-3);
+  const older = weights.slice(-6, -3);
+  if (older.length < 3) return null;
+  const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+  if (recentAvg <= 0) return null; // ejercicio sin carga (solo reps): no aplica meseta de peso
+
+  if (Math.abs(recentAvg - olderAvg) < 2.5) {
+    return {
+      exercise: exerciseName,
+      weeks: Math.max(1, Math.round(relevant.length / 1.5)),
+      currentWeight: Math.round(recentAvg * 10) / 10,
+      suggestion: getPlateauSuggestion(exerciseName),
+    };
+  }
+  return null;
+}
+
+function findMainPlateau(sessions) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const exNames = [...new Set(workouts.flatMap((s) => s.exercises.map((e) => e.name)))];
+  const dismissed = store.get("plateau_dismissed", {});
+  for (const name of exNames) {
+    if (dismissed[name]) continue;
+    const p = detectPlateau(sessions, name);
+    if (p) return p;
+  }
+  return null;
+}
+
+function PlateauCard({ sessions }) {
+  const plateau = useMemo(() => findMainPlateau(sessions), [sessions]);
+  const [dismissed, setDismissed] = useState(false);
+  if (!plateau || dismissed) return null;
+  return (
+    <div className="card" style={{ marginTop: 10, borderColor: `${C.orange}66`, background: "rgba(255,122,47,0.06)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <p style={{ fontSize: 13, fontWeight: 800, color: C.orange }}>⚠️ Posible meseta detectada</p>
+        <button
+          aria-label="Descartar alerta de meseta"
+          onClick={() => {
+            const d = store.get("plateau_dismissed", {});
+            d[plateau.exercise] = true;
+            store.set("plateau_dismissed", d);
+            setDismissed(true);
+          }}
+          style={{ fontSize: 14, color: C.dim, padding: 2 }}
+        >
+          ✕
+        </button>
+      </div>
+      <p style={{ fontSize: 12, color: C.text, marginTop: 6 }}>
+        {plateau.exercise} — {plateau.weeks} {plateau.weeks === 1 ? "semana" : "semanas"} sin progreso significativo
+      </p>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>Peso actual promedio: {plateau.currentWeight}kg</p>
+      <p style={{ fontSize: 12, color: C.text, marginTop: 8, fontWeight: 700 }}>💡 Sugerencia: {plateau.suggestion.title}</p>
+      <p style={{ fontSize: 11, color: C.mut, marginTop: 2, lineHeight: 1.4 }}>{plateau.suggestion.desc}</p>
+      <button
+        className="btn-xl" onClick={() => alert(plateau.suggestion.desc)}
+        style={{ marginTop: 10, background: C.orange, color: "#07070C", fontSize: 12 }}
+      >
+        {plateau.suggestion.action}
+      </button>
+    </div>
+  );
+}
+
 function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
@@ -6146,6 +7418,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const [showAchievements, setShowAchievements] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
+  const [showMacros, setShowMacros] = useState(false);
   const [weeklyPlan, setWeeklyPlan] = useState(() => store.get("weekly_plan", null));
 
   const [newAchievement, setNewAchievement] = useState(null);
@@ -6233,6 +7506,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   }, [workouts]);
 
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
+  if (showMacros) return <MacrosCalculator sessions={sessions} onBack={() => setShowMacros(false)} />;
 
   if (showPlan) {
     const globalIdx0 = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
@@ -6530,8 +7804,13 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
             <div style={{ fontSize: 20 }}>📅</div>
             <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mi plan</div>
           </button>
+          <button className="card" onClick={() => setShowMacros(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 20 }}>🧮</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mis macros</div>
+          </button>
         </div>
 
+        <PlateauCard sessions={sessions} />
         <WeekComparisonCard sessions={sessions} />
         <WeakPointCard
           sessions={sessions}
@@ -7262,6 +8541,12 @@ export default function App() {
   const [highContrast, setHighContrast] = useState(() => store.get("high_contrast", false));
   const [noEquipment, setNoEquipment] = useState(() => store.get("no_equipment", false));
   const [toast, setToast] = useState(null);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(() => {
+    const hour = new Date().getHours();
+    const inWindow = (hour >= 6 && hour < 10) || (hour >= 16 && hour < 20);
+    const dismissedToday = store.get("notif_prompt_seen", null) === todayKey();
+    return inWindow && !dismissedToday && !!window.Notification && Notification.permission === "default";
+  });
   const [storageFull, setStorageFull] = useState(false);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -7299,6 +8584,7 @@ export default function App() {
   });
   const [showTheme, setShowTheme] = useState(false);
   const [showProfileCard, setShowProfileCard] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const saveChallenge = (c) => {
     setChallenge(c);
@@ -7422,35 +8708,57 @@ export default function App() {
     return `${weekday} ${day} ${month}`;
   }, []);
 
-  /* Recordatorio diario: mejor esfuerzo del lado del cliente (revisa mientras la
+  /* Recordatorios inteligentes: mejor esfuerzo del lado del cliente (revisa mientras la
      app está abierta; no es un push real en segundo plano sin servidor). */
   useEffect(() => {
-    const hourId = store.get("notif_hour", null);
-    if (!hourId || !window.Notification || Notification.permission !== "granted") return undefined;
-    const hourMap = { morning: 7, afternoon: 17, night: 20 };
-    const targetHour = hourMap[hourId];
+    const legacyHour = { morning: 7, afternoon: 17, night: 20 }[store.get("notif_hour", null)];
+    const remindersOn = store.get("reminder_enabled", false) || legacyHour !== undefined;
+    if (!remindersOn || !window.Notification || Notification.permission !== "granted") return undefined;
+    const targetHour = store.get("reminder_hour", legacyHour ?? 17);
+    const waterRemindersOn = store.get("water_reminder_enabled", false);
+
     const check = () => {
       const now = new Date();
       const today = dayKey(now.getTime());
+      const trainedToday = sessions.some((s) => dayKey(s.ts) === today);
+
       const lastShown = store.get("notif_last_shown", null);
-      if (now.getHours() === targetHour && lastShown !== today) {
+      if (now.getHours() === targetHour && lastShown !== today && !trainedToday) {
         const msg = streak === 0
-          ? `💪 ${name}, hoy es un buen día para empezar`
+          ? "¿Empezamos hoy? Tu cuerpo está listo"
           : streak < 7
-          ? `🔥 ${name}, llevas ${streak} días. No rompas la racha`
-          : `⚡ ${name}, ${streak} días seguidos. Eres una máquina`;
+          ? `🔥 Llevas ${streak} días. No rompas la racha`
+          : `${streak} días seguidos. Eres una máquina ⚡`;
         try {
-          new Notification("F.A.S.E.", { body: msg, icon: "/favicon.svg" });
+          new Notification("F.A.S.E. ⚡", { body: msg, icon: "/icon-192.png" });
         } catch {
           /* silencioso */
         }
         store.set("notif_last_shown", today);
       }
+
+      if (waterRemindersOn && now.getHours() >= 8 && now.getHours() <= 20 && now.getHours() % 2 === 0 && now.getMinutes() < 1) {
+        const waterNotifKey = `water_notif_${today}_${now.getHours()}`;
+        if (!store.get(waterNotifKey, false)) {
+          store.set(waterNotifKey, true);
+          const goal = store.get("water_goal", 8);
+          const count = store.get("water_" + today, 0);
+          const hoursIntoDay = Math.max(1, now.getHours() - 7);
+          const expected = Math.min(goal, Math.round((hoursIntoDay / 13) * goal));
+          if (count < expected) {
+            try {
+              new Notification("F.A.S.E. 💧", { body: `Llevas ${count} vasos hoy. Meta: ${goal} vasos`, icon: "/icon-192.png", badge: "/icon-192.png" });
+            } catch {
+              /* silencioso */
+            }
+          }
+        }
+      }
     };
     check();
     const id = setInterval(check, 60000);
     return () => clearInterval(id);
-  }, [streak, name]);
+  }, [streak, sessions]);
 
   /* Streak freeze: disponible si la cadena terminó anteayer y no se usó este mes */
   const freezeInfo = useMemo(() => computeFreezeInfo(sessions, freezes), [sessions, freezes]);
@@ -7477,6 +8785,26 @@ export default function App() {
     store.set("name", n);
     setMode(m);
     store.set("mode", m);
+  };
+
+  const renameUser = (n) => {
+    const clean = sanitize(n);
+    if (!clean) return;
+    setName(clean);
+    store.set("name", clean);
+  };
+
+  const wipeAllData = () => {
+    try {
+      const keys = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k && k.startsWith("fase_")) keys.push(k);
+      }
+      keys.forEach((k) => window.localStorage.removeItem(k));
+    } finally {
+      window.location.reload();
+    }
   };
 
   const MAX_SESSIONS = 500;
@@ -7541,6 +8869,22 @@ export default function App() {
     );
   }
 
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        name={name} onRename={renameUser}
+        weeklyGoal={weeklyGoal} onSetWeeklyGoal={(n) => { setWeeklyGoal(n); store.set("weekly_goal", n); }}
+        mode={mode} onSetMode={(m) => { setMode(m); store.set("mode", m); }}
+        highContrast={highContrast} onToggleContrast={toggleContrast}
+        noEquipment={noEquipment} onToggleEquipment={toggleEquipment}
+        voiceOn={voiceOn} onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
+        themeId={themeId} onSelectTheme={selectTheme}
+        sessions={sessions} onCleanOld={cleanOldSessions} onWipeAll={wipeAllData}
+        onBack={() => setShowSettings(false)}
+      />
+    );
+  }
+
   if (live) {
     return (
       <ActiveSession
@@ -7551,6 +8895,7 @@ export default function App() {
         onSaveNote={updateSessionNote}
         onClose={() => { setLive(null); setTab("inicio"); }}
         onViewStats={() => { setLive(null); setTab("progreso"); }}
+        name={name}
         voiceOn={voiceOn}
         onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
       />
@@ -7600,6 +8945,32 @@ export default function App() {
           color: C.cyan, fontSize: 12, fontWeight: 700,
         }}>
           {toast}
+        </div>
+      )}
+      {showNotifPrompt && (
+        <div style={{
+          position: "sticky", top: 0, zIndex: 50, textAlign: "center", padding: "8px 10px",
+          background: "rgba(0,229,255,0.12)", borderBottom: "1px solid rgba(0,229,255,0.35)",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>🔔 ¿Activar recordatorios de F.A.S.E.?</span>
+          <button
+            onClick={async () => {
+              try { await Notification.requestPermission(); } catch { /* no disponible */ }
+              store.set("reminder_enabled", true);
+              store.set("notif_prompt_seen", todayKey());
+              setShowNotifPrompt(false);
+            }}
+            style={{ fontSize: 11, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "4px 10px", borderRadius: 99 }}
+          >
+            Activar
+          </button>
+          <button
+            onClick={() => { store.set("notif_prompt_seen", todayKey()); setShowNotifPrompt(false); }}
+            style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}
+          >
+            Ahora no
+          </button>
         </div>
       )}
       <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease", flexDirection: "column", alignItems: "stretch", gap: 8 }}>
@@ -7695,6 +9066,7 @@ export default function App() {
             {highContrast ? "🌙" : "☀️"}
           </button>
           <button onClick={() => setShowTheme(true)} aria-label="Mi estilo" style={{ fontSize: 15, padding: 4 }}>🎨</button>
+          <button onClick={() => setShowSettings(true)} aria-label="Configuración" style={{ fontSize: 15, padding: 4 }}>⚙️</button>
         </div>
       </header>
 
@@ -7742,7 +9114,7 @@ export default function App() {
             {tab === "entrenar" && (
               <Train
                 onStart={setLive} onAccent={(c) => setAccent(c || getTabAccent("entrenar"))} totalSessions={sessions.length}
-                noEquipment={noEquipment} onSaveSpecial={saveSession}
+                noEquipment={noEquipment} onSaveSpecial={saveSession} name={name}
                 sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
               />
             )}

@@ -490,6 +490,20 @@ input[type='number'] {
   animation: whiteFlash 300ms ease-out forwards;
 }
 
+/* ─── Respiración guiada pre-sesión ─── */
+@keyframes breathe {
+  0%, 100% { r: 60; stroke-opacity: 0.4; }
+  28% { r: 90; stroke-opacity: 1; }
+  57% { r: 90; stroke-opacity: 0.8; }
+  85% { r: 60; stroke-opacity: 0.4; }
+}
+@keyframes breatheInner {
+  0%, 100% { r: 40; }
+  28% { r: 65; }
+  57% { r: 65; }
+  85% { r: 40; }
+}
+
 /* ─── Splash screen ─── */
 @keyframes splashF {
   from { transform: scale(0.5); opacity: 0; }
