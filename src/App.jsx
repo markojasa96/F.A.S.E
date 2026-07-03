@@ -1868,6 +1868,71 @@ function weightSuggestion(sessions, exName) {
   return result;
 }
 
+/* ─── Series de activación específicas por ejercicio principal (no cuentan en el historial) ─── */
+const WARMUP_SETS = {
+  "Sentadilla con barra": [
+    { pct: 0.40, reps: 10, label: "Activación" },
+    { pct: 0.60, reps: 5, label: "Activación" },
+    { pct: 0.80, reps: 3, label: "Potenciación" },
+  ],
+  "Press banca": [
+    { pct: 0.50, reps: 10, label: "Activación" },
+    { pct: 0.70, reps: 5, label: "Activación" },
+    { pct: 0.90, reps: 2, label: "Potenciación" },
+  ],
+  "Peso muerto convencional": [
+    { pct: 0.40, reps: 8, label: "Activación" },
+    { pct: 0.65, reps: 5, label: "Activación" },
+    { pct: 0.80, reps: 3, label: "Potenciación" },
+  ],
+  "Press militar": [
+    { pct: 0.50, reps: 10, label: "Activación" },
+    { pct: 0.75, reps: 5, label: "Activación" },
+  ],
+  "Remo con barra": [
+    { pct: 0.50, reps: 10, label: "Activación" },
+    { pct: 0.75, reps: 5, label: "Activación" },
+  ],
+};
+
+/* ─── Progresión lineal automática: sugiere el próximo peso según las últimas 3 sesiones ─── */
+function calculateNextWeight(exerciseName, history) {
+  const sessions = history
+    .filter((s) => s.kind === "entreno" && s.exercises?.some((e) => e.name === exerciseName))
+    .slice(-3);
+
+  if (sessions.length === 0) {
+    return { weight: null, message: "Primera vez — empieza ligero", trend: "new" };
+  }
+
+  const sessionData = sessions.map((s) => {
+    const ex = s.exercises.find((e) => e.name === exerciseName);
+    const completedSets = ex.sets.filter((st) => st.ok);
+    const totalSets = ex.sets.length || 1;
+    const avgWeight = completedSets.length > 0
+      ? completedSets.reduce((a, st) => a + (parseFloat(st.weight) || 0), 0) / completedSets.length
+      : 0;
+    const completionRate = completedSets.length / totalSets;
+    return { avgWeight, completionRate };
+  });
+
+  const lastSession = sessionData[sessionData.length - 1];
+
+  if (lastSession.completionRate === 1) {
+    const increment = lastSession.avgWeight >= 100 ? 5 : lastSession.avgWeight >= 60 ? 2.5 : 1.25;
+    const next = Math.round((lastSession.avgWeight + increment) * 4) / 4;
+    return { weight: next, message: `↑ Completaste todo. Sube a ${next}kg`, trend: "up" };
+  }
+
+  if (lastSession.completionRate < 0.7) {
+    const decrease = lastSession.avgWeight * 0.1;
+    const newWeight = Math.round((lastSession.avgWeight - decrease) / 2.5) * 2.5;
+    return { weight: newWeight, message: `↓ Reduce el peso. Prueba ${newWeight}kg`, trend: "down" };
+  }
+
+  return { weight: Math.round(lastSession.avgWeight * 4) / 4, message: `→ Mantén ${Math.round(lastSession.avgWeight * 4) / 4}kg`, trend: "same" };
+}
+
 /* ─── Predicción de récord (regresión lineal simple) ─── */
 function predictRecord(sessions, exercise) {
   const relevant = sessions
@@ -2427,6 +2492,33 @@ const LEVEL_SCALING = [
   { setsAdd: 2, restMin: 15, restMax: 30, intensityLabel: "Máxima" },
 ];
 
+/* ─── Esquemas de series inteligentes ─── */
+const SCHEMES = {
+  standard: { name: "Estándar", desc: "Series × reps igual en todas" },
+  pyramid: {
+    name: "Pirámide", desc: "Subir peso, bajar reps cada serie",
+    repsPerSet: [12, 10, 8, 6], weightMultiplier: [0.70, 0.80, 0.90, 1.0],
+  },
+  reverse_pyramid: {
+    name: "Pirámide inversa", desc: "Peso máximo primero, bajar peso y subir reps",
+    repsPerSet: [5, 8, 12], weightMultiplier: [1.0, 0.85, 0.75],
+  },
+  dropset: { name: "Drop set", desc: "Falla → baja 20% → falla de nuevo" },
+  cluster: { name: "Cluster", desc: "5 reps, 15s pausa, 5 reps más = 1 set" },
+};
+
+/* Asigna esquema según nivel: Iniciado/Guerrero siempre estándar,
+   Campeón introduce pirámide en la última posición, Élite usa pirámide
+   inversa en el primer ejercicio (principal), Leyenda/THE ONE usan
+   drop set / cluster en los ejercicios principales. */
+function schemeForExercise(lvlIdx, exIndex, totalExercises) {
+  if (lvlIdx <= 1) return "standard";
+  if (lvlIdx === 2) return exIndex === totalExercises - 1 ? "pyramid" : "standard";
+  if (lvlIdx === 3) return exIndex === 0 ? "reverse_pyramid" : "standard";
+  if (lvlIdx === 4) return exIndex === 0 ? "dropset" : exIndex === 1 ? "pyramid" : "standard";
+  return exIndex === 0 ? "cluster" : exIndex === 1 ? "dropset" : "reverse_pyramid";
+}
+
 function levelFromCount(count, thresholds) {
   let idx = 0;
   thresholds.forEach((t, i) => {
@@ -2714,7 +2806,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
 
   const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
-  return chosen.map((e) => {
+  return chosen.map((e, i) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
     let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
     if (deloadActive) {
@@ -2724,7 +2816,8 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
       sets = Math.max(1, sets + phaseMods.setsModifier);
       rest = Math.max(0, rest + phaseMods.restModifier);
     }
-    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel };
+    const scheme = e.t === "peso" && sets >= 3 && !deloadActive ? schemeForExercise(effLvlIdx, i, chosen.length) : "standard";
+    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
   });
 }
 
@@ -3244,7 +3337,7 @@ const FOCUS_ZONES = {
 /* Confetti CSS puro: 20 partículas cayendo, sin librerías */
 const CONFETTI_COLORS = [C.cyan, C.green, C.orange, C.yellow, C.red, C.purple];
 function Confetti({ show }) {
-  const [particles] = useState(() => Array.from({ length: 15 }, (_, i) => ({
+  const [particles] = useState(() => Array.from({ length: 8 }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
     color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
@@ -6251,6 +6344,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [rpeFor, setRpeFor] = useState(null);
   const rpeTimeoutRef = useRef(null);
+  const [setBadge, setSetBadge] = useState(null);
+  const setBadgeTimeoutRef = useRef(null);
+  useEffect(() => () => clearTimeout(setBadgeTimeoutRef.current), []);
+  const [showQuickNote, setShowQuickNote] = useState(false);
+  const [quickNote, setQuickNote] = useState("");
+  const [activationDone, setActivationDone] = useState({});
 
   useEffect(() => () => clearTimeout(rpeTimeoutRef.current), []);
 
@@ -6424,6 +6523,49 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   );
   const sug = suggestions[exIdx];
 
+  /* Progresión lineal automática por ejercicio (peso sugerido + tendencia + PR + última vez) */
+  const progressions = useMemo(
+    () => plan.exercises.map((e) => (e.type === "peso" ? calculateNextWeight(e.name, sessions) : null)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const progression = progressions[exIdx];
+  const exPR = priorRecords.find((r) => r.name === ex.name);
+  const lastSessionSets = useMemo(() => {
+    const prevWithEx = [...sessions].reverse().find((s) => s.kind === "entreno" && s.exercises.some((e) => e.name === ex.name));
+    if (!prevWithEx) return null;
+    const foundEx = prevWithEx.exercises.find((e) => e.name === ex.name);
+    const okSets = foundEx.sets.filter((st) => st.ok);
+    if (!okSets.length) return null;
+    return okSets.map((st) => (st.weight > 0 ? `${st.weight}kg×${st.reps}` : `${st.reps}`)).join(", ");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ex.name]);
+
+  /* Warm-up específico: solo si hay historial y el peso de trabajo supera los 40kg */
+  const workWeight = progression?.weight || 0;
+  const activationSets = WARMUP_SETS[ex.name];
+  const showActivation = !!(
+    ex.type === "peso" && activationSets && progression?.weight !== null && workWeight > 40 &&
+    phase === "work" && setNum === 0 && !activationDone[exIdx]
+  );
+
+  /* Tiempo estimado restante: promedio de segundos por ejercicio de sesiones previas + descansos pendientes */
+  const estMinutesLeft = useMemo(() => {
+    const prior = sessions.filter((s) => s.kind === "entreno" && s.disc === plan.discId && s.exercises?.length);
+    let avgSecPerEx = 150;
+    if (prior.length) {
+      const withDuration = prior.filter((s) => s.durationMin > 0);
+      if (withDuration.length) {
+        avgSecPerEx = withDuration.reduce((a, s) => a + (s.durationMin * 60) / s.exercises.length, 0) / withDuration.length;
+      }
+    }
+    const remainingExercises = plan.exercises.length - exIdx;
+    const remainingRest = plan.exercises.slice(exIdx).reduce((a, e) => a + (e.rest || 0), 0);
+    const totalSec = remainingExercises * avgSecPerEx + remainingRest;
+    return Math.max(0, Math.round(totalSec / 60));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exIdx, plan.discId]);
+
   const endRest = () => {
     setPhase("work");
     setSetNum((n) => n + 1);
@@ -6498,13 +6640,24 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       durationMin: Math.round(sessionSecs / 60),
       sesionRapida: sessionSecs < 300,
       cooldownBonus: !!gotCooldownBonus,
+      note: sanitizeNote(quickNote) || undefined,
       exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i], technique: techniqueRatings[i] || null })),
     };
     onSave(record);
     setLastRecord(record);
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     if (voiceOn) speak(`¡Sesión completada! Eres un ${LEVELS[plan.lvlIdx]?.name || ""}`);
-    popConfetti();
+    const allSetsPlanned = plan.exercises.reduce((a, e) => a + e.sets, 0);
+    const allSetsOk = finalLogs.flat().filter((s) => s.ok).length;
+    const isPerfect = allSetsPlanned > 0 && allSetsOk >= allSetsPlanned;
+    const beatRecord = plan.exercises.some((e, i) => {
+      const okLogs = (finalLogs[i] || []).filter((l) => l.ok);
+      if (!okLogs.length) return false;
+      const best = okLogs.reduce((a, b) => (b.weight * 1000 + b.reps > a.weight * 1000 + a.reps ? b : a));
+      const prior = priorRecords.find((r) => r.name === e.name);
+      return !prior || best.weight * 1000 + best.reps > prior.score;
+    });
+    if (isPerfect || beatRecord) popConfetti();
     setFlashWhite(true);
     setTimeout(() => setFlashWhite(false), 300);
     setPhase("finished");
@@ -6524,6 +6677,20 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       setRpeFor({ exIdx: thisExIdx, setIdx: thisSetIdx });
       clearTimeout(rpeTimeoutRef.current);
       rpeTimeoutRef.current = setTimeout(() => applyRpe(thisExIdx, thisSetIdx, 7), 3000);
+
+      /* Feedback inmediato: compara con el récord y la sesión anterior */
+      if (ex.type === "peso" && entry.weight > 0) {
+        const prScore = exPR ? exPR.weight * 1000 + exPR.reps : 0;
+        const thisScore = entry.weight * 1000 + entry.reps;
+        let badge;
+        if (thisScore > prScore) badge = { text: "🏆 NUEVO RÉCORD", color: "#FFD700" };
+        else if (progression?.weight !== null && entry.weight === progression.weight) badge = { text: "✅ Consistente", color: C.cyan };
+        else if (progression?.trend === "up" || entry.weight > (progression?.weight || 0)) badge = { text: "📈 Mejorando", color: C.green };
+        else badge = { text: "💪 Sigue adelante", color: C.orange };
+        setSetBadge(badge);
+        clearTimeout(setBadgeTimeoutRef.current);
+        setBadgeTimeoutRef.current = setTimeout(() => setSetBadge(null), 1500);
+      }
     }
     if (setNum + 1 >= ex.sets) {
       setFlashDone(true);
@@ -7008,6 +7175,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             <span style={{ fontSize: 11, color: C.dim }}>🔆 Pantalla activa</span>
           </>
         )}
+        <button onClick={() => setShowQuickNote((v) => !v)} aria-label="Nota rápida" style={{ fontSize: 14, padding: 4 }}>
+          📝
+        </button>
         <button onClick={() => setAmbientOn((v) => { const nv = !v; store.set("ambient", nv); return nv; })} aria-label="Sonido ambiental" style={{ fontSize: 14, padding: 4 }}>
           {ambientOn ? "🎵" : "🔇"}
         </button>
@@ -7018,6 +7188,19 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           {liveMode ? "👁️‍🗨️" : "👁️"}
         </button>
       </div>
+
+      {showQuickNote && (
+        <div className="card fade-up" style={{ marginTop: 8, padding: "10px 12px" }}>
+          <textarea
+            className="input" rows={2} maxLength={300} placeholder="Apunta algo rápido de esta sesión..."
+            value={quickNote} onChange={(e) => setQuickNote(e.target.value)}
+            style={{ resize: "none" }}
+          />
+          <button onClick={() => setShowQuickNote(false)} style={{ marginTop: 6, fontSize: 11, color: C.cyan, fontWeight: 700 }}>
+            Listo
+          </button>
+        </div>
+      )}
 
       {prevTotals && (() => {
         const curSets = logs.flat().filter((s) => s.ok).length;
@@ -7032,21 +7215,21 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         );
       })()}
 
-      {/* Progreso de la sesión */}
+      {/* Progreso de la sesión: segmentos por ejercicio */}
       <div style={{ display: "flex", gap: 4, marginTop: 14 }}>
         {plan.exercises.map((_, i) => (
           <div
             key={i}
             style={{
-              flex: 1, height: 4, borderRadius: 99,
+              flex: 1, height: 10, borderRadius: 3,
               background: i < exIdx ? plan.discColor : i === exIdx ? `${plan.discColor}66` : C.border,
               transition: "background .3s",
             }}
           />
         ))}
       </div>
-      <p style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
-        Ejercicio {exIdx + 1} de {plan.exercises.length}
+      <p style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
+        {estMinutesLeft !== null ? `~${estMinutesLeft} min restantes` : `Ejercicio ${exIdx + 1} de ${plan.exercises.length}`}
       </p>
 
       <div
@@ -7077,10 +7260,46 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
               {ex.intensity}
             </span>
           )}
+          {ex.scheme && ex.scheme !== "standard" && (
+            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: plan.discColor, background: `${plan.discColor}18`, padding: "2px 8px", borderRadius: 99, border: `1px solid ${plan.discColor}44` }}>
+              {SCHEMES[ex.scheme].name}
+            </span>
+          )}
         </p>
+        {ex.scheme && ex.scheme !== "standard" && (
+          <p style={{ marginTop: 4, fontSize: 11, color: C.dim }}>{SCHEMES[ex.scheme].desc}</p>
+        )}
         <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>💡 {ex.tip}</p>
         {showSwipeHint && phase === "work" && ex.type !== "tiempo" && (
           <p style={{ marginTop: 8, fontSize: 11, color: C.cyan, textAlign: "center" }}>💡 Desliza arriba para completar serie</p>
+        )}
+        {ex.type === "peso" && progression && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              {progression.weight !== null ? (
+                <>
+                  <span style={{ fontSize: 11, color: C.cyan, fontWeight: 700 }}>HOY → </span>
+                  <span style={{
+                    fontSize: 20, fontWeight: 900,
+                    color: progression.trend === "up" ? C.green : progression.trend === "down" ? C.orange : C.cyan,
+                  }}>
+                    {progression.weight}kg
+                  </span>
+                </>
+              ) : (
+                <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>🌱 Primera vez — registra tu marca inicial</span>
+              )}
+              <p style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{progression.message}</p>
+              {lastSessionSets && (
+                <p style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>Última vez: {lastSessionSets}</p>
+              )}
+            </div>
+            {exPR && (
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, color: "#FFD700", fontWeight: 800 }}>📈 PR: {exPR.weight > 0 ? `${exPR.weight}kg` : `${exPR.reps} reps`}</span>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -7098,7 +7317,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
                 border: `1px solid ${log ? (log.ok ? "rgba(34,255,136,0.4)" : "rgba(255,59,92,0.4)") : i === setNum && phase === "work" ? plan.discColor : C.border}`,
               }}
             >
-              <div style={{ fontSize: 11, color: C.dim }}>S{i + 1}</div>
+              <div style={{ fontSize: 11, color: C.dim }}>
+                S{i + 1}
+                {(ex.scheme === "pyramid" || ex.scheme === "reverse_pyramid") && SCHEMES[ex.scheme].repsPerSet[i] && (
+                  <span>({SCHEMES[ex.scheme].repsPerSet[i]})</span>
+                )}
+              </div>
               <div style={{ fontSize: 13, fontWeight: 800, color: log ? (log.ok ? C.green : C.red) : C.mut }}>
                 {log ? (log.ok ? `${log.reps || "✓"}` : "✗") : "—"}
               </div>
@@ -7107,7 +7331,48 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         })}
       </div>
 
-      {phase === "work" && ex.type === "tiempo" ? (
+      {setBadge && (
+        <div className="set-badge-pop" style={{ textAlign: "center", marginTop: 10 }}>
+          <span style={{
+            display: "inline-block", padding: "8px 16px", borderRadius: 99, fontWeight: 900, fontSize: 13,
+            background: setBadge.color, color: setBadge.color === "#FFD700" ? "#07070C" : "#07070C",
+          }}>
+            {setBadge.text}
+          </span>
+        </div>
+      )}
+
+      {showActivation ? (
+        <div className="card fade-up" style={{ marginTop: 14, borderColor: `${C.yellow}55` }}>
+          <span style={{
+            display: "inline-block", fontSize: 10, fontWeight: 800, color: "#07070C", background: C.yellow,
+            padding: "3px 9px", borderRadius: 99,
+          }}>
+            ⚡ Series de activación (no cuentan en el registro)
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+            {activationSets.map((w, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0", borderBottom: i < activationSets.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                <span style={{ color: C.mut }}>{w.label}</span>
+                <span style={{ fontWeight: 800 }}>{Math.round(workWeight * w.pct * 4) / 4}kg × {w.reps}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            className="btn-xl"
+            onClick={() => setActivationDone((prev) => ({ ...prev, [exIdx]: true }))}
+            style={{ marginTop: 12, background: C.yellow, color: "#07070C", fontSize: 13 }}
+          >
+            ✓ Completé la activación
+          </button>
+          <button
+            onClick={() => setActivationDone((prev) => ({ ...prev, [exIdx]: true }))}
+            style={{ marginTop: 8, fontSize: 11, color: C.mut, fontWeight: 700 }}
+          >
+            Saltar activación
+          </button>
+        </div>
+      ) : phase === "work" && ex.type === "tiempo" ? (
         <>
           <Stopwatch
             key={`${exIdx}-${setNum}`}
