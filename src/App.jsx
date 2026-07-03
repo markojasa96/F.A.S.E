@@ -790,6 +790,289 @@ function requiresGymEquipment(name) {
   return /barra|m[aá]quina|polea/i.test(name);
 }
 
+/* ═══════════════════ v5: LOGROS, XP Y ESTADÍSTICAS ÉPICAS ═══════════════════ */
+
+/* Longitud de la cadena de días más larga en todo el historial (no solo la actual) */
+function longestStreakEver(sessions) {
+  const days = [...new Set(sessions.map((s) => dayKey(s.ts)))]
+    .map((k) => {
+      const [y, m, d] = k.split("-").map(Number);
+      return new Date(y, m - 1, d).getTime();
+    })
+    .sort((a, b) => a - b);
+  if (!days.length) return 0;
+  let best = 1;
+  let cur = 1;
+  for (let i = 1; i < days.length; i++) {
+    if (days[i] - days[i - 1] === 86400000) {
+      cur++;
+      best = Math.max(best, cur);
+    } else {
+      cur = 1;
+    }
+  }
+  return best;
+}
+
+/* Volumen total (kg) de una sesión de entreno */
+function sessionVolume(s) {
+  return s.exercises.flatMap((e) => e.sets).filter((st) => st.ok).reduce((a, st) => a + st.weight * st.reps, 0);
+}
+
+/* ─── Definición de logros ─── */
+const ACHIEVEMENTS = [
+  { id: "first", emoji: "🪨", name: "Primera piedra", desc: "Completa tu primera sesión", secret: false,
+    check: (st) => st.totalSessions >= 1 },
+  { id: "week", emoji: "⭐", name: "Semana perfecta", desc: "7 días seguidos entrenando", secret: false,
+    check: (st) => st.bestStreak >= 7 },
+  { id: "month", emoji: "🔩", name: "Mes de hierro", desc: "30 días seguidos entrenando", secret: false,
+    check: (st) => st.bestStreak >= 30 },
+  { id: "centurion", emoji: "💯", name: "Centurión", desc: "100 sesiones totales", secret: false,
+    check: (st) => st.totalSessions >= 100 },
+  { id: "early", emoji: "🌅", name: "Madrugador", desc: "Entrena antes de las 7am", secret: false,
+    check: (st) => st.hasEarlySession },
+  { id: "night", emoji: "🌙", name: "Nocturno", desc: "Entrena después de las 10pm", secret: false,
+    check: (st) => st.hasLateSession },
+  { id: "noexcuses", emoji: "☔", name: "Sin excusas", desc: "Entrena un lunes y un viernes en la misma semana", secret: false,
+    check: (st) => st.hasMonAndFriSameWeek },
+  { id: "tonne", emoji: "🏋️", name: "Primera tonelada", desc: "Levanta 1,000 kg de volumen total", secret: false,
+    check: (st) => st.totalVolume >= 1000 },
+  { id: "tentonnes", emoji: "💪", name: "10 toneladas", desc: "Volumen acumulado de 10,000 kg", secret: false,
+    check: (st) => st.totalVolume >= 10000 },
+  { id: "sprinter", emoji: "⚡", name: "El velocista", desc: "Registra un sprint de 100m", secret: false,
+    check: (st) => st.hasSprint100 },
+  { id: "marathon", emoji: "🏃", name: "Maratonista", desc: "Completa una sesión de maratón", secret: false,
+    check: (st) => st.hasMarathonSession },
+  { id: "complete", emoji: "🎯", name: "El completo", desc: "Entrena las 4 disciplinas en una semana", secret: false,
+    check: (st) => st.allDisciplinesOneWeek },
+  { id: "explorer", emoji: "🗺️", name: "Explorador", desc: "Prueba AMRAP, EMOM e Intervalos", secret: false,
+    check: (st) => st.specialModesUsed >= 3 },
+  { id: "restless", emoji: "😤", name: "¿Descansas?", desc: "Entrena 14 días seguidos", secret: true,
+    check: (st) => st.bestStreak >= 14 },
+  { id: "theone", emoji: "👑", name: "Leyenda viviente", desc: "Alcanza nivel THE ONE en cualquier disciplina", secret: true,
+    check: (st) => st.reachedTheOne },
+  { id: "indestructible", emoji: "🛡️", name: "Indestructible", desc: "Usa el streak freeze y al día siguiente entrenas igual", secret: true,
+    check: (st) => st.usedFreezeAndTrained },
+];
+
+/* Calcula las estadísticas base usadas para evaluar todos los logros */
+function computeAchievementStats(sessions, freezes) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const totalSessions = sessions.length;
+  const totalVolume = workouts.reduce((a, s) => a + sessionVolume(s), 0);
+  const bestStreak = longestStreakEver(sessions);
+  const hasEarlySession = sessions.some((s) => new Date(s.ts).getHours() < 7);
+  const hasLateSession = sessions.some((s) => new Date(s.ts).getHours() >= 22);
+  const weekMap = {};
+  sessions.forEach((s) => {
+    const wk = Math.floor(s.ts / (7 * 86400000));
+    if (!weekMap[wk]) weekMap[wk] = new Set();
+    weekMap[wk].add(new Date(s.ts).getDay());
+  });
+  const hasMonAndFriSameWeek = Object.values(weekMap).some((days) => days.has(1) && days.has(5));
+  const hasSprint100 = workouts.some((s) => s.exercises.some((e) => /sprint m[aá]ximo/i.test(e.name)));
+  const hasMarathonSession = workouts.some((s) => s.focusLabel === "Maratón");
+  const discWeekMap = {};
+  workouts.forEach((s) => {
+    const wk = Math.floor(s.ts / (7 * 86400000));
+    if (!discWeekMap[wk]) discWeekMap[wk] = new Set();
+    const base = s.disc?.startsWith("futbol") ? "futbol" : s.disc;
+    discWeekMap[wk].add(base);
+  });
+  const allDisciplinesOneWeek = Object.values(discWeekMap).some((set) =>
+    ["gimnasio", "calistenia", "futbol", "atletismo"].every((d) => set.has(d))
+  );
+  const specialModesUsed = new Set(
+    workouts.filter((s) => s.disc === "especial").map((s) => s.focusLabel?.split(" ")[0])
+  ).size;
+  const reachedTheOne = workouts.some((s) => s.levelIdx === 5);
+  const nextDayKey = (k) => {
+    const [y, m, d] = k.split("-").map(Number);
+    return dayKey(new Date(y, m - 1, d + 1).getTime());
+  };
+  const usedFreezeAndTrained = freezes.length > 0 && freezes.some((f) => sessions.some((s) => dayKey(s.ts) === nextDayKey(f)));
+  return {
+    totalSessions, totalVolume, bestStreak, hasEarlySession, hasLateSession, hasMonAndFriSameWeek,
+    hasSprint100, hasMarathonSession, allDisciplinesOneWeek, specialModesUsed, reachedTheOne, usedFreezeAndTrained,
+  };
+}
+
+/* Devuelve la lista completa de logros con su estado (unlocked + fecha), y guarda nuevos desbloqueos */
+function computeAchievements(sessions, freezes) {
+  const stats = computeAchievementStats(sessions, freezes);
+  const saved = store.get("achievements", {});
+  const now = Date.now();
+  let changed = false;
+  const list = ACHIEVEMENTS.map((a) => {
+    const already = saved[a.id];
+    const earned = a.check(stats);
+    if (earned && !already) {
+      saved[a.id] = now;
+      changed = true;
+    }
+    return { ...a, unlocked: !!saved[a.id], ts: saved[a.id] || null };
+  });
+  if (changed) store.set("achievements", saved);
+  return { list, justUnlocked: changed ? list.filter((a) => a.ts === now) : [] };
+}
+
+/* ─── Sistema de XP y rangos ─── */
+const XP_RANKS = ["Recluta", "Soldado", "Guerrero", "Élite", "Maestro", "Gran Maestro", "Leyenda", "THE ONE"];
+const XP_ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+
+function computeXP(sessions, achievementsUnlockedCount, bestStreak) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const totalSets = workouts.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.filter((st) => st.ok).length, 0), 0);
+  const perfectSessions = workouts.filter((s) => s.exercises.every((e) => e.sets.length > 0 && e.sets.every((st) => st.ok))).length;
+  const recordsBonus = computeRecords(sessions).length * 200;
+  const xp = workouts.length * 100
+    + totalSets * 10
+    + perfectSessions * 150
+    + achievementsUnlockedCount * 300
+    + Math.floor(bestStreak / 7) * 500
+    + recordsBonus;
+  const rankIdx = Math.min(XP_RANKS.length - 1, Math.floor(xp / 1000));
+  const intoRank = xp - rankIdx * 1000;
+  return { xp, rankIdx, rankName: XP_RANKS[rankIdx], roman: XP_ROMAN[rankIdx], progress: rankIdx === XP_RANKS.length - 1 ? 1 : intoRank / 1000 };
+}
+
+/* ─── Estadísticas globales épicas ─── */
+function computeGlobalStats(sessions) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const totalSets = workouts.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.filter((st) => st.ok).length, 0), 0);
+  const totalVolume = Math.round(workouts.reduce((a, s) => a + sessionVolume(s), 0));
+  const activeDays = new Set(sessions.map((s) => dayKey(s.ts))).size;
+
+  const discCount = {};
+  workouts.forEach((s) => { discCount[s.disc] = (discCount[s.disc] || 0) + 1; });
+  const favDiscId = Object.entries(discCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  const exCount = {};
+  workouts.forEach((s) => s.exercises.forEach((e) => { exCount[e.name] = (exCount[e.name] || 0) + 1; }));
+  const favExercise = Object.entries(exCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  const hourCount = {};
+  sessions.forEach((s) => { const h = new Date(s.ts).getHours(); hourCount[h] = (hourCount[h] || 0) + 1; });
+  const favHour = Object.entries(hourCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  /* Semana más activa: máximo de sesiones en cualquier ventana de 7 días */
+  const sortedTs = sessions.map((s) => s.ts).sort((a, b) => a - b);
+  let busiestWeek = 0;
+  for (let i = 0; i < sortedTs.length; i++) {
+    let count = 1;
+    for (let j = i + 1; j < sortedTs.length && sortedTs[j] - sortedTs[i] < 7 * 86400000; j++) count++;
+    busiestWeek = Math.max(busiestWeek, count);
+  }
+
+  const progressFor = (name) => {
+    const hist = exerciseHistory(sessions, name);
+    if (hist.rows.length < 2) return null;
+    const first = hist.rows[0];
+    const last = hist.rows[hist.rows.length - 1];
+    return { first: first.weight, last: last.weight, diff: Math.round((last.weight - first.weight) * 10) / 10 };
+  };
+  const squatProgress = progressFor("Sentadilla con barra");
+  const benchProgress = progressFor("Press banca con barra");
+
+  /* Proyección motivacional a 1 año según el ritmo actual */
+  const weeksActive = Math.max(1, (Date.now() - (sortedTs[0] || Date.now())) / (7 * 86400000));
+  const sessionsPerWeek = workouts.length / weeksActive;
+  const volumePerWeek = totalVolume / weeksActive;
+  const projectedDays = Math.round(sessionsPerWeek * 52);
+  const projectedTonnes = Math.round((volumePerWeek * 52) / 1000);
+
+  return {
+    totalSets, totalVolume, activeDays, favDiscId, favExercise, favHour, busiestWeek,
+    squatProgress, benchProgress, projectedDays, projectedTonnes,
+  };
+}
+
+/* ─── Insight automático del día (rota diariamente, determinista por fecha) ─── */
+function computeInsight(sessions) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  if (workouts.length < 5) {
+    return "Cada sesión cuenta. Sigue sumando para desbloquear tus primeros insights 💡";
+  }
+  const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  const dayCount = {};
+  sessions.forEach((s) => { const d = new Date(s.ts).getDay(); dayCount[d] = (dayCount[d] || 0) + 1; });
+  const bestDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  const hourCount = {};
+  sessions.forEach((s) => { const h = new Date(s.ts).getHours(); hourCount[h] = (hourCount[h] || 0) + 1; });
+  const bestHour = Object.entries(hourCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  const discCount = {};
+  workouts.forEach((s) => { discCount[s.disc] = (discCount[s.disc] || 0) + 1; });
+  const discEntries = Object.entries(discCount).sort((a, b) => a[1] - b[1]);
+  const weakestDisc = discEntries[0]?.[0];
+  const weakestLabel = DISCIPLINES[weakestDisc]?.label || weakestDisc;
+
+  const last4 = workouts.slice(-8, -4).reduce((a, s) => a + sessionVolume(s), 0);
+  const prev4 = workouts.slice(-4).reduce((a, s) => a + sessionVolume(s), 0);
+  const volPct = last4 > 0 ? Math.round(((prev4 - last4) / last4) * 100) : null;
+
+  const daysSinceLast = workouts.length ? Math.floor((Date.now() - workouts[workouts.length - 1].ts) / 86400000) : null;
+
+  const candidates = [
+    `Entrenas mejor los ${dayNames[bestDay]} 📅`,
+    bestHour !== undefined ? `Tu mejor hora para entrenar es alrededor de las ${bestHour}:00 ⏰` : null,
+    `Tu punto débil es ${weakestLabel}. ¿La trabajamos? 🎯`,
+    volPct !== null ? `En tus últimas sesiones tu volumen ${volPct >= 0 ? "subió" : "bajó"} ${Math.abs(volPct)}% 📊` : null,
+    daysSinceLast >= 2 ? `Última sesión hace ${daysSinceLast} días. Tu cuerpo ya está recuperado 💪` : null,
+  ].filter(Boolean);
+
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  return candidates[dayOfYear % candidates.length];
+}
+
+/* ─── Reto personal (torneo contra ti mismo) ─── */
+const CHALLENGE_TYPES = [
+  { id: "streak", label: "Racha de X días", unit: "días" },
+  { id: "sessions", label: "X sesiones en Y semanas", unit: "sesiones" },
+  { id: "weight", label: "Levantar X kg en un ejercicio", unit: "kg" },
+  { id: "distance", label: "Correr una distancia en menos de X", unit: "seg" },
+];
+
+function challengeProgress(challenge, sessions, streak) {
+  if (!challenge) return null;
+  const now = Date.now();
+  const daysLeft = Math.max(0, Math.ceil((challenge.deadline - now) / 86400000));
+  const workouts = sessions.filter((s) => s.kind === "entreno" && s.ts >= challenge.startTs);
+  let current = 0;
+  let target = challenge.target;
+  let unit = "";
+  let label = "";
+  if (challenge.type === "streak") {
+    current = streak;
+    unit = "días";
+    label = `Racha de ${target} días`;
+  } else if (challenge.type === "sessions") {
+    current = workouts.length;
+    unit = "sesiones";
+    label = `${target} sesiones antes de la fecha límite`;
+  } else if (challenge.type === "weight") {
+    const hist = exerciseHistory(sessions, challenge.exercise);
+    current = hist.rows.length ? Math.max(...hist.rows.map((r) => r.weight)) : 0;
+    unit = "kg";
+    label = `Levantar ${target} kg en ${challenge.exercise}`;
+  } else if (challenge.type === "distance") {
+    const vals = workouts
+      .flatMap((s) => s.exercises)
+      .filter((e) => e.name === challenge.exercise)
+      .flatMap((e) => e.sets)
+      .filter((st) => st.ok && st.reps > 0)
+      .map((st) => st.reps);
+    current = vals.length ? Math.min(...vals) : Infinity;
+    unit = "seg";
+    label = `${challenge.exercise} en menos de ${target}s`;
+    const pct = current === Infinity ? 0 : Math.min(1, target / current);
+    return { daysLeft, current: current === Infinity ? null : current, target, unit, label, pct, done: current <= target, lowerIsBetter: true };
+  }
+  const pct = Math.min(1, current / target);
+  return { daysLeft, current, target, unit, label, pct, done: current >= target, lowerIsBetter: false };
+}
+
 function heroForStreak(streak) {
   let hero = null;
   for (const h of HEROES) if (streak >= h.days) hero = h;
@@ -937,6 +1220,36 @@ const FOCUS_ZONES = {
 };
 
 /* ═══════════════════ COMPONENTES UI ═══════════════════ */
+
+/* Confetti CSS puro: 20 partículas cayendo, sin librerías */
+const CONFETTI_COLORS = [C.cyan, C.green, C.orange, C.yellow, C.red, C.purple];
+function Confetti({ show }) {
+  const [particles] = useState(() => Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    delay: Math.random() * 0.4,
+    duration: 1.8 + Math.random() * 0.8,
+    size: 6 + Math.random() * 6,
+    rotate: Math.random() * 360,
+  })));
+  if (!show) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, pointerEvents: "none", overflow: "hidden" }}>
+      {particles.map((p) => (
+        <span
+          key={p.id}
+          style={{
+            position: "absolute", top: -20, left: `${p.left}%`,
+            width: p.size, height: p.size * 0.4, background: p.color,
+            transform: `rotate(${p.rotate}deg)`,
+            animation: `confettiFall ${p.duration}s ease-in ${p.delay}s forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function MuscleMap({ zones }) {
   const on = (z) => zones.includes(z);
@@ -1254,18 +1567,43 @@ const NOTIF_HOURS = [
   { id: "night", label: "Noche 8pm", hour: 20 },
 ];
 
+const GOAL_OPTIONS = [
+  { id: "rendimiento", emoji: "🏆", label: "Rendimiento deportivo", desc: "Fútbol, atletismo",
+    msg: "Tu camino al alto rendimiento empieza hoy. F.A.S.E. te llevará ahí." },
+  { id: "musculo", emoji: "💪", label: "Ganar músculo y fuerza", desc: "Gimnasio, hipertrofia",
+    msg: "La fuerza no se pide, se construye. Empecemos." },
+  { id: "grasa", emoji: "🔥", label: "Perder grasa y definirme", desc: "Volumen alto, constancia",
+    msg: "Cada sesión te acerca a la mejor versión de ti. Vamos." },
+  { id: "general", emoji: "⚡", label: "Mejorar condición física general", desc: "Un poco de todo",
+    msg: "La versatilidad es tu superpoder. F.A.S.E. te acompaña en cada disciplina." },
+  { id: "bienestar", emoji: "🧘", label: "Movilidad y bienestar", desc: "Cuidar el cuerpo",
+    msg: "Cuidar tu cuerpo es la inversión más importante que harás. Empecemos con calma." },
+];
+
+const EXPERIENCE_OPTIONS = [
+  { id: "nuevo", emoji: "🥚", label: "Soy nuevo", desc: "Menos de 3 meses" },
+  { id: "base", emoji: "🌱", label: "Tengo algo de base", desc: "3-12 meses" },
+  { id: "año", emoji: "💪", label: "Llevo más de un año", desc: "Experiencia sólida" },
+  { id: "atleta", emoji: "🔥", label: "Soy atleta o entreno serio", desc: "Alto nivel" },
+];
+
 function Welcome({ onDone }) {
   const [step, setStep] = useState(1);
   const [value, setValue] = useState("");
+  const [goal, setGoal] = useState(null);
+  const [experience, setExperience] = useState(null);
+  const [days, setDays] = useState(4);
   const [mode, setMode] = useState(null);
-  const goToMode = () => {
-    if (value.trim()) setStep(2);
-  };
+
   const chooseMode = (m) => {
     setMode(m);
-    setStep(3);
+    setStep(6);
   };
-  const finish = () => onDone(value.trim(), mode);
+  const finish = () => {
+    store.set("profile", { goal, experience, days });
+    store.set("weekly_goal", days);
+    onDone(value.trim(), mode);
+  };
 
   const acceptNotifs = async (hourId) => {
     try {
@@ -1281,12 +1619,38 @@ function Welcome({ onDone }) {
     } catch {
       /* notificaciones no disponibles */
     }
-    finish();
+    setStep(7);
   };
 
-  if (step === 3) {
-    return (
-      <div className="fade-up" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center", padding: 28, gap: 12 }}>
+  const wrap = (children) => (
+    <div className="fade-up" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center", padding: 28, gap: 12 }}>
+      {children}
+    </div>
+  );
+
+  if (step === 7) {
+    const g = GOAL_OPTIONS.find((o) => o.id === goal);
+    return wrap(
+      <div style={{ textAlign: "center" }}>
+        <div className="pop" style={{ fontSize: 70 }}>🥚</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 14 }}>¡Bienvenido, {value.trim()}!</h2>
+        <p style={{ fontSize: 14, color: C.mut, marginTop: 10, lineHeight: 1.6, padding: "0 8px" }}>
+          {g ? g.msg : "Tu momento es ahora. Empecemos."}
+        </p>
+        <button
+          className="btn-xl"
+          onClick={finish}
+          style={{ marginTop: 24, background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, color: "#07070C" }}
+        >
+          COMENZAR
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 6) {
+    return wrap(
+      <>
         <div style={{ textAlign: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 40 }}>🔔</div>
         </div>
@@ -1302,22 +1666,18 @@ function Welcome({ onDone }) {
         </div>
         <button
           className="btn-xl"
-          onClick={finish}
+          onClick={() => setStep(7)}
           style={{ marginTop: 8, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
         >
           Ahora no
         </button>
-      </div>
+      </>
     );
   }
 
-  if (step === 2) {
-    return (
-      <div className="fade-up" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center", padding: 28, gap: 12 }}>
-        <div style={{ textAlign: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 40 }}>👋</div>
-          <p style={{ color: C.text, fontSize: 18, fontWeight: 700, marginTop: 8 }}>Hola, {value.trim()}</p>
-        </div>
+  if (step === 5) {
+    return wrap(
+      <>
         <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Cómo prefieres entrenar?</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
           {MODE_OPTIONS.map((m) => (
@@ -1330,25 +1690,79 @@ function Welcome({ onDone }) {
             </button>
           ))}
         </div>
-        <button onClick={() => setStep(1)} style={{ color: C.dim, fontSize: 13, marginTop: 12, fontWeight: 600 }}>
-          ‹ Volver
-        </button>
-      </div>
+        <button onClick={() => setStep(4)} style={{ color: C.dim, fontSize: 13, marginTop: 12, fontWeight: 600 }}>‹ Volver</button>
+      </>
     );
   }
 
-  return (
-    <div
-      className="fade-up"
-      style={{
-        minHeight: "100svh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        padding: 28,
-        gap: 12,
-      }}
-    >
+  if (step === 4) {
+    return wrap(
+      <>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Cuántos días a la semana puedes entrenar?</p>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          {[2, 3, 4, 5, 6].map((n) => (
+            <button
+              key={n}
+              className="card"
+              onClick={() => setDays(n)}
+              style={{ flex: 1, padding: "14px 4px", textAlign: "center", border: `1px solid ${days === n ? C.cyan : C.border}` }}
+            >
+              <span style={{ fontSize: 16, fontWeight: 800, color: days === n ? C.cyan : C.text }}>{n}</span>
+            </button>
+          ))}
+        </div>
+        <button className="btn-xl" onClick={() => setStep(5)} style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}>CONTINUAR</button>
+        <button onClick={() => setStep(3)} style={{ color: C.dim, fontSize: 13, marginTop: 8, fontWeight: 600 }}>‹ Volver</button>
+      </>
+    );
+  }
+
+  if (step === 3) {
+    return wrap(
+      <>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Cuánto tiempo llevas entrenando?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+          {EXPERIENCE_OPTIONS.map((e) => (
+            <button key={e.id} className="card" onClick={() => { setExperience(e.id); setStep(4); }} style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
+              <span style={{ fontSize: 26 }}>{e.emoji}</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>{e.label}</div>
+                <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{e.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setStep(2)} style={{ color: C.dim, fontSize: 13, marginTop: 12, fontWeight: 600 }}>‹ Volver</button>
+      </>
+    );
+  }
+
+  if (step === 2) {
+    return wrap(
+      <>
+        <div style={{ textAlign: "center", marginBottom: 4 }}>
+          <div style={{ fontSize: 40 }}>👋</div>
+          <p style={{ color: C.text, fontSize: 18, fontWeight: 700, marginTop: 8 }}>Hola, {value.trim()}</p>
+        </div>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Qué quieres lograr?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          {GOAL_OPTIONS.map((g) => (
+            <button key={g.id} className="card" onClick={() => { setGoal(g.id); setStep(3); }} style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
+              <span style={{ fontSize: 26 }}>{g.emoji}</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>{g.label}</div>
+                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{g.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setStep(1)} style={{ color: C.dim, fontSize: 13, marginTop: 10, fontWeight: 600 }}>‹ Volver</button>
+      </>
+    );
+  }
+
+  return wrap(
+    <>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div className="pop" style={{ fontSize: 64, marginBottom: 12 }}>⚡</div>
         <h1
@@ -1375,13 +1789,13 @@ function Welcome({ onDone }) {
         value={value}
         maxLength={24}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && goToMode()}
+        onKeyDown={(e) => e.key === "Enter" && value.trim() && setStep(2)}
         autoFocus
       />
       <button
         className="btn-xl"
         disabled={!value.trim()}
-        onClick={goToMode}
+        onClick={() => setStep(2)}
         style={{ background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, color: "#07070C", marginTop: 8 }}
       >
         CONTINUAR
@@ -1389,17 +1803,19 @@ function Welcome({ onDone }) {
       <p style={{ color: C.dim, fontSize: 12, textAlign: "center", marginTop: 8 }}>
         Sin cuentas ni correos. Todo se guarda solo en tu dispositivo.
       </p>
-    </div>
+    </>
   );
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode, broken, canFreeze, onFreeze, challenge }) {
   const pro = mode === "pro";
   const hero = heroForStreak(streak);
   const nextHero = HEROES.find((h) => h.days > streak);
   const recent = sessions.slice(-5).reverse();
   const lastEntreno = [...sessions].reverse().find((s) => s.kind === "entreno");
+  const insight = useMemo(() => computeInsight(sessions), [sessions]);
+  const challProg = useMemo(() => challengeProgress(challenge, sessions, streak), [challenge, sessions, streak]);
 
   /* Resumen semanal (desde el lunes) */
   const weekList = sessions.filter((s) => s.ts >= startOfWeek());
@@ -1427,6 +1843,29 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, mode,
         Hola, <span style={{ color: C.cyan }}>{name}</span> {!pro && "👋"}
       </p>
       <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
+
+      <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.cyan}44` }}>
+        <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>💡 INSIGHT DEL DÍA</p>
+        <p style={{ fontSize: 13, marginTop: 3, lineHeight: 1.4 }}>{insight}</p>
+      </div>
+
+      {challProg && (
+        <div className="card" style={{ marginTop: 10, padding: "13px 14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontSize: 13, fontWeight: 800 }}>🏆 {challProg.label}</span>
+            <span style={{ fontSize: 11, color: C.dim }}>{challProg.daysLeft}d restantes</span>
+          </div>
+          <div style={{ height: 8, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 8 }}>
+            <div style={{
+              height: "100%", width: `${challProg.pct * 100}%`, borderRadius: 99, transition: "width .5s ease",
+              background: `linear-gradient(90deg, ${C.red}, ${challProg.pct > 0.5 ? C.yellow : C.red}, ${C.green})`,
+            }} />
+          </div>
+          <p style={{ fontSize: 11, color: C.mut, marginTop: 6 }}>
+            {challProg.current ?? "—"} / {challProg.target} {challProg.unit} {challProg.done ? "· ¡Completado! 🎉" : ""}
+          </p>
+        </div>
+      )}
 
       {pro ? (
         /* Modo Control total: estadísticas limpias, sin héroes ni animaciones */
@@ -1623,6 +2062,19 @@ const TRAIN_CARDS = [
   { id: "futbol", ...FUTBOL_META },
   { id: "atletismo", ...DISCIPLINES.atletismo },
 ];
+
+/* Sugiere primero la disciplina afín al objetivo elegido en el onboarding */
+function orderedTrainCards() {
+  const profile = store.get("profile", null);
+  if (!profile?.goal) return TRAIN_CARDS;
+  const priority = { rendimiento: ["futbol", "atletismo"], musculo: ["gimnasio"], grasa: ["gimnasio", "calistenia"] }[profile.goal];
+  if (!priority) return TRAIN_CARDS;
+  return [...TRAIN_CARDS].sort((a, b) => {
+    const ia = priority.indexOf(a.id);
+    const ib = priority.indexOf(b.id);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+}
 
 const MAX_CUSTOM_ROUTINES = 10;
 
@@ -2088,7 +2540,82 @@ function IntervalMode({ onFinish, onSave }) {
   );
 }
 
-function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial }) {
+/* ─── Reto personal: creación y seguimiento ─── */
+function ChallengeScreen({ challenge, sessions, streak, onSave, onBack }) {
+  const [type, setType] = useState("streak");
+  const [target, setTarget] = useState("30");
+  const [exercise, setExercise] = useState(RM_EXERCISES[0]);
+  const [days, setDays] = useState("30");
+
+  const prog = challenge ? challengeProgress(challenge, sessions, streak) : null;
+
+  const create = () => {
+    const t = parseFloat(target) || 0;
+    if (t <= 0) return;
+    onSave({
+      type, target: t, exercise: type === "weight" || type === "distance" ? exercise : null,
+      startTs: Date.now(), deadline: Date.now() + (parseInt(days, 10) || 30) * 86400000,
+    });
+  };
+
+  if (challenge) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 16 }}>🏆</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>{prog.label}</h2>
+        <div style={{ fontSize: 42, fontWeight: 900, color: prog.done ? C.green : C.orange, marginTop: 12 }}>
+          {prog.current ?? "—"} / {prog.target} {prog.unit}
+        </div>
+        <div style={{ height: 10, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 12 }}>
+          <div style={{
+            height: "100%", width: `${prog.pct * 100}%`, borderRadius: 99,
+            background: `linear-gradient(90deg, ${C.red}, ${C.yellow}, ${C.green})`,
+          }} />
+        </div>
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 8 }}>{prog.daysLeft} días restantes</p>
+        {prog.done && <p style={{ fontSize: 15, fontWeight: 800, color: C.green, marginTop: 10 }}>🎉 ¡Reto completado!</p>}
+        <button
+          className="btn-xl"
+          onClick={() => onSave(null)}
+          style={{ marginTop: 20, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
+        >
+          Eliminar reto
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>🏆 Nuevo reto personal</h2>
+      <div className="sec-title">Tipo de reto</div>
+      <div className="chip-wrap">
+        {CHALLENGE_TYPES.map((t) => (
+          <button key={t.id} className={`chip ${type === t.id ? "on" : ""}`} style={type === t.id ? { background: C.yellow } : {}} onClick={() => setType(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {(type === "weight" || type === "distance") && (
+        <>
+          <div className="sec-title">Ejercicio</div>
+          <input className="input" value={exercise} onChange={(e) => setExercise(e.target.value)} placeholder="Nombre exacto del ejercicio" />
+        </>
+      )}
+      <div className="sec-title">Meta ({CHALLENGE_TYPES.find((t) => t.id === type)?.unit})</div>
+      <input className="input" type="number" value={target} onChange={(e) => setTarget(e.target.value)} />
+      <div className="sec-title">Fecha límite (días desde hoy)</div>
+      <input className="input" type="number" value={days} onChange={(e) => setDays(e.target.value)} />
+      <button className="btn-xl" onClick={create} style={{ marginTop: 16, background: C.yellow, color: "#07070C" }}>
+        🏁 CREAR RETO
+      </button>
+    </div>
+  );
+}
+
+function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge }) {
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
@@ -2205,6 +2732,14 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial })
   if (special === "amrap") return <AmrapMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
+  if (special === "reto") {
+    return (
+      <ChallengeScreen
+        challenge={challenge} sessions={sessions} streak={streak}
+        onSave={onSaveChallenge} onBack={() => setSpecial(null)}
+      />
+    );
+  }
 
   /* ── Pantalla 1: lista de disciplinas ── */
   if (!discId) {
@@ -2213,7 +2748,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial })
         <h2 style={{ fontSize: 18, fontWeight: 800 }}>Entrenar</h2>
         <p className="muted" style={{ marginTop: 2 }}>Elige tu disciplina de hoy</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-          {TRAIN_CARDS.map((d) => (
+          {orderedTrainCards().map((d) => (
             <button
               key={d.id}
               className="card fade-up"
@@ -2248,6 +2783,13 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial })
             <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Intervalos</div>
           </button>
         </div>
+        <button className="card" onClick={() => setSpecial("reto")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.yellow}` }}>
+          <span style={{ fontSize: 24 }}>🏆</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Reto Personal</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{challenge ? "Ver progreso de tu reto activo" : "Crea un desafío contra ti mismo"}</div>
+          </div>
+        </button>
 
         <div className="sec-title">Mi rutina</div>
         <button
@@ -2581,7 +3123,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial })
 }
 
 /* ─── SESIÓN ACTIVA ─── */
-function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onToggleVoice }) {
+function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onToggleVoice, onViewStats }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
   const [phase, setPhase] = useState("work"); // work | rest | exdone | finished
@@ -2593,11 +3135,47 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
   const [repsError, setRepsError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [flashDone, setFlashDone] = useState(false);
+  const [sessionSecs, setSessionSecs] = useState(0);
+  const [confetti, setConfetti] = useState(false);
   const restRef = useRef(0);
+  const [startTs] = useState(() => Date.now());
 
   const ex = plan.exercises[exIdx];
   const isLastEx = exIdx === plan.exercises.length - 1;
   const lvl = LEVELS[plan.lvlIdx];
+
+  const popConfetti = () => {
+    setConfetti(true);
+    setTimeout(() => setConfetti(false), 2500);
+  };
+
+  /* Cronómetro global de la sesión */
+  useEffect(() => {
+    const t = setInterval(() => setSessionSecs(Math.floor((Date.now() - startTs) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [startTs]);
+
+  /* Modo competencia: comparación contra la sesión anterior de la misma disciplina+enfoque */
+  const prevSession = useMemo(() => {
+    return [...sessions].reverse().find(
+      (s) => s.kind === "entreno" && s.disc === plan.discId && s.focusLabel === plan.focusLabel
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const prevTotals = useMemo(() => {
+    if (!prevSession) return null;
+    const okSets = prevSession.exercises.flatMap((e) => e.sets).filter((st) => st.ok);
+    return { sets: okSets.length, volume: Math.round(okSets.reduce((a, st) => a + st.weight * st.reps, 0)) };
+  }, [prevSession]);
+
+  /* Historial y récords ANTERIORES a esta sesión (para comparativas en la pantalla final) */
+  const priorHistory = useMemo(() => sessions, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const priorRecords = useMemo(() => computeRecords(priorHistory), [priorHistory]);
+  const priorAvgVolume = useMemo(() => {
+    const w = priorHistory.filter((s) => s.kind === "entreno");
+    if (!w.length) return 0;
+    return w.reduce((a, s) => a + sessionVolume(s), 0) / w.length;
+  }, [priorHistory]);
 
   /* Sugerencias de peso calculadas al iniciar la sesión */
   const suggestions = useMemo(
@@ -2698,6 +3276,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
       onSave(record);
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       if (voiceOn) speak(`¡Sesión completada! Eres un ${LEVELS[plan.lvlIdx]?.name || ""}`);
+      popConfetti();
       setPhase("finished");
     } else {
       const nextEx = plan.exercises[exIdx + 1];
@@ -2713,50 +3292,114 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
     if (window.confirm("¿Abandonar la sesión? No se guardará el progreso.")) onClose();
   };
 
-  /* Felicitaciones */
+  /* Felicitaciones — resumen épico post-sesión */
   if (phase === "finished") {
     const allSets = logs.flat();
     const okSets = allSets.filter((s) => s.ok).length;
+    const totalPlanned = plan.exercises.reduce((a, e) => a + e.sets, 0);
+    const pctComplete = totalPlanned > 0 ? okSets / totalPlanned : 1;
     const volume = Math.round(allSets.reduce((acc, s) => acc + s.weight * s.reps, 0));
     const newStreak = streak;
     const hero = heroForStreak(newStreak);
     const justUnlocked = HEROES.find((h) => h.days === newStreak);
+
+    const title = pctComplete >= 1 ? "¡SESIÓN PERFECTA! 🔥" : pctComplete > 0.8 ? "¡Gran trabajo! 💪" : "¡Buen esfuerzo! Mañana más fuerte 🦾";
+    const bulldogs = (volume / 20).toFixed(0); // 1 bulldog ≈ 20kg
+
+    const volDiffPct = priorAvgVolume > 0 ? Math.round(((volume - priorAvgVolume) / priorAvgVolume) * 100) : null;
+
+    /* Detectar si esta sesión rompió algún récord previo */
+    let newRecord = null;
+    plan.exercises.forEach((e, i) => {
+      const okLogs = (logs[i] || []).filter((l) => l.ok);
+      if (!okLogs.length) return;
+      const best = okLogs.reduce((a, b) => (b.weight * 1000 + b.reps > a.weight * 1000 + a.reps ? b : a));
+      const prior = priorRecords.find((r) => r.name === e.name);
+      const bestScore = best.weight * 1000 + best.reps;
+      if (!prior || bestScore > prior.score) {
+        if (!newRecord || bestScore - (prior?.score || 0) > newRecord.improvement) {
+          newRecord = { name: e.name, weight: best.weight, reps: best.reps, improvement: bestScore - (prior?.score || 0) };
+        }
+      }
+    });
+
+    /* Sugerencia de la siguiente sesión (equilibrio muscular básico) */
+    const NEXT_SUGGESTION = {
+      pecho: "Espalda y bíceps", espalda: "Pecho y tríceps", piernas: "Tren superior",
+      hombros: "Piernas y core", brazos: "Piernas", gluteos: "Tren superior",
+      sup: "Piernas y glúteos", inf: "Pecho, espalda y hombros", todo: "Un enfoque específico mañana",
+    };
+    const focusKey = Object.keys(NEXT_SUGGESTION).find((k) => plan.focusLabel?.toLowerCase().includes(k));
+    const suggestion = plan.discId === "gimnasio" ? NEXT_SUGGESTION[focusKey] || "Otro grupo muscular" : null;
+
     return (
-      <div className="screen fade-up" style={{ paddingTop: 40, textAlign: "center", paddingBottom: 30 }}>
-        <div className="pop" style={{ fontSize: 70 }}>🎉</div>
-        <h2 style={{ fontSize: 26, fontWeight: 900, marginTop: 10 }}>¡FELICITACIONES!</h2>
-        <p style={{ color: C.mut, marginTop: 6, fontSize: 14 }}>
-          Sesión de {plan.discLabel} completada
-        </p>
+      <div className="screen fade-up" style={{ paddingTop: 30, textAlign: "center", paddingBottom: 30 }}>
+        <Confetti show={confetti} />
+        <div className="pop" style={{ fontSize: 64 }}>{hero.emoji}</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>{title}</h2>
+        <p style={{ color: C.mut, marginTop: 4, fontSize: 13 }}>Sesión de {plan.discLabel} completada</p>
+
         {justUnlocked && (
-          <div className="card pop" style={{ marginTop: 16, borderColor: C.yellow, background: "rgba(255,214,0,0.07)" }}>
-            <div style={{ fontSize: 40 }}>{justUnlocked.emoji}</div>
-            <div style={{ fontWeight: 800, color: C.yellow, marginTop: 4 }}>¡Héroe desbloqueado: {justUnlocked.name}!</div>
-            <div style={{ fontSize: 12, color: C.mut, fontStyle: "italic" }}>“{justUnlocked.quote}”</div>
+          <div className="card pop" style={{ marginTop: 14, borderColor: C.yellow, background: "rgba(255,214,0,0.07)" }}>
+            <div style={{ fontSize: 36 }}>{justUnlocked.emoji}</div>
+            <div style={{ fontWeight: 800, color: C.yellow, marginTop: 4, fontSize: 13 }}>¡Héroe desbloqueado: {justUnlocked.name}!</div>
+            <div style={{ fontSize: 11, color: C.mut, fontStyle: "italic" }}>“{justUnlocked.quote}”</div>
           </div>
         )}
-        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          <StatBox label="Ejercicios" value={plan.exercises.length} accent={plan.discColor} />
-          <StatBox label="Series ✓" value={okSets} accent={C.green} />
-          <StatBox label="Racha 🔥" value={newStreak} accent={C.orange} />
+
+        {newRecord && (
+          <div className="card pop" style={{ marginTop: 12, borderColor: C.yellow, background: "rgba(255,214,0,0.1)" }}>
+            <div style={{ fontSize: 13, fontWeight: 900, color: C.yellow }}>🏆 NUEVO RÉCORD PERSONAL</div>
+            <div style={{ fontSize: 12, color: C.text, marginTop: 4 }}>
+              {newRecord.name}: {newRecord.weight > 0 ? `${newRecord.weight} kg × ${newRecord.reps}` : `${newRecord.reps} reps`}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <StatBox label="⏱ Tiempo" value={`${Math.floor(sessionSecs / 60)} min`} accent={C.cyan} />
+          <StatBox label="💪 Series" value={`${okSets}/${totalPlanned}`} accent={C.green} />
+          <StatBox label="🔥 Racha" value={newStreak} accent={C.orange} />
         </div>
+
         {volume > 0 && (
           <div className="card" style={{ marginTop: 10, padding: "12px" }}>
-            <span style={{ fontSize: 13, color: C.mut }}>Volumen total movido: </span>
+            <span style={{ fontSize: 13, color: C.mut }}>🏋️ Volumen total: </span>
             <span style={{ fontWeight: 800, color: C.cyan }}>{volume} kg</span>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>Levantaste el peso de {bulldogs} bulldogs 🐕</div>
           </div>
         )}
-        <div className="card" style={{ marginTop: 10, padding: "14px" }}>
-          <span style={{ fontSize: 26 }}>{hero.emoji}</span>
-          <div style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>
-            {hero === EGG ? "Sigue así: tu héroe está por nacer." : `${hero.name} está orgulloso de ti.`}
+
+        {volDiffPct !== null && (
+          <div className="card" style={{ marginTop: 8, padding: "11px" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: volDiffPct >= 0 ? C.green : C.mut }}>
+              {volDiffPct >= 0 ? `+${volDiffPct}% de volumen vs tu promedio 📈` : `${volDiffPct}% vs tu promedio — eso está bien, descansa mañana`}
+            </span>
           </div>
-        </div>
+        )}
+
+        {suggestion && (
+          <div className="card" style={{ marginTop: 8, padding: "11px" }}>
+            <span style={{ fontSize: 12, color: C.mut }}>Mañana sugerido: </span>
+            <span style={{ fontSize: 12, fontWeight: 700 }}>{suggestion}</span>
+          </div>
+        )}
+
+        {prevTotals && (
+          <div className="card" style={{ marginTop: 8, padding: "12px" }}>
+            {volume >= prevTotals.volume ? (
+              <span style={{ fontSize: 13, fontWeight: 800, color: C.green }}>GANASTE contra tu yo anterior 🏆</span>
+            ) : (
+              <span style={{ fontSize: 13, fontWeight: 800, color: C.orange }}>PERDISTE por poco — mañana la revancha 💪</span>
+            )}
+          </div>
+        )}
+
         <button
           className="btn-xl"
           onClick={async () => {
-            const lvl = LEVELS[plan.lvlIdx]?.name || "";
-            const text = `Completé ${okSets} series en ${plan.discLabel} nivel ${lvl} con F.A.S.E. 💪 f-a-s-e.vercel.app`;
+            const lvlName = LEVELS[plan.lvlIdx]?.name || "";
+            const text = `Completé ${okSets} series en ${plan.discLabel} nivel ${lvlName} con F.A.S.E. 💪 f-a-s-e.vercel.app`;
             try {
               await navigator.clipboard.writeText(text);
               setCopied(true);
@@ -2765,16 +3408,25 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
               /* portapapeles no disponible */
             }
           }}
-          style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+          style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
         >
           {copied ? "¡Copiado!" : "📤 Compartir"}
         </button>
+        {onViewStats && (
+          <button
+            className="btn-xl"
+            onClick={onViewStats}
+            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+          >
+            📊 Ver estadísticas
+          </button>
+        )}
         <button
           className="btn-xl"
           onClick={onClose}
           style={{ marginTop: 10, background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`, color: "#07070C" }}
         >
-          VOLVER AL INICIO
+          🏠 VOLVER AL INICIO
         </button>
       </div>
     );
@@ -2840,10 +3492,26 @@ function ActiveSession({ plan, streak, sessions, onSave, onClose, voiceOn, onTog
         <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
           {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
         </span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: sessionSecs > 5400 ? C.orange : C.text, fontVariantNumeric: "tabular-nums" }}>
+          ⏱ {String(Math.floor(sessionSecs / 60)).padStart(2, "0")}:{String(sessionSecs % 60).padStart(2, "0")}
+        </span>
         <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 15, padding: 4 }}>
           {voiceOn ? "🔊" : "🔇"}
         </button>
       </div>
+
+      {prevTotals && (() => {
+        const curSets = logs.flat().filter((s) => s.ok).length;
+        const diff = curSets - prevTotals.sets;
+        return (
+          <div className="card" style={{ marginTop: 10, padding: "8px 12px", textAlign: "center" }}>
+            <span style={{ fontSize: 11, color: C.mut }}>vs tu mejor sesión anterior de {plan.discLabel}: </span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: diff >= 0 ? C.green : C.orange }}>
+              {diff >= 0 ? `Vas +${diff} series adelante 🔥` : `Vas ${diff} series atrás ⚠️ — dale!`}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Progreso de la sesión */}
       <div style={{ display: "flex", gap: 4, marginTop: 14 }}>
@@ -3162,10 +3830,36 @@ function OneRM({ onBack }) {
 }
 
 /* ─── PROGRESO ─── */
-function Progress({ sessions }) {
+function Progress({ sessions, freezes = [], streak = 0 }) {
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
   const [recordDetail, setRecordDetail] = useState(null);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+
+  const [newAchievement, setNewAchievement] = useState(null);
+  const [achConfetti, setAchConfetti] = useState(false);
+  const { list: achievements, justUnlocked } = useMemo(() => computeAchievements(sessions, freezes), [sessions, freezes]);
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
+
+  useEffect(() => {
+    if (justUnlocked.length === 0) return undefined;
+    const t0 = setTimeout(() => {
+      setNewAchievement(justUnlocked[0]);
+      setAchConfetti(true);
+    }, 0);
+    const t1 = setTimeout(() => setNewAchievement(null), 3000);
+    const t2 = setTimeout(() => setAchConfetti(false), 2500);
+    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justUnlocked.length]);
+  const [bestStreak] = useState(() => {
+    const best = Math.max(longestStreakEver(sessions), streak, store.get("best_streak", 0));
+    store.set("best_streak", best);
+    return best;
+  });
+  const xpInfo = useMemo(() => computeXP(sessions, unlockedCount, bestStreak), [sessions, unlockedCount, bestStreak]);
+  const globalStats = useMemo(() => computeGlobalStats(sessions), [sessions]);
 
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const globalIdx = levelFromCount(sessions.length, [0, 10, 25, 50, 90, 150]);
@@ -3228,6 +3922,111 @@ function Progress({ sessions }) {
 
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
 
+  if (showAchievements) {
+    return (
+      <div className="screen">
+        <button onClick={() => setShowAchievements(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
+          ‹ Progreso
+        </button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🏅 Logros</h2>
+        <p className="muted" style={{ marginTop: 2 }}>{unlockedCount} de {achievements.length} desbloqueados</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+          {achievements.map((a) => {
+            const hidden = a.secret && !a.unlocked;
+            return (
+              <div key={a.id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", opacity: a.unlocked ? 1 : 0.5 }}>
+                <span style={{ fontSize: 30 }}>{hidden ? "❓" : a.unlocked ? a.emoji : "🔒"}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800 }}>{hidden ? "Logro secreto" : a.name}</div>
+                  <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{hidden ? "Sigue entrenando para descubrirlo" : a.desc}</div>
+                  {a.unlocked && <div style={{ fontSize: 10, color: C.cyan, marginTop: 2 }}>Desbloqueado {fmtDate(a.ts)}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (showStats) {
+    const s = globalStats;
+    const elephants = (s.totalVolume / 5000).toFixed(1);
+    const favDisc = DISCIPLINES[s.favDiscId];
+    return (
+      <div className="screen">
+        <button onClick={() => setShowStats(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
+          ‹ Progreso
+        </button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📊 Mis estadísticas</h2>
+
+        <div className="card" style={{ marginTop: 12, textAlign: "center", padding: "20px 12px" }}>
+          <div style={{ fontSize: 44, fontWeight: 900, color: C.cyan }}>{s.totalSets}</div>
+          <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>series completadas en total</div>
+        </div>
+
+        <div className="card" style={{ marginTop: 10, padding: "16px 14px" }}>
+          <div style={{ fontSize: 28, fontWeight: 900, color: C.green }}>{s.totalVolume} kg</div>
+          {s.totalVolume > 0 && (
+            <div style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
+              Has levantado el peso de {elephants} elefantes 🐘 (1 elefante ≈ 5,000 kg)
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <StatBox label="Días activos" value={s.activeDays} accent={C.orange} />
+          <StatBox label="Racha actual" value={streak} accent={C.red} />
+          <StatBox label="Mejor racha" value={bestStreak} accent={C.yellow} />
+        </div>
+
+        <div className="card" style={{ marginTop: 10, padding: "12px 14px" }}>
+          <p style={{ fontSize: 12, color: C.mut }}>Disciplina favorita</p>
+          <p style={{ fontSize: 15, fontWeight: 800, marginTop: 2 }}>{favDisc ? `${favDisc.icon} ${favDisc.label}` : "—"}</p>
+        </div>
+        <div className="card" style={{ marginTop: 8, padding: "12px 14px" }}>
+          <p style={{ fontSize: 12, color: C.mut }}>Ejercicio más frecuente</p>
+          <p style={{ fontSize: 15, fontWeight: 800, marginTop: 2 }}>{s.favExercise || "—"}</p>
+        </div>
+        <div className="card" style={{ marginTop: 8, padding: "12px 14px" }}>
+          <p style={{ fontSize: 12, color: C.mut }}>Semana más activa</p>
+          <p style={{ fontSize: 15, fontWeight: 800, marginTop: 2 }}>{s.busiestWeek} sesiones en 7 días</p>
+        </div>
+
+        {(s.squatProgress || s.benchProgress) && (
+          <>
+            <div className="sec-title">Progresión</div>
+            {s.squatProgress && (
+              <div className="card" style={{ padding: "12px 14px", marginBottom: 8 }}>
+                <p style={{ fontSize: 12, color: C.mut }}>Sentadilla: {s.squatProgress.first} kg → {s.squatProgress.last} kg</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: C.cyan, marginTop: 2 }}>
+                  Tu sentadilla {s.squatProgress.diff >= 0 ? "creció" : "bajó"} {Math.abs(s.squatProgress.diff)} kg desde que empezaste 📈
+                </p>
+              </div>
+            )}
+            {s.benchProgress && (
+              <div className="card" style={{ padding: "12px 14px" }}>
+                <p style={{ fontSize: 12, color: C.mut }}>Press banca: {s.benchProgress.first} kg → {s.benchProgress.last} kg</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: C.cyan, marginTop: 2 }}>
+                  Tu press banca {s.benchProgress.diff >= 0 ? "creció" : "bajó"} {Math.abs(s.benchProgress.diff)} kg desde que empezaste 📈
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {s.projectedDays > 0 && (
+          <div className="card" style={{ marginTop: 10, padding: "14px", borderColor: `${C.purple}55` }}>
+            <p style={{ fontSize: 13, lineHeight: 1.5 }}>
+              Si mantuvieras este ritmo, en 1 año habrías entrenado <strong style={{ color: C.purple }}>{s.projectedDays} días</strong> y
+              levantado <strong style={{ color: C.purple }}>{s.projectedTonnes} toneladas</strong> 🚀
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (recordDetail) {
     const hist = exerciseHistory(sessions, recordDetail);
     const maxVal = Math.max(1, ...hist.rows.map((r) => (r.weight > 0 ? r.weight : r.reps)));
@@ -3276,6 +4075,14 @@ function Progress({ sessions }) {
   if (!detail) {
     return (
       <div className="screen">
+        <Confetti show={achConfetti} />
+        {newAchievement && (
+          <div className="card pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, borderColor: C.yellow, background: "#13131dee", textAlign: "center", padding: "14px" }}>
+            <div style={{ fontSize: 30 }}>{newAchievement.emoji}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.yellow, marginTop: 4 }}>¡Logro desbloqueado!</div>
+            <div style={{ fontSize: 12, color: C.text, marginTop: 2 }}>{newAchievement.name}</div>
+          </div>
+        )}
         <h2 style={{ fontSize: 18, fontWeight: 800 }}>Progreso</h2>
         <p className="muted" style={{ marginTop: 2 }}>Tu nivel global como atleta</p>
 
@@ -3314,10 +4121,31 @@ function Progress({ sessions }) {
           <div style={{ fontSize: 12, color: C.dim, marginTop: 14 }}>Toca para ver el detalle ›</div>
         </button>
 
+        <div className="card" style={{ marginTop: 10, padding: "12px 14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>Rango {xpInfo.roman} · {xpInfo.rankName}</span>
+            <span style={{ fontSize: 11, color: C.dim }}>{xpInfo.xp} XP</span>
+          </div>
+          <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 6 }}>
+            <div style={{ height: "100%", width: `${xpInfo.progress * 100}%`, background: `linear-gradient(90deg, ${C.purple}, ${C.cyan})`, borderRadius: 99 }} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button className="card" onClick={() => setShowAchievements(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 20 }}>🏅</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Logros ({unlockedCount})</div>
+          </button>
+          <button className="card" onClick={() => setShowStats(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 20 }}>📊</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Estadísticas</div>
+          </button>
+        </div>
+
         <button
           className="btn-xl"
           onClick={() => setShow1rm(true)}
-          style={{ marginTop: 12, background: C.cyan, color: "#07070C", fontSize: 15 }}
+          style={{ marginTop: 10, background: C.cyan, color: "#07070C", fontSize: 15 }}
         >
           💪 CALCULAR MI 1RM
         </button>
@@ -3757,6 +4585,12 @@ export default function App() {
   const [noEquipment, setNoEquipment] = useState(() => store.get("no_equipment", false));
   const [toast, setToast] = useState(null);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
+  const [challenge, setChallenge] = useState(() => store.get("challenge", null));
+
+  const saveChallenge = (c) => {
+    setChallenge(c);
+    store.set("challenge", c);
+  };
 
   useEffect(() => {
     document.body.classList.toggle("hc", highContrast);
@@ -3884,6 +4718,7 @@ export default function App() {
         sessions={sessions}
         onSave={saveSession}
         onClose={() => { setLive(null); setTab("inicio"); }}
+        onViewStats={() => { setLive(null); setTab("progreso"); }}
         voiceOn={voiceOn}
         onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
       />
@@ -3990,15 +4825,17 @@ export default function App() {
           onTrain={() => changeTab("entrenar")} mode={mode}
           onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
           broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
+          challenge={challenge}
         />
       )}
       {tab === "entrenar" && (
         <Train
           onStart={setLive} onAccent={(c) => setAccent(c || TAB_ACCENTS.entrenar)} totalSessions={sessions.length}
           noEquipment={noEquipment} onSaveSpecial={saveSession}
+          sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
         />
       )}
-      {tab === "progreso" && <Progress sessions={sessions} />}
+      {tab === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} />}
       {tab === "cuerpo" && <Body onComplete={completeBody} />}
 
       <nav className="tabbar">
