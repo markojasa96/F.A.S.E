@@ -1857,6 +1857,117 @@ function weightSuggestion(sessions, exName) {
   return result;
 }
 
+/* ─── Guías técnicas completas (bottom sheet) para los ejercicios principales ─── */
+const EXERCISE_GUIDES = {
+  "Sentadilla con barra": {
+    setup: "Barra sobre trapecios medios. Pies a anchura de hombros. Puntas ligeramente abiertas (15-30°).",
+    ejecucion: "Inicia el movimiento sacando las caderas hacia atrás Y abajo simultáneamente. Rodillas siguen la dirección de los pies. Baja hasta que muslos estén paralelos al suelo mínimo.",
+    errores: "❌ Rodillas colapsando hacia adentro\n❌ Talones levantándose del suelo\n❌ Espalda redondeándose\n❌ Mirar hacia abajo",
+    correcciones: "✅ Empuja rodillas hacia afuera activamente\n✅ Trabaja movilidad de tobillo\n✅ Pecho arriba, mirada al frente",
+  },
+  "Peso muerto rumano": {
+    setup: "Barra pegada a las piernas. Agarre a la anchura de hombros. Espalda neutra desde el inicio.",
+    ejecucion: "Empuja la cadera hacia atrás manteniendo la barra pegada a las piernas. Rodillas con flexión mínima y constante. Baja hasta sentir tensión en isquiotibiales.",
+    errores: "❌ Redondear la espalda baja\n❌ Alejar la barra del cuerpo\n❌ Flexionar demasiado las rodillas (se vuelve sentadilla)",
+    correcciones: "✅ Core apretado todo el recorrido\n✅ Barra siempre en contacto con las piernas\n✅ Sube empujando cadera hacia adelante",
+  },
+  "Peso muerto convencional": {
+    setup: "Barra sobre el medio del pie. Espinillas casi tocando la barra. Agarre justo fuera de las piernas.",
+    ejecucion: "Pecho arriba, espalda neutra, empuja el suelo con los pies para levantar la barra pegada al cuerpo hasta la extensión completa de cadera.",
+    errores: "❌ Cadera sube antes que los hombros\n❌ Barra se aleja del cuerpo\n❌ Hiperextender la espalda arriba",
+    correcciones: "✅ Tensa la espalda antes de tirar\n✅ Empuja el suelo, no tires con la espalda\n✅ Termina con cadera y hombros a la vez",
+  },
+  "Press banca con barra": {
+    setup: "Omóplatos retraídos y hacia abajo. Pies firmes en el suelo. Agarre un poco más ancho que los hombros.",
+    ejecucion: "Baja la barra de forma controlada hasta tocar el pecho a la altura de las tetillas. Empuja hacia arriba y ligeramente hacia atrás.",
+    errores: "❌ Rebotar la barra en el pecho\n❌ Codos totalmente abiertos a 90°\n❌ Levantar la cadera del banco",
+    correcciones: "✅ Codos a 45-60° del torso\n✅ Controla el descenso 2 segundos\n✅ Mantén los pies firmes y la cadera abajo",
+  },
+  "Dominadas": {
+    setup: "Agarre prono, un poco más ancho que los hombros. Cuelga con los brazos completamente extendidos.",
+    ejecucion: "Tira llevando el pecho hacia la barra, codos hacia abajo y atrás. Sube hasta que la barbilla pase la barra. Baja con control total.",
+    errores: "❌ Usar impulso o balanceo\n❌ Rango de movimiento parcial\n❌ Encoger los hombros al inicio",
+    correcciones: "✅ Inicia retrayendo el omóplato\n✅ Sube pensando en llevar los codos al bolsillo\n✅ Baja hasta extensión completa",
+  },
+  "Press militar con barra": {
+    setup: "Barra a la altura de la clavícula. Agarre a la anchura de hombros. Core y glúteos apretados.",
+    ejecucion: "Empuja la barra en línea recta hacia arriba, metiendo la cabeza ligeramente al pasar la cara. Termina con la barra sobre la cabeza y el cuerpo alineado.",
+    errores: "❌ Arquear excesivamente la espalda baja\n❌ Empujar la barra hacia adelante\n❌ No bloquear el codo arriba",
+    correcciones: "✅ Aprieta glúteos y abdomen para proteger la espalda\n✅ Barra viaja en línea recta\n✅ Extiende completamente arriba",
+  },
+  "Remo con barra": {
+    setup: "Torso inclinado a 45°, espalda neutra. Agarre a la anchura de hombros. Rodillas con flexión leve.",
+    ejecucion: "Tira de la barra hacia el abdomen bajo, codos pegados al cuerpo. Aprieta los omóplatos al final. Baja con control.",
+    errores: "❌ Usar impulso de la espalda baja\n❌ Torso subiendo demasiado en cada rep\n❌ Tirar solo con los brazos",
+    correcciones: "✅ Mantén el torso fijo en el ángulo inicial\n✅ Inicia el tirón con la espalda, no el bíceps\n✅ Aprieta al final del recorrido",
+  },
+  "Hip thrust": {
+    setup: "Espalda superior apoyada en un banco. Barra sobre la cadera con protección. Pies a la anchura de hombros.",
+    ejecucion: "Empuja con los talones para elevar la cadera hasta la extensión completa, apretando los glúteos arriba. Baja con control.",
+    errores: "❌ Hiperextender la espalda baja arriba\n❌ Pies muy adelante o muy atrás\n❌ No llegar a la extensión completa",
+    correcciones: "✅ Barbilla metida, mirada al frente\n✅ Ajusta la posición de los pies para 90° de rodilla arriba\n✅ Aprieta glúteos con fuerza al final",
+  },
+  "Curl nórdico": {
+    setup: "Rodillas apoyadas en superficie acolchada. Tobillos anclados firmemente. Cuerpo recto de rodillas a cabeza.",
+    ejecucion: "Baja el cuerpo lo más lento posible resistiendo con los isquiotibiales, usando las manos solo al final para amortiguar.",
+    errores: "❌ Doblar la cadera durante la bajada\n❌ Caer sin control\n❌ Ir demasiado rápido",
+    correcciones: "✅ Mantén cadera y torso en línea recta\n✅ Baja en 3-5 segundos mínimo\n✅ Usa asistencia (banda o pareja) si es necesario",
+  },
+  "Fondos en paralelas": {
+    setup: "Brazos extendidos sobre las paralelas, hombros abajo y atrás. Cuerpo ligeramente inclinado adelante para enfatizar pecho.",
+    ejecucion: "Baja con control flexionando los codos hasta 90° o sentir estiramiento en el pecho. Empuja de vuelta arriba sin bloquear de golpe.",
+    errores: "❌ Bajar demasiado y forzar el hombro\n❌ Codos completamente abiertos\n❌ Balancear las piernas para impulsarse",
+    correcciones: "✅ Codos cerca del cuerpo, no muy abiertos\n✅ Baja solo hasta donde el hombro esté cómodo\n✅ Controla todo el recorrido",
+  },
+  "Plancha": {
+    setup: "Antebrazos y puntas de los pies en el suelo. Codos justo debajo de los hombros. Cuerpo en línea recta.",
+    ejecucion: "Mantén la posición apretando abdomen y glúteos, sin dejar caer ni levantar la cadera.",
+    errores: "❌ Cadera hundida hacia el suelo\n❌ Cadera muy elevada\n❌ Aguantar la respiración",
+    correcciones: "✅ Imagina que te jalan del ombligo hacia la columna\n✅ Aprieta los glúteos para alinear la cadera\n✅ Respira de forma constante",
+  },
+};
+
+function TechniqueGuideSheet({ exerciseName, tip, onClose }) {
+  const guide = EXERCISE_GUIDES[exerciseName];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "flex-end" }} onClick={onClose}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} />
+      <div
+        className="card fade-up"
+        onClick={(e) => e.stopPropagation()}
+        style={{ position: "relative", width: "100%", maxHeight: "75vh", overflowY: "auto", borderRadius: "20px 20px 0 0", padding: 20 }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ fontSize: 16, fontWeight: 900 }}>{exerciseName}</h3>
+          <button onClick={onClose} style={{ fontSize: 18, color: C.mut, padding: 4 }}>✕</button>
+        </div>
+        {!guide ? (
+          <p style={{ fontSize: 13, color: C.mut, marginTop: 12, lineHeight: 1.5 }}>💡 {tip}</p>
+        ) : (
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: C.cyan, letterSpacing: 1 }}>SETUP</p>
+              <p style={{ fontSize: 13, color: C.text, marginTop: 4, lineHeight: 1.5 }}>{guide.setup}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: C.cyan, letterSpacing: 1 }}>EJECUCIÓN</p>
+              <p style={{ fontSize: 13, color: C.text, marginTop: 4, lineHeight: 1.5 }}>{guide.ejecucion}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: C.red, letterSpacing: 1 }}>ERRORES COMUNES</p>
+              <p style={{ fontSize: 13, color: C.text, marginTop: 4, lineHeight: 1.6, whiteSpace: "pre-line" }}>{guide.errores}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, color: C.green, letterSpacing: 1 }}>CORRECCIONES</p>
+              <p style={{ fontSize: 13, color: C.text, marginTop: 4, lineHeight: 1.6, whiteSpace: "pre-line" }}>{guide.correcciones}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Series de activación específicas por ejercicio principal (no cuentan en el historial) ─── */
 const WARMUP_SETS = {
   "Sentadilla con barra": [
@@ -2608,17 +2719,78 @@ const BASQUET_SIN_CANCHA_BY_LEVEL = [
   ],
 ];
 
+/* ─── Orden lógico de ejercicios: compuestos primero, core siempre al final ─── */
+const EXERCISE_ORDER_PRIORITY = { compound_primary: 1, compound_secondary: 2, assistance: 3, core: 4 };
+
+function classifyExerciseOrder(name) {
+  const n = name.toLowerCase();
+  if (["sentadilla", "peso muerto", "press banca", "dominadas", "press militar", "hip thrust"].some((e) => n.includes(e))) {
+    return "compound_primary";
+  }
+  if (["remo", "fondos", "press inclinado", "jalón", "jalon", "press polea"].some((e) => n.includes(e))) {
+    return "compound_secondary";
+  }
+  if (["plancha", "abdomin", "core", "crunch", "rueda", "l-sit", "hollow"].some((e) => n.includes(e))) {
+    return "core";
+  }
+  return "assistance";
+}
+
+function sortExercises(exercises) {
+  return [...exercises].sort((a, b) => EXERCISE_ORDER_PRIORITY[classifyExerciseOrder(a.name)] - EXERCISE_ORDER_PRIORITY[classifyExerciseOrder(b.name)]);
+}
+
 function genBasquetRoutine(discId, lvlIdx, deloadActive) {
   const effLvlIdx = Math.max(0, Math.min(5, deloadActive ? lvlIdx - 1 : lvlIdx));
   const table = discId === "basquetCancha" ? BASQUET_CANCHA_BY_LEVEL : BASQUET_SIN_CANCHA_BY_LEVEL;
   const list = table[effLvlIdx] || table[0];
   let rest = REST_BY_LEVEL[effLvlIdx];
-  return list.map((it) => {
+  return sortExercises(list.map((it) => {
     const r = fixedItem(it);
     let sets = r.sets;
     if (deloadActive) { sets = Math.max(1, Math.round(sets * 0.6)); rest = Math.round(rest * 1.3); }
     return { ...r, sets, rest, intensity: LEVEL_SCALING[effLvlIdx]?.intensityLabel };
-  });
+  }));
+}
+
+/* ─── Educación integrada: texto breve mostrado antes de cada sesión ─── */
+const SESSION_EDUCATION = {
+  "gimnasio:pecho": "Hoy entrenas pecho, hombros y tríceps. Trabajan juntos en todos los empujes. Compuestos primero, aislamiento al final. El pecho crece con sobrecarga progresiva.",
+  "gimnasio:espalda": "La espalda es el músculo más grande del tren superior. Dominadas y remo son los reyes. Una espalda fuerte previene lesiones de hombro y mejora todos los otros ejercicios.",
+  "gimnasio:piernas": "El 70% de tu masa muscular está en las piernas. La sentadilla y el peso muerto liberan más hormona de crecimiento que cualquier otro ejercicio. No las saltes.",
+  "gimnasio:hombros": "Los hombros mueven en todas direcciones. Trabaja las tres cabezas del deltoides y el manguito rotador para hombros fuertes y sin lesiones.",
+  "gimnasio:brazos": "Bíceps y tríceps ya trabajan en cada empuje y jalón. Este día los aísla para el detalle final.",
+  "calistenia:todo": "El peso corporal entrena fuerza relativa. Eso significa más control, más coordinación y menos lesiones que el peso libre. Los gimnastas son de los atletas más fuertes.",
+  "atletismo:sprint": "Los sprints máximos requieren CNS fresco. Por eso van primero siempre. Cada sprint al 95-100%. Sin medias tintas. La velocidad no se mejora yendo suave.",
+  "futbol:portero": "El portero vive de reflejos y explosividad. Cada caída y cada salida deben ser técnica pura antes que fuerza bruta.",
+  "futbol:defensaCentral": "El defensa central gana partidos en los duelos aéreos y de fuerza. Tu trabajo hoy: piernas fuertes y posicionamiento.",
+  "futbol:lateral": "El lateral corre la banda completa, ida y vuelta, todo el partido. Resistencia de velocidad es tu arma principal.",
+  "futbol:pivote": "El pivote recupera balones y protege la defensa. Fuerza en los duelos y resistencia para estar siempre cerca del balón.",
+  "futbol:mediocampista": "El mediocampista moderno corre 11-13km por partido. Tu trabajo hoy: resistencia aeróbica y técnica bajo fatiga.",
+  "futbol:extremo": "El extremo moderno corre entre 10-13km por partido. 60% a alta intensidad. Tu trabajo hoy: velocidad explosiva y resistencia de velocidad. Sin esto el talento técnico no alcanza.",
+  "futbol:delantero": "El delantero decide partidos en los primeros metros y el primer toque. Explosividad y definición son tu prioridad hoy.",
+  "basquet:todo": "El básquetbol combina explosividad, técnica fina y resistencia. Cada sesión construye una de esas tres piezas.",
+};
+
+function getSessionEducation(plan) {
+  if (plan.discId === "gimnasio") {
+    const f = (plan.focusLabel || "").toLowerCase();
+    const key = ["pecho", "espalda", "piernas", "hombros", "brazos"].find((k) => f.includes(k));
+    return key ? SESSION_EDUCATION[`gimnasio:${key}`] : null;
+  }
+  if (plan.discId === "calistenia") return SESSION_EDUCATION["calistenia:todo"];
+  if (plan.discId === "atletismo") return SESSION_EDUCATION["atletismo:sprint"];
+  if (plan.discId?.startsWith("futbol")) {
+    const f = (plan.focusLabel || "").toLowerCase();
+    const posMap = [
+      ["portero", "portero"], ["defensa", "defensaCentral"], ["lateral", "lateral"],
+      ["pivote", "pivote"], ["mediocampista", "mediocampista"], ["extremo", "extremo"], ["delantero", "delantero"],
+    ];
+    const found = posMap.find(([needle]) => f.includes(needle));
+    return found ? SESSION_EDUCATION[`futbol:${found[1]}`] : null;
+  }
+  if (plan.discId?.startsWith("basquet")) return SESSION_EDUCATION["basquet:todo"];
+  return null;
 }
 
 /* ─── Rutinas fijas de Fútbol Parque por posición (Iniciado + THE ONE dados; se interpolan los niveles intermedios) ─── */
@@ -2738,12 +2910,12 @@ function genFutbolPositionRoutine(positionId, lvlIdx, deloadActive) {
   const base = effLvlIdx <= 1 ? pos.iniciado : pos.theOne;
   const frac = LEVEL_SETS_FRACTION[effLvlIdx];
   let rest = REST_BY_LEVEL[effLvlIdx];
-  return base.map((it) => {
+  return sortExercises(base.map((it) => {
     const r = fixedItem(it);
     let sets = Math.max(1, Math.round(r.sets * frac));
     if (deloadActive) { sets = Math.max(1, Math.round(sets * 0.6)); rest = Math.round(rest * 1.3); }
     return { ...r, sets, rest, intensity: LEVEL_SCALING[effLvlIdx]?.intensityLabel };
-  });
+  }));
 }
 
 /* ─── Generador de rutinas (5-8 ejercicios, con variación por semilla) ─── */
@@ -2795,7 +2967,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
 
   const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
-  return chosen.map((e, i) => {
+  return sortExercises(chosen.map((e, i) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
     let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
     if (deloadActive) {
@@ -2807,7 +2979,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     }
     const scheme = e.t === "peso" && sets >= 3 && !deloadActive ? schemeForExercise(effLvlIdx, i, chosen.length) : "standard";
     return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
-  });
+  }));
 }
 
 /* Generador de rutinas de Atletismo (no usa enfoque, la distancia ya filtra) */
@@ -2821,7 +2993,7 @@ function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
   const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
-  return shuffled.map((e) => {
+  return sortExercises(shuffled.map((e) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
     let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
     if (deloadActive) {
@@ -2832,7 +3004,7 @@ function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
       rest = Math.max(0, rest + phaseMods.restModifier);
     }
     return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: "velocidad", intensity: scaling.intensityLabel };
-  });
+  }));
 }
 
 /* Reconstruye un plan de sesión a partir de un registro del historial (para "Repetir última sesión") */
@@ -2908,6 +3080,79 @@ function focusGroupOf(label) {
   if (/espalda/.test(l)) return "tiron";
   if (/pierna|glúte|gluteo/.test(l)) return "piernas";
   return "otro";
+}
+
+/* ─── Recuperación muscular ─── */
+const RECOVERY_BASE_HOURS = {
+  Piernas: 72, Espalda: 60, Pecho: 48, Hombros: 48, Brazos: 36,
+  Core: 24, Atletismo: 48, "Fútbol": 36, Básquetbol: 36, Calistenia: 48, Cuerpo: 12,
+};
+const RECOVERY_INTENSITY_MULTIPLIER = {
+  heavy_duty: 1.5, gvt: 1.4, the_one: 1.3, leyenda: 1.2, elite: 1.1, campeon: 1.0, guerrero: 0.9, iniciado: 0.8,
+};
+const LEVEL_TO_INTENSITY_KEY = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
+
+function getRecoveryTime(group, intensityKey) {
+  const base = RECOVERY_BASE_HOURS[group] ?? 24;
+  const mult = RECOVERY_INTENSITY_MULTIPLIER[intensityKey] ?? 1.0;
+  return Math.round(base * mult);
+}
+
+/* Deriva el grupo muscular principal trabajado a partir del registro de sesión guardado */
+function muscleGroupOf(session) {
+  if (session.disc === "gimnasio") {
+    const l = (session.focusLabel || "").toLowerCase();
+    if (/pierna|glúte|gluteo|inferior/.test(l)) return "Piernas";
+    if (/espalda/.test(l)) return "Espalda";
+    if (/pecho/.test(l)) return "Pecho";
+    if (/hombro/.test(l)) return "Hombros";
+    if (/brazo/.test(l)) return "Brazos";
+    return "Pecho";
+  }
+  if (session.disc === "calistenia") return "Calistenia";
+  if (session.disc === "atletismo") return "Atletismo";
+  if (session.disc?.startsWith("futbol")) return "Fútbol";
+  if (session.disc?.startsWith("basquet")) return "Básquetbol";
+  if (session.kind === "cuerpo") return "Cuerpo";
+  return null;
+}
+
+function updateRecoveryState(session) {
+  const group = muscleGroupOf(session);
+  if (!group) return;
+  let intensityKey = LEVEL_TO_INTENSITY_KEY[session.levelIdx] || "campeon";
+  if (session.methodology === "heavy_duty") intensityKey = "heavy_duty";
+  else if (session.methodology === "gvt") intensityKey = "gvt";
+  const hoursNeeded = getRecoveryTime(group, intensityKey);
+  const recovery = store.get("recovery", {});
+  recovery[group] = { lastSession: session.ts, hoursNeeded };
+  store.set("recovery", recovery);
+}
+
+/* Estado agregado de recuperación para mostrar en Inicio */
+function getRecoveryStatus() {
+  const recovery = store.get("recovery", {});
+  const now = Date.now();
+  const groups = Object.entries(recovery).map(([group, info]) => {
+    const hoursElapsed = (now - info.lastSession) / 3600000;
+    const hoursLeft = Math.max(0, Math.round(info.hoursNeeded - hoursElapsed));
+    return { group, hoursLeft, recovered: hoursLeft <= 0 };
+  });
+  const worst = groups.filter((g) => !g.recovered).sort((a, b) => b.hoursLeft - a.hoursLeft)[0];
+  const recentIntenseSessions = Object.values(recovery).filter((r) => now - r.lastSession < 3 * 86400000).length;
+  let level = "green";
+  let message = "Listo para entrenar fuerte";
+  let chipLabel = "🟢 Listo para entrenar";
+  if (worst && worst.hoursLeft > 24) {
+    level = "red";
+    message = "Sesión ligera recomendada";
+    chipLabel = "🔴 Descanso o movilidad";
+  } else if ((worst && worst.hoursLeft > 0) || recentIntenseSessions >= 3) {
+    level = "yellow";
+    message = worst ? `Puedes entrenar, evita ${worst.group}` : "Puedes entrenar, con moderación";
+    chipLabel = worst ? `🟡 Evita ${worst.group.toLowerCase()} hoy` : "🟡 Entrena con moderación";
+  }
+  return { level, message, chipLabel, groups: groups.sort((a, b) => a.hoursLeft - b.hoursLeft), worst };
 }
 
 /* Devuelve una lista de sugerencias (la primera es la principal; "ver otro plan" rota entre el resto) */
@@ -3117,10 +3362,44 @@ function programDailyCandidate(sessions) {
   return { discId: today.discId, focusId: today.focusId, lvlIdx, reason: `Semana ${active.week} — ${active.program.name}: ${today.label}` };
 }
 
+/* Grupo muscular objetivo de un candidato de plan (para evitar sugerir un grupo sin recuperar) */
+function candidateMuscleGroup(c) {
+  if (c.discId === "gimnasio") {
+    const f = (c.focusId || "").toLowerCase();
+    if (f === "todo") return null;
+    if (f === "piernas" || f === "gluteos" || f === "inf") return "Piernas";
+    if (f === "espalda") return "Espalda";
+    if (f === "pecho" || f === "sup") return "Pecho";
+    if (f === "hombros") return "Hombros";
+    if (f === "brazos") return "Brazos";
+    return null;
+  }
+  if (c.discId === "calistenia") return "Calistenia";
+  if (c.discId === "atletismo") return "Atletismo";
+  if (c.discId?.startsWith("futbol")) return "Fútbol";
+  if (c.discId?.startsWith("basquet")) return "Básquetbol";
+  return null;
+}
+
+/* Evita sugerir en primer lugar un grupo muscular que aún no está recuperado */
+function deprioritizeUnrecovered(candidates) {
+  const status = getRecoveryStatus();
+  const unrecoveredGroups = new Set(status.groups.filter((g) => !g.recovered).map((g) => g.group));
+  if (!unrecoveredGroups.size) return candidates;
+  const ready = [];
+  const resting = [];
+  candidates.forEach((c) => {
+    const group = candidateMuscleGroup(c);
+    (group && unrecoveredGroups.has(group) ? resting : ready).push(c);
+  });
+  return ready.length ? [...ready, ...resting] : candidates;
+}
+
 function getDailyPlan(sessions) {
   const today = todayKey();
   const programCandidate = programDailyCandidate(sessions);
-  const candidates = programCandidate ? [programCandidate, ...dailyPlanCandidates(sessions)] : dailyPlanCandidates(sessions);
+  const rawCandidates = programCandidate ? [programCandidate, ...dailyPlanCandidates(sessions)] : dailyPlanCandidates(sessions);
+  const candidates = deprioritizeUnrecovered(rawCandidates);
   const cached = store.get("daily_plan", null);
   if (cached && cached.date === today && cached.fromProgram === !!programCandidate) {
     return { plan: cached.plan, index: cached.index, candidates };
@@ -4377,6 +4656,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   const [tappedHero, setTappedHero] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const longPressRef = useRef(null);
 
   /* Plan del día */
@@ -4469,6 +4749,41 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         Hola, <span style={{ color: C.cyan }}>{name}</span> {!pro && "👋"}
       </p>
       <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
+
+      {!pro && (() => {
+        const status = getRecoveryStatus();
+        const color = status.level === "green" ? C.green : status.level === "yellow" ? C.yellow : C.red;
+        return (
+          <div style={{ marginTop: 8 }}>
+            <button
+              onClick={() => setShowRecovery((v) => !v)}
+              style={{
+                fontSize: 11, fontWeight: 800, color, background: `${color}18`,
+                padding: "5px 12px", borderRadius: 99, border: `1px solid ${color}44`,
+              }}
+            >
+              {status.chipLabel}
+            </button>
+            {showRecovery && (
+              <div className="card fade-up" style={{ marginTop: 8, padding: "10px 14px" }}>
+                <p style={{ fontSize: 12, color: C.mut, lineHeight: 1.4 }}>{status.message}</p>
+                {status.groups.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+                    {status.groups.map((g) => (
+                      <div key={g.group} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                        <span style={{ color: C.mut }}>{g.group}</span>
+                        <span style={{ fontWeight: 700, color: g.recovered ? C.green : g.hoursLeft > 24 ? C.red : C.yellow }}>
+                          {g.recovered ? "🟢 Recuperado" : `${g.hoursLeft > 24 ? "🔴" : "🟡"} ${g.hoursLeft}h restantes`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {pro ? (
         /* Modo Control total: estadísticas limpias, sin héroes ni animaciones */
@@ -5001,8 +5316,456 @@ function CustomRoutineBuilder({ initial, onSave, onCancel }) {
   );
 }
 
+/* ─── Modo especial: Heavy Duty (Mike Mentzer) ─── */
+const HEAVY_DUTY_EXERCISES = {
+  Pecho: [
+    { name: "Press banca con barra", warmup: "50% × 12" },
+    { name: "Aperturas con mancuernas" },
+    { name: "Fondos en paralelas" },
+  ],
+  Espalda: [
+    { name: "Dominadas", warmup: "Asistidas si no puedes" },
+    { name: "Remo con barra" },
+    { name: "Pullover con mancuerna" },
+  ],
+  Piernas: [
+    { name: "Sentadilla con barra", warmup: "50% × 12" },
+    { name: "Prensa de piernas" },
+    { name: "Curl femoral" },
+  ],
+  Hombros: [
+    { name: "Press militar con barra", warmup: "50% × 12" },
+    { name: "Elevaciones laterales" },
+    { name: "Face pull" },
+  ],
+};
+
+function intensityScore(sets) {
+  return sets.reduce((score, set) => {
+    if (set.reachedFailure) return score + 10;
+    if (set.rpe >= 9) return score + 7;
+    if (set.rpe >= 8) return score + 4;
+    return score + 1;
+  }, 0);
+}
+
+function HeavyDutyMode({ onFinish, onSave, lvlIdx }) {
+  const [group, setGroup] = useState(null);
+  const [accepted, setAccepted] = useState(false);
+  const [exIdx, setExIdx] = useState(0);
+  const [phase, setPhase] = useState("warmup"); // warmup | work | failure | rest | done
+  const [weight, setWeight] = useState("");
+  const [reps, setReps] = useState("");
+  const [log, setLog] = useState([]);
+  const [restLeft, setRestLeft] = useState(240);
+  const [failMsg, setFailMsg] = useState(false);
+  const restRef = useRef(240);
+
+  const canDo = lvlIdx >= 2;
+  const exercises = group ? HEAVY_DUTY_EXERCISES[group] : null;
+  const ex = exercises?.[exIdx];
+
+  useEffect(() => {
+    if (phase !== "rest") return undefined;
+    restRef.current = 240;
+    const t = setInterval(() => {
+      restRef.current -= 1;
+      if (restRef.current <= 0) {
+        clearInterval(t);
+        tripleBeep();
+        setPhase("warmup");
+        setExIdx((i) => i + 1);
+        setWeight(""); setReps("");
+      } else {
+        setRestLeft(restRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [phase]);
+
+  const logFailure = (reachedFailure) => {
+    setLog((prev) => [...prev, { name: ex.name, weight: parseFloat(weight) || 0, reps: parseInt(reps, 10) || 0, reachedFailure }]);
+    if (!reachedFailure) {
+      setFailMsg(true);
+      setTimeout(() => {
+        setFailMsg(false);
+        if (exIdx + 1 >= exercises.length) setPhase("done");
+        else { setRestLeft(240); setPhase("rest"); }
+      }, 2000);
+      return;
+    }
+    if (exIdx + 1 >= exercises.length) setPhase("done");
+    else { setRestLeft(240); setPhase("rest"); }
+  };
+
+  const finish = () => {
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "gimnasio", methodology: "heavy_duty",
+      focusLabel: group, levelIdx: lvlIdx,
+      exercises: log.map((l) => ({ name: l.name, sets: [{ weight: l.weight, reps: l.reps, ok: l.reachedFailure, rpe: l.reachedFailure ? 10 : 7 }] })),
+    });
+    store.set("hd_recovery", { group, ts: Date.now() });
+    onFinish();
+  };
+
+  if (!group) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 12 }}>💀</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Heavy Duty</h2>
+        <p className="muted" style={{ marginTop: 4 }}>Alta intensidad, poco volumen. 1-2 series por ejercicio al fallo absoluto. Método de Mike Mentzer. Para avanzados.</p>
+        {!canDo ? (
+          <div className="card" style={{ marginTop: 16, opacity: 0.6 }}>
+            <p style={{ fontSize: 12, color: C.mut }}>Disponible desde nivel Campeón</p>
+          </div>
+        ) : !accepted ? (
+          <div className="card" style={{ marginTop: 16, borderColor: `${C.red}66`, background: "rgba(255,59,92,0.06)" }}>
+            <p style={{ fontSize: 12, color: C.red, fontWeight: 700, lineHeight: 1.5 }}>
+              ⚠️ Heavy Duty es extremadamente intenso. No hagas más de 2 sesiones por semana del mismo grupo muscular. Si tienes lesiones, consulta un profesional.
+            </p>
+            <button className="btn-xl" onClick={() => setAccepted(true)} style={{ marginTop: 12, background: C.red, color: "#fff" }}>Entiendo, continuar</button>
+          </div>
+        ) : (
+          <div className="chip-wrap" style={{ marginTop: 16, justifyContent: "center" }}>
+            {Object.keys(HEAVY_DUTY_EXERCISES).map((g) => (
+              <button key={g} className="chip" onClick={() => setGroup(g)}>{g}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (phase === "rest") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>DESCANSO ENTRE EJERCICIOS</p>
+        <div style={{ fontSize: 52, fontWeight: 900, marginTop: 10, fontVariantNumeric: "tabular-nums" }}>
+          {String(Math.floor(restLeft / 60)).padStart(2, "0")}:{String(restLeft % 60).padStart(2, "0")}
+        </div>
+        <button className="btn-xl" onClick={() => { setPhase("warmup"); setExIdx((i) => i + 1); setWeight(""); setReps(""); }} style={{ marginTop: 20, background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>
+          Saltar descanso
+        </button>
+      </div>
+    );
+  }
+
+  if (phase === "done") {
+    const score = intensityScore(log);
+    const failures = log.filter((l) => l.reachedFailure).length;
+    const hours = getRecoveryTime(group, "heavy_duty");
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <div className="pop" style={{ fontSize: 56 }}>💀</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 8 }}>Heavy Duty completado</h2>
+        <div style={{ fontSize: 42, fontWeight: 900, color: score >= 7 ? C.green : C.orange, marginTop: 10 }}>{score}/10</div>
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Intensidad Heavy Duty · Series al fallo: {failures} de {log.length}</p>
+        {score < 7 && (
+          <div className="card" style={{ marginTop: 12, borderColor: `${C.orange}55` }}>
+            <p style={{ fontSize: 12, color: C.orange }}>Para Heavy Duty necesitas llegar al límite. La próxima sesión sube el peso.</p>
+          </div>
+        )}
+        <div className="card" style={{ marginTop: 12 }}>
+          <p style={{ fontSize: 12, color: C.mut }}>Próxima sesión de {group}: en {hours}h mínimo</p>
+        </div>
+        <button className="btn-xl" onClick={finish} style={{ marginTop: 16, background: C.red, color: "#fff" }}>Guardar y volver</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>{group.toUpperCase()} · Ejercicio {exIdx + 1} de {exercises.length}</p>
+      <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 8 }}>{ex.name}</h2>
+      {phase === "warmup" ? (
+        <>
+          <p style={{ fontSize: 13, color: C.mut, marginTop: 8 }}>Serie de calentamiento{ex.warmup ? `: ${ex.warmup}` : ""}</p>
+          <button className="btn-xl" onClick={() => setPhase("work")} style={{ marginTop: 20, background: C.red, color: "#fff" }}>
+            Listo, ir a la serie de trabajo
+          </button>
+        </>
+      ) : phase === "work" ? (
+        <>
+          <p style={{ fontSize: 13, color: C.red, fontWeight: 800, marginTop: 8 }}>SERIE DE TRABAJO — AL FALLO TOTAL</p>
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 10, color: C.mut }}>PESO (KG)</label>
+              <input className="input" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 10, color: C.mut }}>REPS AL FALLO</label>
+              <input className="input" type="number" value={reps} onChange={(e) => setReps(e.target.value)} />
+            </div>
+          </div>
+          <button className="btn-xl" onClick={() => setPhase("failure")} style={{ marginTop: 16, background: C.red, color: "#fff" }}>
+            Terminé la serie
+          </button>
+        </>
+      ) : (
+        <>
+          <p style={{ fontSize: 14, fontWeight: 800, marginTop: 12 }}>¿Llegaste al fallo?</p>
+          {failMsg ? (
+            <p style={{ fontSize: 12, color: C.orange, marginTop: 12, fontWeight: 700 }}>Heavy Duty requiere llegar al límite. Prueba más peso.</p>
+          ) : (
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button className="btn-xl" onClick={() => logFailure(true)} style={{ background: C.green, color: "#07070C" }}>Sí</button>
+              <button className="btn-xl" onClick={() => logFailure(false)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>No</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─── Modo especial: GVT — German Volume Training (10×10) ─── */
+const GVT_EXERCISES = ["Sentadilla con barra", "Press banca con barra", "Peso muerto convencional", "Remo con barra", "Press militar con barra", "Dominadas"];
+
+function estimate1RM(weight, reps) {
+  return weight * (1 + reps / 30);
+}
+
+function GvtMode({ onFinish, onSave, sessions }) {
+  const [exName, setExName] = useState(null);
+  const [weight, setWeight] = useState("");
+  const [manualWeight, setManualWeight] = useState("");
+  const [setNum, setSetNum] = useState(0);
+  const [reps, setReps] = useState([]);
+  const [phase, setPhase] = useState("rest"); // rest | work | done
+  const [restLeft, setRestLeft] = useState(60);
+  const restRef = useRef(60);
+
+  const chooseExercise = (name) => {
+    const records = computeRecords(sessions);
+    const rec = records.find((r) => r.name === name);
+    if (rec && rec.weight > 0) {
+      setWeight(Math.round(estimate1RM(rec.weight, rec.reps) * 0.6 * 4) / 4);
+      setExName(name);
+    } else {
+      setExName(name);
+    }
+  };
+
+  const confirmManualWeight = () => {
+    setWeight(Math.round((parseFloat(manualWeight) || 0) * 4) / 4);
+  };
+
+  useEffect(() => {
+    if (phase !== "rest" || setNum === 0) return undefined;
+    restRef.current = 60;
+    const t = setInterval(() => {
+      restRef.current -= 1;
+      if (restRef.current <= 0) {
+        clearInterval(t);
+        tripleBeep();
+        setPhase("work");
+      } else {
+        setRestLeft(restRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setNum]);
+
+  const logSet = (repsDone) => {
+    const next = [...reps, repsDone];
+    setReps(next);
+    if (next.length >= 10) {
+      setPhase("done");
+      const allTen = next.every((r) => r >= 10);
+      const progress = store.get("gvt_progress", {});
+      // eslint-disable-next-line react-hooks/purity -- Date.now() en un handler de clic (evento de usuario), no en render
+      const finishedAt = Date.now();
+      progress[exName] = { weight: allTen ? weight + 2.5 : weight, ts: finishedAt };
+      store.set("gvt_progress", progress);
+      onSave({
+        id: finishedAt, ts: finishedAt, kind: "entreno", disc: "gimnasio", methodology: "gvt",
+        focusLabel: exName, levelIdx: 1,
+        exercises: [{ name: exName, sets: next.map((r) => ({ weight, reps: r, ok: r > 0 })) }],
+      });
+    } else {
+      setRestLeft(60);
+      setSetNum((n) => n + 1);
+      setPhase("rest");
+    }
+  };
+
+  if (!exName) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 12 }}>🔟</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>GVT — 10×10</h2>
+        <p className="muted" style={{ marginTop: 4 }}>10 series de 10 repeticiones del mismo ejercicio. El método alemán para ganar masa muscular rápido. Usa el 60% de tu máximo.</p>
+        <div className="chip-wrap" style={{ marginTop: 16, justifyContent: "center" }}>
+          {GVT_EXERCISES.map((e) => (
+            <button key={e} className="chip" onClick={() => chooseExercise(e)}>{e}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!weight) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800 }}>{exName}</h2>
+        <p className="muted" style={{ marginTop: 6 }}>No tenemos tu 1RM. Ingresa tu peso de trabajo habitual:</p>
+        <input className="input" type="number" value={manualWeight} onChange={(e) => setManualWeight(e.target.value)} style={{ marginTop: 12 }} />
+        <button className="btn-xl" onClick={confirmManualWeight} disabled={!manualWeight} style={{ marginTop: 12, background: C.cyan, color: "#07070C" }}>Confirmar</button>
+      </div>
+    );
+  }
+
+  if (phase === "done") {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 56 }}>💪</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>100 REPS COMPLETADAS</h2>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>{exName} · {weight}kg</p>
+        <button className="btn-xl" onClick={onFinish} style={{ marginTop: 20, background: C.cyan, color: "#07070C" }}>VOLVER</button>
+      </div>
+    );
+  }
+
+  const totalReps = reps.reduce((a, b) => a + b, 0);
+
+  if (phase === "rest" && setNum > 0) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>DESCANSO — 60s exactos</p>
+        <div style={{ fontSize: 52, fontWeight: 900, marginTop: 10, fontVariantNumeric: "tabular-nums" }}>{restLeft}s</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 800 }}>{exName} · {weight}kg</h2>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Serie {setNum + 1} de 10</p>
+      <div style={{ fontSize: 13, color: C.cyan, fontWeight: 700, marginTop: 8 }}>Completadas: {totalReps} reps / 100 objetivo</div>
+      <div style={{ height: 8, background: C.surface, borderRadius: 99, overflow: "hidden", marginTop: 8, border: `1px solid ${C.border}` }}>
+        <div style={{ height: "100%", width: `${totalReps}%`, background: C.cyan, transition: "width .3s ease" }} />
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 14, justifyContent: "center" }}>
+        {[6, 8, 10].map((r) => (
+          <button key={r} className="btn-xl" onClick={() => logSet(r)} style={{ background: r === 10 ? C.cyan : C.surface, color: r === 10 ? "#07070C" : C.text, border: r === 10 ? "none" : `1px solid ${C.border}` }}>
+            {r} reps
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Modo especial: Century Set (100 reps) ─── */
+function CenturySetMode({ onFinish, onSave, sessions }) {
+  const [exName, setExName] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [secs, setSecs] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [done, setDone] = useState(false);
+  const secRef = useRef(0);
+
+  const weight = useMemo(() => {
+    if (!exName) return 0;
+    const rec = computeRecords(sessions).find((r) => r.name === exName);
+    return rec && rec.weight > 0 ? Math.round(rec.weight * 0.3 * 4) / 4 : 0;
+  }, [exName, sessions]);
+
+  const records = store.get("century_records", {});
+  const bestTime = exName && records[exName] ? records[exName] : null;
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => { secRef.current += 1; setSecs(secRef.current); }, 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const addReps = (n) => {
+    const next = Math.min(100, total + n);
+    setTotal(next);
+    if (next >= 100) {
+      setRunning(false);
+      setDone(true);
+      const time = secRef.current;
+      const prevBest = records[exName];
+      if (!prevBest || time < prevBest) {
+        records[exName] = time;
+        store.set("century_records", records);
+      }
+      // eslint-disable-next-line react-hooks/purity -- Date.now() en un handler de clic (evento de usuario), no en render
+      const finishedAt = Date.now();
+      onSave({
+        id: finishedAt, ts: finishedAt, kind: "entreno", disc: "calistenia",
+        focusLabel: `Century Set — ${exName}`, levelIdx: 2,
+        exercises: [{ name: exName, sets: [{ weight, reps: 100, ok: true }] }],
+      });
+    }
+  };
+
+  if (!exName) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 12 }}>💯</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Century Set</h2>
+        <p className="muted" style={{ marginTop: 4 }}>100 repeticiones de un ejercicio en el menor tiempo posible. Rompe mesetas y mejora la resistencia muscular. Peso: 30-40% del máximo.</p>
+        <div className="chip-wrap" style={{ marginTop: 16, justifyContent: "center" }}>
+          {["Flexiones", "Sentadilla con barra", "Dominadas", "Fondos en paralelas", "Burpees"].map((e) => (
+            <button key={e} className="chip" onClick={() => setExName(e)}>{e}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 56 }}>💯</div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>100 completadas</h2>
+        <div style={{ fontSize: 36, fontWeight: 900, color: C.green, marginTop: 8, fontVariantNumeric: "tabular-nums" }}>
+          {String(Math.floor(secs / 60)).padStart(2, "0")}:{String(secs % 60).padStart(2, "0")}
+        </div>
+        <button className="btn-xl" onClick={onFinish} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>VOLVER</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 800 }}>{exName}{weight > 0 ? ` · ${weight}kg` : ""}</h2>
+      {bestTime && (
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
+          Tu mejor tiempo en 100 {exName.toLowerCase()}: {String(Math.floor(bestTime / 60)).padStart(2, "0")}:{String(bestTime % 60).padStart(2, "0")}
+        </p>
+      )}
+      <div style={{ fontSize: 14, color: C.mut, fontWeight: 700, marginTop: 10, fontVariantNumeric: "tabular-nums" }}>
+        {String(Math.floor(secs / 60)).padStart(2, "0")}:{String(secs % 60).padStart(2, "0")}
+      </div>
+      <div style={{ fontSize: 52, fontWeight: 900, color: C.green, marginTop: 8 }}>{total}/100</div>
+      {!running ? (
+        <button className="btn-xl" onClick={() => setRunning(true)} style={{ marginTop: 16, background: C.green, color: "#07070C" }}>▶ INICIAR</button>
+      ) : (
+        <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center", flexWrap: "wrap" }}>
+          {[5, 10, 15, 20].map((n) => (
+            <button key={n} className="btn-xl" onClick={() => addReps(n)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, minWidth: 70 }}>+{n}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const AMRAP_WEIGHTED_EXERCISES = ["Dominadas", "Flexiones", "Fondos en paralelas", "Sentadilla con barra", "Burpees"];
+
 /* ─── Modo especial: AMRAP (As Many Rounds As Possible) ─── */
 function AmrapMode({ onFinish, onSave }) {
+  const [mode, setMode] = useState(null); // "circuit" | "weighted"
+  const [weightedEx, setWeightedEx] = useState(null);
+  const [weightedLoad, setWeightedLoad] = useState("");
   const [duration, setDuration] = useState(null);
   const [circuit, setCircuit] = useState(null);
   const [running, setRunning] = useState(false);
@@ -5013,6 +5776,11 @@ function AmrapMode({ onFinish, onSave }) {
 
   const chooseDuration = (min) => {
     setDuration(min);
+    if (mode === "weighted") {
+      secRef.current = min * 60;
+      setSecondsLeft(min * 60);
+      return;
+    }
     const c = genRoutine("calistenia", "todo", 2, seedNow(), { noBar: true }).slice(0, 5);
     setCircuit(c);
     secRef.current = min * 60;
@@ -5036,27 +5804,81 @@ function AmrapMode({ onFinish, onSave }) {
   }, [running]);
 
   const finish = () => {
+    const recordKey = mode === "weighted" ? `${weightedEx}_${duration}` : duration;
     const records = store.get("amrap_records", {});
-    const prevBest = records[duration] || 0;
+    const prevBest = records[recordKey] || 0;
     const isRecord = rounds > prevBest;
     if (isRecord) {
-      records[duration] = rounds;
+      records[recordKey] = rounds;
       store.set("amrap_records", records);
     }
+    const label = mode === "weighted" ? `AMRAP ${weightedEx} ${duration} min` : `AMRAP ${duration} min`;
     onSave({
       id: Date.now(), ts: Date.now(), kind: "entreno", disc: "especial",
-      focusLabel: `AMRAP ${duration} min`, levelIdx: 2,
-      exercises: [{ name: `AMRAP ${duration} min`, sets: [{ weight: 0, reps: rounds, ok: true }] }],
+      focusLabel: label, levelIdx: 2,
+      exercises: [{ name: mode === "weighted" ? weightedEx : label, sets: [{ weight: parseFloat(weightedLoad) || 0, reps: rounds, ok: true }] }],
     });
     onFinish();
   };
 
-  if (!duration) {
+  if (!mode) {
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
         <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
         <div style={{ fontSize: 40, marginTop: 16 }}>⏱</div>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>AMRAP</h2>
+        <p className="muted" style={{ marginTop: 4 }}>Tantas rondas o repeticiones como puedas en el tiempo elegido</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button className="card" onClick={() => setMode("circuit")} style={{ flex: 1, padding: "16px 8px" }}>
+            <div style={{ fontSize: 22 }}>🔄</div>
+            <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4 }}>Circuito</div>
+          </button>
+          <button className="card" onClick={() => setMode("weighted")} style={{ flex: 1, padding: "16px 8px" }}>
+            <div style={{ fontSize: 22 }}>🏋️</div>
+            <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4 }}>Un ejercicio</div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "weighted" && !weightedEx) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={() => setMode(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ AMRAP</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>¿Qué ejercicio?</h2>
+        <div className="chip-wrap" style={{ marginTop: 16, justifyContent: "center" }}>
+          {AMRAP_WEIGHTED_EXERCISES.map((e) => (
+            <button key={e} className="chip" onClick={() => setWeightedEx(e)}>{e}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "weighted" && weightedEx && !duration) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800 }}>{weightedEx}</h2>
+        <p className="muted" style={{ marginTop: 4 }}>¿Con peso adicional? (opcional, en kg)</p>
+        <input className="input" type="number" value={weightedLoad} onChange={(e) => setWeightedLoad(e.target.value)} style={{ marginTop: 10 }} />
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 16 }}>¿Cuántas {weightedEx.toLowerCase()} puedes hacer en...?</p>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          {[3, 5, 10, 15].map((m) => (
+            <button key={m} className="card" onClick={() => chooseDuration(m)} style={{ flex: 1, padding: "16px 4px" }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>{m}</div>
+              <div style={{ fontSize: 10, color: C.mut }}>min</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!duration) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={() => setMode(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ AMRAP</button>
         <p className="muted" style={{ marginTop: 4 }}>Cuantas rondas puedas en el tiempo elegido</p>
         <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
           {[5, 10, 15, 20].map((m) => (
@@ -5071,13 +5893,16 @@ function AmrapMode({ onFinish, onSave }) {
   }
 
   if (done) {
+    const recordKey = mode === "weighted" ? `${weightedEx}_${duration}` : duration;
     const records = store.get("amrap_records", {});
-    const prevBest = records[duration] || 0;
+    const prevBest = records[recordKey] || 0;
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
         <div className="pop" style={{ fontSize: 60 }}>🎉</div>
         <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>¡Tiempo!</h2>
-        <div style={{ fontSize: 42, fontWeight: 900, color: C.green, marginTop: 10 }}>{rounds} rondas</div>
+        <div style={{ fontSize: 42, fontWeight: 900, color: C.green, marginTop: 10 }}>
+          {rounds} {mode === "weighted" ? weightedEx.toLowerCase() : "rondas"}
+        </div>
         <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>
           {rounds > prevBest ? `🏆 ¡Nuevo récord! Anterior: ${prevBest}` : `Tu récord: ${Math.max(prevBest, rounds)}`}
         </p>
@@ -5090,21 +5915,27 @@ function AmrapMode({ onFinish, onSave }) {
 
   return (
     <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
-      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>AMRAP · {duration} min</p>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
+        {mode === "weighted" ? `${weightedEx} · ` : ""}AMRAP · {duration} min
+      </p>
       <div style={{ fontSize: 56, fontWeight: 900, marginTop: 8, fontVariantNumeric: "tabular-nums" }}>
         {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:{String(secondsLeft % 60).padStart(2, "0")}
       </div>
-      <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
-        <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>CIRCUITO</p>
-        {circuit.map((e, i) => (
-          <p key={i} style={{ fontSize: 12, marginTop: 4 }}>{i + 1}. {e.name} — {e.reps}</p>
-        ))}
-      </div>
+      {mode === "circuit" && (
+        <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
+          <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>CIRCUITO</p>
+          {circuit.map((e, i) => (
+            <p key={i} style={{ fontSize: 12, marginTop: 4 }}>{i + 1}. {e.name} — {e.reps}</p>
+          ))}
+        </div>
+      )}
       <div style={{ fontSize: 40, fontWeight: 900, color: C.cyan, marginTop: 20 }}>{rounds}</div>
-      <p style={{ fontSize: 11, color: C.dim }}>rondas completadas</p>
+      <p style={{ fontSize: 11, color: C.dim }}>{mode === "weighted" ? `${weightedEx.toLowerCase()} completadas` : "rondas completadas"}</p>
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <button className="btn-xl" onClick={() => setRounds((r) => Math.max(0, r - 1))} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>−</button>
-        <button className="btn-xl" onClick={() => setRounds((r) => r + 1)} style={{ background: C.cyan, color: "#07070C" }}>+1 RONDA</button>
+        <button className="btn-xl" onClick={() => setRounds((r) => r + 1)} style={{ background: C.cyan, color: "#07070C" }}>
+          {mode === "weighted" ? "+1" : "+1 RONDA"}
+        </button>
       </div>
       {!running ? (
         <button className="btn-xl" onClick={() => setRunning(true)} style={{ marginTop: 14, background: C.green, color: "#07070C" }}>▶ INICIAR</button>
@@ -5903,6 +6734,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [lvlIdx, setLvlIdx] = useState(null);
   const [seed, setSeed] = useState(0);
   const [calLocation, setCalLocation] = useState(null);
+  const [gymMethod, setGymMethod] = useState(null);
   const [distance, setDistance] = useState(null);
   const [customRoutines, setCustomRoutines] = useState(() => store.get("custom_routines", []));
   const [trainCards] = useState(() => orderedTrainCards());
@@ -5941,6 +6773,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   };
   const backToDiscs = () => {
     setDiscId(null);
+    setGymMethod(null);
     onAccent(null);
   };
 
@@ -6021,6 +6854,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 
   /* ── Modos especiales (AMRAP / EMOM / Intervalos) ── */
   if (special === "amrap") return <AmrapMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
+  if (special === "heavyduty") {
+    return <HeavyDutyMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} lvlIdx={mostFrequentLevel(sessions)} />;
+  }
+  if (special === "gvt") return <GvtMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} sessions={sessions} />;
+  if (special === "century") return <CenturySetMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} sessions={sessions} />;
   if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "viaje") return <TravelMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
@@ -6102,6 +6940,20 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           <button className="card" onClick={() => setSpecial("intervalos")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
             <div style={{ fontSize: 22 }}>📊</div>
             <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Intervalos</div>
+          </button>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button className="card" onClick={() => setSpecial("heavyduty")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 22 }}>💀</div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Heavy Duty</div>
+          </button>
+          <button className="card" onClick={() => setSpecial("gvt")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 22 }}>🔟</div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>GVT 10×10</div>
+          </button>
+          <button className="card" onClick={() => setSpecial("century")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 22 }}>💯</div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Century</div>
           </button>
         </div>
         <button className="card" onClick={() => setSpecial("reto")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.yellow}` }}>
@@ -6383,6 +7235,50 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     );
   }
 
+  /* ── Gimnasio: preguntar metodología antes del enfoque ── */
+  if (discId === "gimnasio" && !gymMethod) {
+    const userLvl = mostFrequentLevel(sessions);
+    const METHODOLOGIES = [
+      { id: "standard", emoji: "📊", name: "Estándar", desc: "Series y reps fijas. Para todos los niveles.", minLvl: 0 },
+      { id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "1-2 series al fallo total. Requiere Campeón+", minLvl: 2 },
+      { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio. Volumen extremo.", minLvl: 1 },
+      { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones. Descanso libre.", minLvl: 0 },
+    ];
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Disciplinas
+        </button>
+        <div style={{ fontSize: 40, marginTop: 12 }}>🏋️</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Cómo quieres entrenar hoy?</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+          {METHODOLOGIES.map((m) => {
+            const available = userLvl >= m.minLvl;
+            return (
+              <button
+                key={m.id} className="card"
+                onClick={() => {
+                  if (!available) return;
+                  if (m.id === "standard") setGymMethod("standard");
+                  else { setSpecial(m.id === "heavyduty" ? "heavyduty" : m.id); setDiscId(null); }
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", opacity: available ? 1 : 0.5 }}
+              >
+                <span style={{ fontSize: 24 }}>{m.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800 }}>{m.name}</div>
+                  <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>
+                    {available ? m.desc : `Disponible desde ${LEVELS[m.minLvl].name}`}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="screen" key={discId}>
       <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
@@ -6519,10 +7415,16 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 }
 
 /* ─── SESIÓN ACTIVA ─── */
+/* Avanza automáticamente si el plan no tiene contenido educativo asociado */
+function NoEducationSkip({ onSkip }) {
+  useEffect(() => { onSkip(); }, [onSkip]);
+  return null;
+}
+
 function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats, name, onMentor }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
-  const [phase, setPhase] = useState("warmupPrompt"); // warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
+  const [phase, setPhase] = useState("education"); // education | warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
   const [restLeft, setRestLeft] = useState(0);
   const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
   const [weight, setWeight] = useState("");
@@ -6550,6 +7452,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const setBadgeTimeoutRef = useRef(null);
   useEffect(() => () => clearTimeout(setBadgeTimeoutRef.current), []);
   const [showQuickNote, setShowQuickNote] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [quickNote, setQuickNote] = useState("");
   const [activationDone, setActivationDone] = useState({});
 
@@ -6716,6 +7619,23 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
+
+  /* Persiste la sugerencia de próxima sesión para que Inicio la use en el plan del día */
+  const nextSuggestionSavedRef = useRef(false);
+  useEffect(() => {
+    if (phase !== "finished") { nextSuggestionSavedRef.current = false; return; }
+    if (nextSuggestionSavedRef.current) return;
+    nextSuggestionSavedRef.current = true;
+    const NEXT_SUGGESTION_MAP = {
+      pecho: "Espalda y bíceps", espalda: "Pecho y tríceps", piernas: "Tren superior",
+      hombros: "Piernas y core", brazos: "Piernas", gluteos: "Tren superior",
+      sup: "Piernas y glúteos", inf: "Pecho, espalda y hombros", todo: "Un enfoque específico mañana",
+    };
+    if (plan.discId !== "gimnasio") return;
+    const focusKey = Object.keys(NEXT_SUGGESTION_MAP).find((k) => plan.focusLabel?.toLowerCase().includes(k));
+    const label = NEXT_SUGGESTION_MAP[focusKey] || "Otro grupo muscular";
+    store.set("next_suggestion", { label, reason: `Balanceas el trabajo de ${plan.focusLabel || plan.discLabel} de hoy. Recuperación: 48h mínimo.`, ts: Date.now() });
+  }, [phase, plan.discId, plan.focusLabel, plan.discLabel]);
 
   /* Sugerencias de peso calculadas al iniciar la sesión */
   const suggestions = useMemo(
@@ -6930,6 +7850,35 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const quit = () => setShowExitConfirm(true);
 
+  /* Educación integrada: card breve antes de empezar (o saltar) */
+  if (phase === "education") {
+    const eduText = getSessionEducation(plan);
+    if (!eduText) {
+      return <NoEducationSkip onSkip={() => setPhase("warmupPrompt")} />;
+    }
+    return (
+      <div
+        className="screen fade-up"
+        style={{ textAlign: "center", paddingTop: 50, background: `linear-gradient(160deg, ${plan.discColor}33, ${C.bg} 70%)`, minHeight: "100vh" }}
+      >
+        <div style={{ fontSize: 56 }}>{plan.discIcon}</div>
+        <h2 style={{ fontSize: 18, fontWeight: 900, marginTop: 12, color: "#fff" }}>{plan.discLabel}{plan.focusLabel ? ` · ${plan.focusLabel}` : ""}</h2>
+        <p style={{ fontSize: 14, color: "#fff", marginTop: 14, lineHeight: 1.6, padding: "0 8px" }}>{eduText}</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 28, justifyContent: "center" }}>
+          <button onClick={() => setPhase("warmupPrompt")} style={{ color: "#fff", fontSize: 13, fontWeight: 700, opacity: 0.7 }}>
+            Saltar →
+          </button>
+          <button
+            className="btn-xl" onClick={() => setPhase("warmupPrompt")}
+            style={{ background: plan.discColor || C.cyan, color: "#07070C" }}
+          >
+            Empezar sesión ▶
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   /* Calentamiento opcional antes de la sesión (no se registra en el historial) */
   if (phase === "warmupPrompt") {
     return (
@@ -7104,20 +8053,45 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           </div>
         )}
 
+        {prevTotals && (() => {
+          const durationNow = Math.round(sessionSecs / 60);
+          const durationPrev = prevSession.durationMin || 0;
+          const volPct = prevTotals.volume > 0 ? Math.round(((volume - prevTotals.volume) / prevTotals.volume) * 100) : 0;
+          const setsDiff = okSets - prevTotals.sets;
+          const timeDiff = durationNow - durationPrev;
+          let analysis;
+          if (volPct > 10) analysis = "Sesión notablemente más intensa que la anterior 🔥";
+          else if (setsDiff < 0 && volPct > 0) analysis = "Menos series, más peso. Enfoque en intensidad 💪";
+          else if (Math.abs(volPct) <= 3 && setsDiff === 0) analysis = "Sesión consistente. La consistencia gana 📊";
+          else if (volPct < 0 && setsDiff <= 0) analysis = "Día más flojo. Normal, sigue mañana 💪";
+          else analysis = "Sesión completada. Cada entrenamiento suma 💪";
+          return (
+            <div className="card" style={{ marginTop: 10, padding: "12px", textAlign: "left" }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: C.mut, marginBottom: 6 }}>📊 Tu sesión vs la anterior</p>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ color: C.dim }}>Volumen</span>
+                <span>{volume.toLocaleString()}kg</span><span style={{ color: C.mut }}>{prevTotals.volume.toLocaleString()}kg</span>
+                <span style={{ fontWeight: 800, color: volPct >= 0 ? C.green : C.orange }}>{volPct >= 0 ? "+" : ""}{volPct}%</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ color: C.dim }}>Series</span>
+                <span>{okSets}</span><span style={{ color: C.mut }}>{prevTotals.sets}</span>
+                <span style={{ fontWeight: 800, color: setsDiff >= 0 ? C.green : C.orange }}>{setsDiff >= 0 ? "+" : ""}{setsDiff}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0" }}>
+                <span style={{ color: C.dim }}>Duración</span>
+                <span>{durationNow}min</span><span style={{ color: C.mut }}>{durationPrev}min</span>
+                <span style={{ fontWeight: 800, color: C.mut }}>{timeDiff >= 0 ? "+" : ""}{timeDiff}min</span>
+              </div>
+              <p style={{ fontSize: 12, color: C.text, marginTop: 8, fontWeight: 700 }}>{analysis}</p>
+            </div>
+          );
+        })()}
+
         {suggestion && (
           <div className="card" style={{ marginTop: 8, padding: "11px" }}>
             <span style={{ fontSize: 12, color: C.mut }}>Mañana sugerido: </span>
             <span style={{ fontSize: 12, fontWeight: 700 }}>{suggestion}</span>
-          </div>
-        )}
-
-        {prevTotals && (
-          <div className="card" style={{ marginTop: 8, padding: "12px" }}>
-            {volume >= prevTotals.volume ? (
-              <span style={{ fontSize: 13, fontWeight: 800, color: C.green }}>GANASTE contra tu yo anterior 🏆</span>
-            ) : (
-              <span style={{ fontSize: 13, fontWeight: 800, color: C.orange }}>PERDISTE por poco — mañana la revancha 💪</span>
-            )}
           </div>
         )}
 
@@ -7471,7 +8445,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         {ex.scheme && ex.scheme !== "standard" && (
           <p style={{ marginTop: 4, fontSize: 11, color: C.dim }}>{SCHEMES[ex.scheme].desc}</p>
         )}
-        <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>💡 {ex.tip}</p>
+        <p style={{ marginTop: 10, fontSize: 13, color: C.mut, lineHeight: 1.5 }}>
+          <button onClick={() => setShowGuide(true)} style={{ display: "inline", color: EXERCISE_GUIDES[ex.name] ? C.cyan : C.mut, fontWeight: EXERCISE_GUIDES[ex.name] ? 800 : 400 }}>💡</button>{" "}
+          {ex.tip}
+        </p>
+        {showGuide && <TechniqueGuideSheet exerciseName={ex.name} tip={ex.tip} onClose={() => setShowGuide(false)} />}
         {showSwipeHint && phase === "work" && ex.type !== "tiempo" && (
           <p style={{ marginTop: 8, fontSize: 11, color: C.cyan, textAlign: "center" }}>💡 Desliza arriba para completar serie</p>
         )}
@@ -10532,6 +11510,7 @@ export default function App() {
     }
     setSessions(next);
     store.set("sessions", next);
+    if (record.kind === "entreno") updateRecoveryState(record);
     const s = calcStreak(next, freezes);
     const earned = HEROES.filter((h) => s >= h.days).map((h) => h.id);
     const merged = [...new Set([...heroes, ...earned])];
