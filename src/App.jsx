@@ -1167,12 +1167,16 @@ const ATLETISMO_BENCH = {
 
 const ATLETISMO_EXDB = {
   "100m": [
-    { n: "Salidas de bloque (o posición baja)", t: "tiempo", s: 6, r: "20 m", rest: 120, tip: "Explota bajo y acelera los primeros 10 pasos." },
-    { n: "Aceleraciones progresivas", t: "tiempo", s: 5, r: "30 m", rest: 120, tip: "De trote a sprint máximo en la distancia." },
-    { n: "Sprint máximo", t: "tiempo", s: 4, r: "60 m", rest: 180, tip: "Inclinación de 45° al salir. Brazos en 90° que se mueven adelante-atrás sin cruzar el centro. Ataque del pie bajo el centro de masa. Máxima frecuencia de zancada en los primeros 30m." },
-    { n: "Skipping A", t: "tiempo", s: 3, r: "20 m", rest: 60, tip: "Rodilla alta, apoyo activo bajo la cadera." },
-    { n: "Skipping B", t: "tiempo", s: 3, r: "20 m", rest: 60, tip: "Extiende la pierna adelante antes de bajarla." },
-    { n: "Frecuencia de zancada en el sitio", t: "tiempo", s: 3, r: "15s", rest: 60, tip: "Pasos muy rápidos y cortos, casi sin desplazarte." },
+    { n: "Skipping A técnico", t: "tiempo", s: 3, r: "20 m", rest: 60, lv: [0, 3], tip: "Rodilla sube a 90°. Brazos en 90°. Ritmo lento y controlado." },
+    { n: "Skipping B técnico", t: "tiempo", s: 3, r: "20 m", rest: 60, lv: [0, 3], tip: "Talón al glúteo. Mismo ritmo que el A." },
+    { n: "Aceleración progresiva", t: "tiempo", s: 4, r: "30 m", rest: 120, lv: [0, 2], tip: "Empieza al 50%, llega al 80% al final. Sin llegar al máximo." },
+    { n: "Sprint técnico 60m", t: "tiempo", s: 3, r: "60 m", rest: 180, lv: [0, 2], tip: "Recuperación 3 min entre sprints. Técnica antes que velocidad." },
+    { n: "Frecuencia de zancada en el sitio", t: "tiempo", s: 3, r: "15s", rest: 60, lv: [0, 5], tip: "Pasos muy rápidos y cortos, casi sin desplazarte." },
+    { n: "Salidas de bloque (o posición baja)", t: "tiempo", s: 6, r: "10 m", rest: 150, lv: [3, 5], tip: "Inclinación 45°. Empuja el suelo. Los primeros 10m son la carrera." },
+    { n: "Aceleraciones máximas", t: "tiempo", s: 5, r: "30 m", rest: 300, lv: [3, 5], tip: "Recuperación COMPLETA (5 min). Cada rep al 100% o no vale." },
+    { n: "Sprint máximo", t: "tiempo", s: 4, r: "60 m", rest: 180, lv: [3, 5], tip: "Inclinación de 45° al salir. Brazos en 90° que se mueven adelante-atrás sin cruzar el centro. Fase de máxima velocidad entre 40-60m." },
+    { n: "Sprint resistido (cuesta o banda)", t: "tiempo", s: 4, r: "20 m", rest: 150, lv: [4, 5], tip: "Mayor resistencia = mayor fuerza en la salida." },
+    { n: "Pliometría: saltos horizontales", t: "reps", s: 4, r: "6", rest: 120, lv: [3, 5], tip: "Distancia máxima. Simula la zancada explosiva." },
   ],
   "400m": [
     { n: "Repeticiones de 300 m a ritmo de carrera", t: "tiempo", s: 4, r: "300 m", rest: 240, tip: "Ritmo agresivo pero sostenible toda la distancia." },
@@ -1189,11 +1193,15 @@ const ATLETISMO_EXDB = {
     { n: "Rodaje suave de base", t: "tiempo", s: 1, r: "20 min", rest: 0, tip: "Ritmo cómodo, puedes hablar mientras corres." },
   ],
   "5km": [
-    { n: "Intervalos 6×200 m", t: "tiempo", s: 6, r: "200 m", rest: 90, tip: "Trabaja velocidad de base para el ritmo de 5K." },
-    { n: "Tempo run", t: "tiempo", s: 1, r: "20 min", rest: 0, tip: "Ritmo algo incómodo pero sostenible." },
-    { n: "Fartlek libre", t: "tiempo", s: 1, r: "25 min", rest: 0, tip: "Cambios de ritmo espontáneos durante la carrera." },
-    { n: "Series de colina", t: "tiempo", s: 6, r: "100 m", rest: 120, tip: "Construye fuerza específica de carrera." },
-    { n: "Rodaje suave de base", t: "tiempo", s: 1, r: "30 min", rest: 0, tip: "El volumen aeróbico es la base de todo." },
+    { n: "Trote suave continuo", t: "tiempo", s: 1, r: "15 min", rest: 0, lv: [0, 2], tip: "Ritmo conversacional. Si no puedes hablar, ve más lento." },
+    { n: "Zancadas dinámicas caminando", t: "reps", s: 2, r: "10 c/pierna", rest: 30, lv: [0, 2], tip: "Movilidad de cadera para correr." },
+    { n: "Strides 100m", t: "tiempo", s: 4, r: "100 m", rest: 60, lv: [0, 3], tip: "Aceleración suave al 80%. Trabaja la técnica de carrera." },
+    { n: "Intervalos 6×200 m", t: "tiempo", s: 6, r: "200 m", rest: 90, lv: [1, 4], tip: "Trabaja velocidad de base para el ritmo de 5K." },
+    { n: "Series de colina", t: "tiempo", s: 6, r: "100 m", rest: 120, lv: [2, 4], tip: "Construye fuerza específica de carrera." },
+    { n: "Rodaje suave de base", t: "tiempo", s: 1, r: "30 min", rest: 0, lv: [0, 5], tip: "El volumen aeróbico es la base de todo." },
+    { n: "Rodaje de calidad 5km", t: "tiempo", s: 1, r: "5 km", rest: 0, lv: [4, 5], tip: "Ritmo de competencia. Últimos 500m al máximo." },
+    { n: "Intervalos 6×800m", t: "tiempo", s: 6, r: "800 m", rest: 90, lv: [3, 5], tip: "Al ritmo objetivo de 5km. Recuperación 90s entre intervalos." },
+    { n: "Tempo run 3km", t: "tiempo", s: 1, r: "3 km", rest: 0, lv: [3, 5], tip: "Incómodo pero sostenible. Entrena el umbral de lactato." },
   ],
   "10km": [
     { n: "Rodaje largo (long run)", t: "tiempo", s: 1, r: "50 min", rest: 0, tip: "Ritmo suave y constante, prioriza la duración." },
@@ -1203,11 +1211,14 @@ const ATLETISMO_EXDB = {
     { n: "Recuperación activa trotando", t: "tiempo", s: 1, r: "15 min", rest: 0, tip: "Muy suave, para asimilar el trabajo previo." },
   ],
   maraton: [
-    { n: "Rodaje largo (long run)", t: "tiempo", s: 1, r: "90 min", rest: 0, tip: "El entrenamiento más importante de la semana: paciencia." },
-    { n: "Ritmo de carrera (pace run)", t: "tiempo", s: 1, r: "40 min", rest: 0, tip: "Practica el ritmo objetivo de la maratón." },
-    { n: "Intervalos largos 3×1 km", t: "tiempo", s: 3, r: "1 km", rest: 180, tip: "Aporta velocidad sin sacrificar la resistencia de base." },
-    { n: "Carrera continua suave", t: "tiempo", s: 1, r: "50 min", rest: 0, tip: "Kilómetros fáciles que suman resistencia." },
-    { n: "Recuperación activa trotando", t: "tiempo", s: 1, r: "20 min", rest: 0, tip: "Fundamental entre sesiones largas para no lesionarte." },
+    { n: "Recuperación activa trotando", t: "tiempo", s: 1, r: "20 min", rest: 0, lv: [0, 5], tip: "Fundamental entre sesiones largas para no lesionarte." },
+    { n: "Carrera continua suave", t: "tiempo", s: 1, r: "50 min", rest: 0, lv: [0, 3], tip: "Kilómetros fáciles que suman resistencia." },
+    { n: "Ritmo de carrera (pace run)", t: "tiempo", s: 1, r: "40 min", rest: 0, lv: [1, 4], tip: "Practica el ritmo objetivo de la maratón." },
+    { n: "Intervalos largos 3×1 km", t: "tiempo", s: 3, r: "1 km", rest: 180, lv: [2, 4], tip: "Aporta velocidad sin sacrificar la resistencia de base." },
+    { n: "Rodaje largo (long run)", t: "tiempo", s: 1, r: "90 min", rest: 0, lv: [1, 3], tip: "El entrenamiento más importante de la semana: paciencia." },
+    { n: "Long run 25-30km", t: "tiempo", s: 1, r: "25-30 km", rest: 0, lv: [4, 5], tip: "Ritmo 90s más lento que tu pace de maratón objetivo. No más rápido." },
+    { n: "Pace run 12km", t: "tiempo", s: 1, r: "12 km", rest: 0, lv: [4, 5], tip: "Exactamente a tu ritmo de maratón. Aprende cómo se siente." },
+    { n: "Fartlek 45 min", t: "tiempo", s: 1, r: "45 min", rest: 0, lv: [3, 5], tip: "Cambios de ritmo libres. Cuando quieras, cuanto quieras." },
   ],
 };
 
@@ -2740,6 +2751,30 @@ function sortExercises(exercises) {
   return [...exercises].sort((a, b) => EXERCISE_ORDER_PRIORITY[classifyExerciseOrder(a.name)] - EXERCISE_ORDER_PRIORITY[classifyExerciseOrder(b.name)]);
 }
 
+/* Sugerencia de grupo muscular complementario para la próxima sesión de gimnasio */
+const NEXT_MUSCLE_SUGGESTION = {
+  pecho: "Espalda y bíceps", espalda: "Pecho y tríceps", piernas: "Tren superior",
+  hombros: "Piernas y core", brazos: "Piernas", gluteos: "Tren superior",
+  sup: "Piernas y glúteos", inf: "Pecho, espalda y hombros", todo: "Un enfoque específico mañana",
+};
+function nextMuscleSuggestion(focusLabel) {
+  const focusKey = Object.keys(NEXT_MUSCLE_SUGGESTION).find((k) => focusLabel?.toLowerCase().includes(k));
+  return NEXT_MUSCLE_SUGGESTION[focusKey] || "Otro grupo muscular";
+}
+
+/* Descanso coherente según el rango de repeticiones: fuerza (1-5) 3-5min,
+   hipertrofia (6-12) 60-90s, resistencia (13+) 30-45s */
+function repRangeRestBounds(repsStr) {
+  const match = String(repsStr).match(/(\d+)/);
+  const reps = match ? parseInt(match[1], 10) : 10;
+  if (reps <= 5) return [180, 300];
+  if (reps <= 12) return [60, 90];
+  return [30, 45];
+}
+
+/* Volumen total (en series) objetivo por nivel para sesiones de gimnasio */
+const GYM_VOLUME_TARGET = [11, 13, 16, 20, 22, 25];
+
 function genBasquetRoutine(discId, lvlIdx, deloadActive) {
   const effLvlIdx = Math.max(0, Math.min(5, deloadActive ? lvlIdx - 1 : lvlIdx));
   const table = discId === "basquetCancha" ? BASQUET_CANCHA_BY_LEVEL : BASQUET_SIN_CANCHA_BY_LEVEL;
@@ -2943,14 +2978,20 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   if (pool.length < 5) pool = db.filter((e) => matchBar(e) && matchEquip(e));
   if (pool.length < 5) pool = db.filter(matchFocus);
 
-  const target = Math.max(
-    5,
-    Math.min(8, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0)))
-  );
+  const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
+
+  /* Para gimnasio, calcula cuántos ejercicios hacen falta para acercarse
+     al volumen total (en series) objetivo del nivel */
+  const avgSetsPerExercise = 3.5 + scaling.setsAdd;
+  const targetVolume = discId === "gimnasio" ? GYM_VOLUME_TARGET[effLvlIdx] : null;
+  const target = targetVolume
+    ? Math.max(5, Math.min(9, Math.min(pool.length, Math.round(targetVolume / avgSetsPerExercise))))
+    : Math.max(5, Math.min(8, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0))));
 
   const shuffled = [...pool].sort(() => rnd() - 0.5);
   const chosen = [];
   const seenTags = new Set();
+  const isolationCountByTag = {};
   for (const e of shuffled) {
     if (chosen.length >= target) break;
     if (!seenTags.has(e.f[0])) {
@@ -2960,16 +3001,25 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   }
   for (const e of shuffled) {
     if (chosen.length >= target) break;
-    if (!chosen.includes(e)) chosen.push(e);
+    if (chosen.includes(e)) continue;
+    /* Máximo 2 ejercicios de aislamiento por mismo grupo muscular en la sesión */
+    if (classifyExerciseOrder(e.n) === "assistance") {
+      const tag = e.f?.[0] || "otro";
+      const count = isolationCountByTag[tag] || 0;
+      if (count >= 2) continue;
+      isolationCountByTag[tag] = count + 1;
+    }
+    chosen.push(e);
   }
 
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
 
-  const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
   return sortExercises(chosen.map((e, i) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
+    const repBounds = repRangeRestBounds(e.r);
     let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
+    rest = Math.min(repBounds[1], Math.max(repBounds[0], rest));
     if (deloadActive) {
       sets = Math.max(1, Math.round(sets * 0.6));
       rest = Math.round(rest * 1.3);
@@ -2982,19 +3032,35 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   }));
 }
 
+/* Orden real de atletismo: técnica/pliometría primero, sprints/tempo después, recuperación al final */
+function classifyAtletismoOrder(name) {
+  const n = name.toLowerCase();
+  if (/skipping|técnic|tecnic|pliometr|zancadas din|movilidad/.test(n)) return 1;
+  if (/aceleraci|salidas de bloque|strides/.test(n)) return 2;
+  if (/sprint|intervalos|series de colina|tempo|fartlek|pace run|rodaje de calidad/.test(n)) return 3;
+  return 4; // trote suave, recuperación, rodaje largo
+}
+function sortAtletismoExercises(exercises) {
+  return [...exercises].sort((a, b) => classifyAtletismoOrder(a.name) - classifyAtletismoOrder(b.name));
+}
+
 /* Generador de rutinas de Atletismo (no usa enfoque, la distancia ya filtra) */
 function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
   const deloadActive = !!store.get("deload_active", null);
   const effLvlIdx = deloadActive ? Math.max(0, lvlIdx - 1) : lvlIdx;
   const rnd = mulberry32(seed);
-  const pool = ATLETISMO_EXDB[distance] || [];
+  const fullPool = ATLETISMO_EXDB[distance] || [];
+  let pool = fullPool.filter((e) => !e.lv || (e.lv[0] <= effLvlIdx && effLvlIdx <= e.lv[1]));
+  if (pool.length < 4) pool = fullPool;
   const target = Math.min(pool.length, 5 + (rnd() < 0.5 ? 1 : 0));
   const shuffled = [...pool].sort(() => rnd() - 0.5).slice(0, target);
   const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
-  return sortExercises(shuffled.map((e) => {
+  return sortAtletismoExercises(shuffled.map((e) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
+    /* Nunca más de 6 sprints/aceleraciones máximas por sesión */
+    if (/sprint máximo|aceleraci[oó]n(es)? m[aá]xima/i.test(e.n)) sets = Math.min(sets, 6);
     let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
     if (deloadActive) {
       sets = Math.max(1, Math.round(sets * 0.6));
@@ -4115,20 +4181,38 @@ function StatBox({ label, value, accent }) {
   );
 }
 
+const WATER_LEVEL_INFO = [
+  { max: 0.25, color: "#FF4444", opacity: 0.6, label: "Deshidratado ⚠️" },
+  { max: 0.5, color: "#FF8800", opacity: 0.7, label: "Hidratación baja" },
+  { max: 0.75, color: "#0099FF", opacity: 0.8, label: "Bien hidratado" },
+  { max: 1.01, color: "#00CCFF", opacity: 1.0, label: "Excelente 💧" },
+];
+
 function WaterGlass({ count, goal, bubbleKey }) {
   const pct = goal > 0 ? Math.min(1, count / goal) : 0;
   const full = count >= goal;
   const fillY = 114 - pct * 100;
-  const opacity = pct <= 0.25 ? 0.4 : pct <= 0.5 ? 0.6 : pct <= 0.75 ? 0.8 : 1.0;
-  const bubbles = pct > 0 ? Array.from({ length: 3 }) : [];
+  const level = WATER_LEVEL_INFO.find((l) => pct <= l.max) || WATER_LEVEL_INFO[0];
+  const showWave = pct >= 0.1 && pct <= 0.9;
+  const bubbles = pct > 0 ? Array.from({ length: 4 }) : [];
   return (
     <div style={{ position: "relative", width: 80, height: 120, flexShrink: 0 }}>
-      <svg width="80" height="120" viewBox="0 0 80 120">
+      <svg width="80" height="120" viewBox="0 0 80 120" style={{ overflow: "visible" }}>
         <defs>
           <clipPath id="glassClip">
             <path d="M14 8 L66 8 L58 114 L22 114 Z" />
           </clipPath>
         </defs>
+        {/* Gotas de splash al tocar + */}
+        {bubbleKey > 0 && [0, 1, 2, 3].map((i) => (
+          <circle
+            key={`splash-${bubbleKey}-${i}`}
+            className="water-splash-drop"
+            cx={26 + i * 10} cy="0" r={2.5}
+            fill={level.color} opacity={0.9}
+            style={{ animationDelay: `${i * 60}ms` }}
+          />
+        ))}
         <path d="M14 8 L66 8 L58 114 L22 114 Z" fill="none" stroke="#0099FF66" strokeWidth="2" strokeLinejoin="round" />
         {[0.25, 0.5, 0.75].map((p) => (
           <line key={p} x1="16" y1={114 - p * 100} x2="64" y2={114 - p * 100} stroke="#0099FF33" strokeWidth="1" strokeDasharray="2 2" />
@@ -4136,17 +4220,20 @@ function WaterGlass({ count, goal, bubbleKey }) {
         <g clipPath="url(#glassClip)">
           <rect
             x="10" y={fillY} width="60" height={114 - fillY}
-            fill="#0099FF" opacity={opacity}
-            style={{ transition: "y 500ms ease, height 500ms ease, opacity 500ms ease" }}
+            fill={level.color} opacity={level.opacity}
+            style={{ transition: "y 500ms ease, height 500ms ease, fill 500ms ease, opacity 500ms ease" }}
           />
-          {full && (
-            <path d={`M14 ${fillY} q7,-4 14,0 t14,0 t14,0 t14,0`} fill="none" stroke="#ffffffcc" strokeWidth="2" className="water-wave-surface" />
+          {showWave && (
+            <path
+              d={`M0,${fillY} C13,${fillY - 4} 27,${fillY + 4} 40,${fillY} C53,${fillY - 4} 67,${fillY + 4} 80,${fillY} L80,120 L0,120 Z`}
+              fill={level.color} opacity={level.opacity * 0.7} className="water-wave-surface"
+            />
           )}
           {bubbles.map((_, i) => (
             <circle
               key={`${bubbleKey}-${i}`}
               className="water-bubble"
-              cx={28 + i * 10}
+              cx={28 + i * 8}
               cy="108"
               r={2 + (i % 2)}
               fill="#ffffffaa"
@@ -4156,6 +4243,7 @@ function WaterGlass({ count, goal, bubbleKey }) {
         </g>
       </svg>
       {full && <div className="water-wave-msg" style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", fontSize: 18 }}>🌊</div>}
+      <p style={{ fontSize: 9, fontWeight: 700, color: level.color, textAlign: "center", marginTop: 4 }}>{level.label}</p>
     </div>
   );
 }
@@ -4657,6 +4745,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [heroExpanded, setHeroExpanded] = useState(false);
   const longPressRef = useRef(null);
 
   /* Plan del día */
@@ -4750,41 +4839,6 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
       </p>
       <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
 
-      {!pro && (() => {
-        const status = getRecoveryStatus();
-        const color = status.level === "green" ? C.green : status.level === "yellow" ? C.yellow : C.red;
-        return (
-          <div style={{ marginTop: 8 }}>
-            <button
-              onClick={() => setShowRecovery((v) => !v)}
-              style={{
-                fontSize: 11, fontWeight: 800, color, background: `${color}18`,
-                padding: "5px 12px", borderRadius: 99, border: `1px solid ${color}44`,
-              }}
-            >
-              {status.chipLabel}
-            </button>
-            {showRecovery && (
-              <div className="card fade-up" style={{ marginTop: 8, padding: "10px 14px" }}>
-                <p style={{ fontSize: 12, color: C.mut, lineHeight: 1.4 }}>{status.message}</p>
-                {status.groups.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
-                    {status.groups.map((g) => (
-                      <div key={g.group} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                        <span style={{ color: C.mut }}>{g.group}</span>
-                        <span style={{ fontWeight: 700, color: g.recovered ? C.green : g.hoursLeft > 24 ? C.red : C.yellow }}>
-                          {g.recovered ? "🟢 Recuperado" : `${g.hoursLeft > 24 ? "🔴" : "🟡"} ${g.hoursLeft}h restantes`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
       {pro ? (
         /* Modo Control total: estadísticas limpias, sin héroes ni animaciones */
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
@@ -4793,8 +4847,11 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           <StatBox label="Días activos (mes)" value={activeDaysMonth} />
         </div>
       ) : (
-        /* Héroe */
-        <div className="card" style={{ marginTop: 16, textAlign: "center", padding: "22px 16px", overflow: "hidden", position: "relative" }}>
+        /* Héroe: compacto en 1 línea, se expande al tocar */
+        <button
+          className="card" onClick={() => setHeroExpanded((v) => !v)}
+          style={{ marginTop: 16, textAlign: heroExpanded ? "center" : "left", padding: heroExpanded ? "22px 16px" : "12px 16px", overflow: "hidden", position: "relative", width: "100%", display: "block" }}
+        >
           <div
             style={{
               position: "absolute", inset: 0, pointerEvents: "none",
@@ -4802,51 +4859,61 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
               animation: "glowPulse 3s ease-in-out infinite",
             }}
           />
-          <div className="pop" style={{ fontSize: 64 }} key={hero.name}>{hero.emoji}</div>
-          <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>{hero.name}</div>
-          <div style={{ color: C.mut, fontSize: 13, marginTop: 3, fontStyle: "italic" }}>“{hero.quote}”</div>
-          {nextHero && (
-            <div style={{ marginTop: 14 }}>
-              <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${Math.min(100, (streak / nextHero.days) * 100)}%`,
-                    background: `linear-gradient(90deg, ${C.orange}, ${C.yellow})`,
-                    borderRadius: 99,
-                    transition: "width .5s ease",
-                  }}
-                />
-              </div>
-              <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
-                Próximo héroe: {nextHero.name} a los {nextHero.days} días de racha
-              </div>
+          {!heroExpanded ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 32 }}>{hero.emoji}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, flex: 1 }}>{hero.name}</span>
+              {streak > 0 && <span style={{ fontSize: 13, fontWeight: 800, color: C.orange }}>🔥 {streak} días</span>}
             </div>
+          ) : (
+            <>
+              <div className="pop" style={{ fontSize: 64 }} key={hero.name}>{hero.emoji}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>{hero.name}</div>
+              <div style={{ color: C.mut, fontSize: 13, marginTop: 3, fontStyle: "italic" }}>“{hero.quote}”</div>
+              {nextHero && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.min(100, (streak / nextHero.days) * 100)}%`,
+                        background: `linear-gradient(90deg, ${C.orange}, ${C.yellow})`,
+                        borderRadius: 99,
+                        transition: "width .5s ease",
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
+                    Próximo héroe: {nextHero.name} a los {nextHero.days} días de racha
+                  </div>
+                </div>
+              )}
+              {/* Colección */}
+              <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+                {HEROES.map((h) => {
+                  const has = unlockedHeroes.includes(h.id);
+                  return (
+                    <span
+                      key={h.id}
+                      onClick={(e) => { e.stopPropagation(); if (has) setTappedHero(h); }}
+                      aria-label={has ? `${h.name}, desbloqueado a los ${h.days} días de racha` : `${h.name} bloqueado`}
+                      style={{ textAlign: "center", minWidth: 44, minHeight: 44, position: "relative", display: "inline-block" }}
+                    >
+                      <div style={{ fontSize: has ? 28 : 20, opacity: has ? 1 : 0.2 }}>{h.emoji}</div>
+                      {!has && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", fontSize: 14 }}>🔒</div>}
+                      <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
+                    </span>
+                  );
+                })}
+              </div>
+              {tappedHero && (
+                <p style={{ fontSize: 11, color: C.mut, marginTop: 8 }}>
+                  {tappedHero.name} — desbloqueado a los {tappedHero.days} días de racha
+                </p>
+              )}
+            </>
           )}
-          {/* Colección */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-            {HEROES.map((h) => {
-              const has = unlockedHeroes.includes(h.id);
-              return (
-                <button
-                  key={h.id}
-                  onClick={() => has && setTappedHero(h)}
-                  aria-label={has ? `${h.name}, desbloqueado a los ${h.days} días de racha` : `${h.name} bloqueado`}
-                  style={{ textAlign: "center", minWidth: 44, minHeight: 44, position: "relative" }}
-                >
-                  <div style={{ fontSize: has ? 28 : 20, opacity: has ? 1 : 0.2 }}>{h.emoji}</div>
-                  {!has && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", fontSize: 14 }}>🔒</div>}
-                  <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
-                </button>
-              );
-            })}
-          </div>
-          {tappedHero && (
-            <p style={{ fontSize: 11, color: C.mut, marginTop: 8 }}>
-              {tappedHero.name} — desbloqueado a los {tappedHero.days} días de racha
-            </p>
-          )}
-        </div>
+        </button>
       )}
 
       {/* Plan del día inteligente */}
@@ -4894,6 +4961,37 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                 Ver otro plan 🔄
               </button>
             )}
+            {!pro && (() => {
+              const status = getRecoveryStatus();
+              const color = status.level === "green" ? C.green : status.level === "yellow" ? C.yellow : C.red;
+              return (
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    onClick={() => setShowRecovery((v) => !v)}
+                    style={{ fontSize: 11, fontWeight: 700, color, textAlign: "left" }}
+                  >
+                    {status.chipLabel}
+                  </button>
+                  {showRecovery && (
+                    <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(0,0,0,0.15)" }}>
+                      <p style={{ fontSize: 12, color: C.mut, lineHeight: 1.4 }}>{status.message}</p>
+                      {status.groups.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+                          {status.groups.map((g) => (
+                            <div key={g.group} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                              <span style={{ color: C.mut }}>{g.group}</span>
+                              <span style={{ fontWeight: 700, color: g.recovered ? C.green : g.hoursLeft > 24 ? C.red : C.yellow }}>
+                                {g.recovered ? "🟢 Recuperado" : `${g.hoursLeft > 24 ? "🔴" : "🟡"} ${g.hoursLeft}h restantes`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
@@ -7453,6 +7551,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   useEffect(() => () => clearTimeout(setBadgeTimeoutRef.current), []);
   const [showQuickNote, setShowQuickNote] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
   const [quickNote, setQuickNote] = useState("");
   const [activationDone, setActivationDone] = useState({});
 
@@ -7499,6 +7598,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   };
 
   useEffect(() => () => { if (wakeLockRef.current) wakeLockRef.current.release(); }, []);
+  /* Cancela cualquier voz pendiente al salir de la sesión */
+  useEffect(() => () => { if (window.speechSynthesis) window.speechSynthesis.cancel(); }, []);
 
   useEffect(() => {
     if (!justWarmedUp) return undefined;
@@ -7626,14 +7727,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     if (phase !== "finished") { nextSuggestionSavedRef.current = false; return; }
     if (nextSuggestionSavedRef.current) return;
     nextSuggestionSavedRef.current = true;
-    const NEXT_SUGGESTION_MAP = {
-      pecho: "Espalda y bíceps", espalda: "Pecho y tríceps", piernas: "Tren superior",
-      hombros: "Piernas y core", brazos: "Piernas", gluteos: "Tren superior",
-      sup: "Piernas y glúteos", inf: "Pecho, espalda y hombros", todo: "Un enfoque específico mañana",
-    };
     if (plan.discId !== "gimnasio") return;
-    const focusKey = Object.keys(NEXT_SUGGESTION_MAP).find((k) => plan.focusLabel?.toLowerCase().includes(k));
-    const label = NEXT_SUGGESTION_MAP[focusKey] || "Otro grupo muscular";
+    const label = nextMuscleSuggestion(plan.focusLabel);
     store.set("next_suggestion", { label, reason: `Balanceas el trabajo de ${plan.focusLabel || plan.discLabel} de hoy. Recuperación: 48h mínimo.`, ts: Date.now() });
   }, [phase, plan.discId, plan.focusLabel, plan.discLabel]);
 
@@ -7951,7 +8046,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     const hero = heroForStreak(newStreak);
     const justUnlocked = HEROES.find((h) => h.days === newStreak);
 
-    const title = pctComplete >= 1 ? "¡SESIÓN PERFECTA! 🔥" : pctComplete > 0.8 ? "¡Gran trabajo! 💪" : "¡Buen esfuerzo! Mañana más fuerte 🦾";
     const bulldogs = (volume / 20).toFixed(0); // 1 bulldog ≈ 20kg
 
     const volDiffPct = priorAvgVolume > 0 ? Math.round(((volume - priorAvgVolume) / priorAvgVolume) * 100) : null;
@@ -7972,21 +8066,26 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     });
 
     /* Sugerencia de la siguiente sesión (equilibrio muscular básico) */
-    const NEXT_SUGGESTION = {
-      pecho: "Espalda y bíceps", espalda: "Pecho y tríceps", piernas: "Tren superior",
-      hombros: "Piernas y core", brazos: "Piernas", gluteos: "Tren superior",
-      sup: "Piernas y glúteos", inf: "Pecho, espalda y hombros", todo: "Un enfoque específico mañana",
-    };
-    const focusKey = Object.keys(NEXT_SUGGESTION).find((k) => plan.focusLabel?.toLowerCase().includes(k));
-    const suggestion = plan.discId === "gimnasio" ? NEXT_SUGGESTION[focusKey] || "Otro grupo muscular" : null;
+    const suggestion = plan.discId === "gimnasio" ? nextMuscleSuggestion(plan.focusLabel) : null;
 
+    const isPerfect = pctComplete >= 1;
     return (
-      <div className="screen fade-up" style={{ paddingTop: 30, textAlign: "center", paddingBottom: 30 }}>
+      <div
+        className="screen fade-up"
+        style={{
+          paddingTop: 30, textAlign: "center", paddingBottom: 30,
+          background: isPerfect ? `linear-gradient(180deg, rgba(255,214,0,0.14), transparent 40%)` : "none",
+          borderTop: !isPerfect && pctComplete > 0.8 ? `3px solid ${C.green}` : "none",
+          margin: !isPerfect && pctComplete > 0.8 ? "-1px -1px 0" : 0,
+        }}
+      >
         {flashWhite && <div className="white-flash" />}
         <Confetti show={confetti} />
         <div className="unlock-pop" style={{ fontSize: 64 }}>{hero.emoji}</div>
         <DisciplineCelebration discId={plan.discId} />
-        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>{title}</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>
+          {isPerfect ? "⚡ SESIÓN PERFECTA" : pctComplete > 0.8 ? "💪 Gran trabajo" : "🦾 Sigue adelante"}
+        </h2>
         <p style={{ color: C.mut, marginTop: 4, fontSize: 13 }}>Sesión de {plan.discLabel} completada</p>
 
         {lastRecord?.cooldownBonus && (
@@ -8031,26 +8130,33 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         )}
         {photoFinish && <div className="white-flash" style={{ animationDuration: "200ms" }} />}
 
-        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <StatBox label="⏱ Tiempo" value={formatDuration(Math.floor(sessionSecs / 60))} accent={C.cyan} />
-          <StatBox label="💪 Series" value={`${okSets}/${totalPlanned}`} accent={C.green} />
-          <StatBox label="🔥 Racha" value={newStreak} accent={C.orange} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
+          <div className="card" style={{ padding: "12px 8px" }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: C.cyan }}>⏱ {formatDuration(Math.floor(sessionSecs / 60))}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Duración</div>
+          </div>
+          <div className="card" style={{ padding: "12px 8px" }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: C.green }}>💪 {okSets}/{totalPlanned}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Series</div>
+          </div>
+          <div className="card" style={{ padding: "12px 8px" }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: C.text }}>🏋️ {volume > 0 ? formatVolume(volume) : "—"}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Volumen</div>
+          </div>
+          <div className="card" style={{ padding: "12px 8px" }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: C.orange }}>🔥 {newStreak} {newStreak === 1 ? "día" : "días"}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Racha</div>
+          </div>
         </div>
 
         {volume > 0 && (
-          <div className="card" style={{ marginTop: 10, padding: "12px" }}>
-            <span style={{ fontSize: 13, color: C.mut }}>🏋️ Volumen total: </span>
-            <span style={{ fontWeight: 800, color: C.cyan }}>{volume} kg</span>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>Levantaste el peso de {bulldogs} bulldogs 🐕</div>
-          </div>
+          <p style={{ fontSize: 11, color: C.mut, marginTop: 8 }}>Levantaste el peso de {bulldogs} bulldogs 🐕</p>
         )}
 
         {volDiffPct !== null && (
-          <div className="card" style={{ marginTop: 8, padding: "11px" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: volDiffPct >= 0 ? C.green : C.mut }}>
-              {volDiffPct >= 0 ? `+${volDiffPct}% de volumen vs tu promedio 📈` : `${volDiffPct}% vs tu promedio — eso está bien, descansa mañana`}
-            </span>
-          </div>
+          <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan, marginTop: 8 }}>
+            vs sesión anterior: {volDiffPct >= 0 ? "+" : ""}{volDiffPct}% volumen {volDiffPct >= 0 ? "📈" : ""}
+          </p>
         )}
 
         {prevTotals && (() => {
@@ -8234,14 +8340,25 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           }}
         >
           <p style={{ color: C.mut, fontSize: 13, fontWeight: 800, letterSpacing: 4 }}>DESCANSO</p>
-          <div
-            style={{
-              fontSize: 56, fontWeight: 900, lineHeight: 1, marginTop: 14,
-              color: restLeft <= 5 ? C.green : C.text, transition: "color .3s",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {restLeft}
+          <div style={{ position: "relative", width: 180, height: 180, marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="180" height="180" viewBox="0 0 180 180" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+              <circle cx="90" cy="90" r="82" fill="none" stroke={C.border} strokeWidth="6" />
+              <circle
+                cx="90" cy="90" r="82" fill="none" stroke={restLeft <= 5 ? C.green : plan.discColor || C.cyan} strokeWidth="6"
+                strokeLinecap="round" strokeDasharray={2 * Math.PI * 82}
+                strokeDashoffset={2 * Math.PI * 82 * (1 - restLeft / Math.max(1, ex.rest))}
+                style={{ transition: "stroke-dashoffset 1s linear, stroke .3s" }}
+              />
+            </svg>
+            <div
+              style={{
+                fontSize: 56, fontWeight: 900, lineHeight: 1,
+                color: restLeft <= 5 ? C.green : C.text, transition: "color .3s",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {restLeft}
+            </div>
           </div>
           <p style={{ color: C.dim, fontSize: 12, marginTop: 8 }}>segundos</p>
         </div>
@@ -8323,73 +8440,70 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           🔄 Semana de deload — peso ligero, técnica perfecta
         </div>
       )}
-      {!store.get("deload_active", null) && (() => {
-        const wk = getPlanWeekNumber();
-        if (!wk || wk > 12) return null;
-        const ph = PERIODIZATION[getPlanPhase(wk)];
-        return (
-          <div style={{ textAlign: "center", padding: "6px 0", fontSize: 11, fontWeight: 700, color: ph.color }}>
-            Semana de {PERIODIZATION_LABELS[getPlanPhase(wk)].toLowerCase()}: {ph.focus}
-          </div>
-        );
-      })()}
-      {!liveMode && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
-          <span style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>
-            {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
-          </span>
+      {/* Header mínimo: Salir — Disciplina·Nivel — Tiempo. Todo lo demás vive detrás de "⋯" */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 48 }}>
+        <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
+        <span style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>
+          {plan.discIcon} {plan.discLabel} · {lvl.emoji} {lvl.name}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 800, color: sessionSecs > 5400 ? C.orange : C.text, fontVariantNumeric: "tabular-nums" }}>
             ⏱ {String(Math.floor(sessionSecs / 60)).padStart(2, "0")}:{String(sessionSecs % 60).padStart(2, "0")}
           </span>
+          <button onClick={() => setShowExtras((v) => !v)} aria-label="Más opciones" style={{ fontSize: 16, padding: 4, color: C.dim }}>⋯</button>
         </div>
-      )}
-      <div style={{ display: "flex", justifyContent: liveMode ? "space-between" : "flex-end", alignItems: "center", gap: 6, marginTop: liveMode ? 0 : 4 }}>
-        {liveMode && (
-          <>
-            <button onClick={quit} style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>✕ Salir</button>
-            <span style={{ fontSize: 11, color: C.dim }}>🔆 Pantalla activa</span>
-          </>
-        )}
-        <button onClick={() => setShowQuickNote((v) => !v)} aria-label="Nota rápida" style={{ fontSize: 14, padding: 4 }}>
-          📝
-        </button>
-        <button onClick={() => setAmbientOn((v) => { const nv = !v; store.set("ambient", nv); return nv; })} aria-label="Sonido ambiental" style={{ fontSize: 14, padding: 4 }}>
-          {ambientOn ? "🎵" : "🔇"}
-        </button>
-        <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 14, padding: 4 }}>
-          {voiceOn ? "🔊" : "🔈"}
-        </button>
-        <button onClick={toggleLiveMode} aria-label="Modo pantalla activa" style={{ fontSize: 14, padding: 4 }}>
-          {liveMode ? "👁️‍🗨️" : "👁️"}
-        </button>
       </div>
 
-      {showQuickNote && (
-        <div className="card fade-up" style={{ marginTop: 8, padding: "10px 12px" }}>
-          <textarea
-            className="input" rows={2} maxLength={300} placeholder="Apunta algo rápido de esta sesión..."
-            value={quickNote} onChange={(e) => setQuickNote(e.target.value)}
-            style={{ resize: "none" }}
-          />
-          <button onClick={() => setShowQuickNote(false)} style={{ marginTop: 6, fontSize: 11, color: C.cyan, fontWeight: 700 }}>
-            Listo
-          </button>
+      {showExtras && (
+        <div className="card fade-up" style={{ marginTop: 6, padding: "10px 12px" }}>
+          {(() => {
+            const wk = !store.get("deload_active", null) ? getPlanWeekNumber() : null;
+            if (!wk || wk > 12) return null;
+            const ph = PERIODIZATION[getPlanPhase(wk)];
+            return (
+              <p style={{ fontSize: 11, fontWeight: 700, color: ph.color, marginBottom: 8 }}>
+                Semana de {PERIODIZATION_LABELS[getPlanPhase(wk)].toLowerCase()}: {ph.focus}
+              </p>
+            );
+          })()}
+          <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center" }}>
+            <button onClick={() => setShowQuickNote((v) => !v)} aria-label="Nota rápida" style={{ fontSize: 18, padding: 4 }}>📝</button>
+            <button onClick={() => setAmbientOn((v) => { const nv = !v; store.set("ambient", nv); return nv; })} aria-label="Sonido ambiental" style={{ fontSize: 18, padding: 4 }}>
+              {ambientOn ? "🎵" : "🔇"}
+            </button>
+            <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 18, padding: 4 }}>
+              {voiceOn ? "🔊" : "🔈"}
+            </button>
+            <button onClick={toggleLiveMode} aria-label="Modo pantalla activa" style={{ fontSize: 18, padding: 4 }}>
+              {liveMode ? "👁️‍🗨️" : "👁️"}
+            </button>
+          </div>
+          {showQuickNote && (
+            <div style={{ marginTop: 10 }}>
+              <textarea
+                className="input" rows={2} maxLength={300} placeholder="Apunta algo rápido de esta sesión..."
+                value={quickNote} onChange={(e) => setQuickNote(e.target.value)}
+                style={{ resize: "none" }}
+              />
+              <button onClick={() => setShowQuickNote(false)} style={{ marginTop: 6, fontSize: 11, color: C.cyan, fontWeight: 700 }}>
+                Listo
+              </button>
+            </div>
+          )}
+          {prevTotals && (() => {
+            const curSets = logs.flat().filter((s) => s.ok).length;
+            const diff = curSets - prevTotals.sets;
+            return (
+              <div style={{ marginTop: 10, textAlign: "center" }}>
+                <span style={{ fontSize: 11, color: C.mut }}>vs tu mejor sesión anterior de {plan.discLabel}: </span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: diff >= 0 ? C.green : C.orange }}>
+                  {diff >= 0 ? `Vas +${diff} series adelante 🔥` : `Vas ${diff} series atrás ⚠️ — dale!`}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       )}
-
-      {prevTotals && (() => {
-        const curSets = logs.flat().filter((s) => s.ok).length;
-        const diff = curSets - prevTotals.sets;
-        return (
-          <div className="card" style={{ marginTop: 10, padding: "8px 12px", textAlign: "center" }}>
-            <span style={{ fontSize: 11, color: C.mut }}>vs tu mejor sesión anterior de {plan.discLabel}: </span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: diff >= 0 ? C.green : C.orange }}>
-              {diff >= 0 ? `Vas +${diff} series adelante 🔥` : `Vas ${diff} series atrás ⚠️ — dale!`}
-            </span>
-          </div>
-        );
-      })()}
 
       {/* Progreso de la sesión: segmentos por ejercicio */}
       <div style={{ display: "flex", gap: 4, marginTop: 14 }}>
