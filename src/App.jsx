@@ -600,17 +600,6 @@ function IconProgress({ color }) {
     </svg>
   );
 }
-function IconBody({ color }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
-      <circle cx="12" cy="5" r="2" />
-      <path d="M12 7v8" />
-      <path d="M8 10l4 2 4-2" />
-      <path d="M10 15l-2 5" />
-      <path d="M14 15l2 5" />
-    </svg>
-  );
-}
 function IconCommunity({ color }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
@@ -3016,15 +3005,128 @@ function levelUpHint(sessions, lvlIdx) {
   return avg > 0.8 ? LEVELS[lvlIdx + 1].name : null;
 }
 
+/* ─── Biblioteca de programas prediseñados ─── */
+const PROGRAMS = [
+  {
+    id: "ppl", name: "PPL (Push Pull Legs)", emoji: "🏋️", color: C.cyan,
+    durationWeeks: 8, daysPerWeek: 6, minLevelIdx: 1, goalTags: ["musculo"],
+    desc: "El programa más probado para ganar músculo. Divide el cuerpo en empuje, jalón y piernas. Alta frecuencia, alto volumen.",
+    structure: [
+      { discId: "gimnasio", focusId: "pecho", label: "Empuje (pecho, hombros, tríceps)" },
+      { discId: "gimnasio", focusId: "espalda", label: "Jalón (espalda, bíceps)" },
+      { discId: "gimnasio", focusId: "piernas", label: "Piernas (cuádriceps, isquios, glúteos)" },
+      { discId: "gimnasio", focusId: "hombros", label: "Empuje (variaciones)" },
+      { discId: "gimnasio", focusId: "brazos", label: "Jalón (variaciones)" },
+      { discId: "gimnasio", focusId: "gluteos", label: "Piernas (énfasis glúteo e isquio)" },
+      null,
+    ],
+  },
+  {
+    id: "5x5", name: "5×5 Fuerza Pura", emoji: "🏆", color: C.orange,
+    durationWeeks: 12, daysPerWeek: 3, minLevelIdx: 2, goalTags: ["musculo", "rendimiento"],
+    desc: "Sentadilla, peso muerto, press banca, press militar, remo. 5 series de 5 reps. Añades peso cada sesión. Simple y brutal.",
+    structure: [
+      { discId: "gimnasio", focusId: "piernas", label: "Día A: Sentadilla + Press banca + Remo (5×5)" },
+      null,
+      { discId: "gimnasio", focusId: "todo", label: "Día B: Sentadilla + Press militar + Peso muerto (5×5 / 1×5)" },
+      null,
+      { discId: "gimnasio", focusId: "piernas", label: "Día A: Sentadilla + Press banca + Remo (5×5)" },
+      null, null,
+    ],
+  },
+  {
+    id: "futbol_premier", name: "Fútbol Físico Premier", emoji: "⚽", color: C.orange,
+    durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 0, goalTags: ["rendimiento"],
+    desc: "Velocidad, potencia, resistencia y fuerza funcional. Diseñado para que tu físico no sea tu limitante en el campo.",
+    structure: [
+      { discId: "futbolGym", focusId: "defensaCentral", label: "Gym — Fuerza explosiva (sentadilla, hip thrust)" },
+      { discId: "futbolParque", focusId: "extremo", label: "Parque — Velocidad (sprints, cambios de dirección)" },
+      null,
+      { discId: "futbolGym", focusId: "pivote", label: "Gym — Fuerza superior + core" },
+      { discId: "futbolParque", focusId: "mediocampista", label: "Parque — Resistencia de velocidad" },
+      null, null,
+    ],
+  },
+  {
+    id: "calistenia_cero", name: "Calistenia desde Cero", emoji: "🤸", color: C.green,
+    durationWeeks: 12, daysPerWeek: 4, minLevelIdx: 0, goalTags: ["musculo", "condicion"],
+    desc: "De cero al muscle-up. Progresión estricta de fuerza relativa usando solo el peso corporal.",
+    structure: [
+      { discId: "calistenia", focusId: "empuje", label: "Empuje (flexiones, fondos)" },
+      { discId: "calistenia", focusId: "tiron", label: "Tirón (dominadas progresivas)" },
+      null,
+      { discId: "calistenia", focusId: "core", label: "Core y estabilidad" },
+      { discId: "calistenia", focusId: "piernas", label: "Piernas con peso corporal" },
+      null, null,
+    ],
+  },
+  {
+    id: "atletismo_velocidad", name: "Atletismo Velocidad", emoji: "🏃", color: C.purple,
+    durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 0, goalTags: ["rendimiento"],
+    desc: "Basado en los principios de velocidad de atletismo de élite. Pliometría, sprints y técnica.",
+    structure: [
+      { discId: "atletismo", focusId: "100m", label: "Velocidad pura (100m)" },
+      { discId: "cuerpo", focusId: null, label: "Movilidad y recuperación" },
+      { discId: "atletismo", focusId: "400m", label: "Velocidad-resistencia (400m)" },
+      null,
+      { discId: "atletismo", focusId: "100m", label: "Técnica y potencia explosiva" },
+      null, null,
+    ],
+  },
+  {
+    id: "basquet_completo", name: "Básquetbol Completo", emoji: "🏀", color: "#A855F7",
+    durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 0, goalTags: ["rendimiento"],
+    desc: "Explosividad, técnica y resistencia para dominar en cancha.",
+    structure: [
+      { discId: "basquetCancha", focusId: "tiro", label: "Técnica — Tiro y dribleo" },
+      { discId: "basquetSinCancha", focusId: "salto", label: "Físico — Salto vertical" },
+      null,
+      { discId: "basquetCancha", focusId: "defensa", label: "Técnica — Defensa y juego" },
+      { discId: "basquetSinCancha", focusId: "resistencia", label: "Físico — Resistencia" },
+      null, null,
+    ],
+  },
+];
+
+function getActiveProgram() {
+  const active = store.get("active_program", null);
+  if (!active) return null;
+  const program = PROGRAMS.find((p) => p.id === active.programId);
+  if (!program) return null;
+  const week = Math.min(program.durationWeeks, Math.floor((Date.now() - active.startTs) / (7 * 86400000)) + 1);
+  if (week > program.durationWeeks) return null;
+  return { ...active, program, week };
+}
+
+function startProgram(programId) {
+  store.set("active_program", { programId, startTs: Date.now() });
+}
+
+function stopProgram() {
+  store.set("active_program", null);
+}
+
+/* Si hay programa activo, propone la sesión de hoy según su estructura semanal */
+function programDailyCandidate(sessions) {
+  const active = getActiveProgram();
+  if (!active) return null;
+  const dayIdx = (new Date().getDay() + 6) % 7; // 0 = lunes
+  const today = active.program.structure[dayIdx];
+  if (!today) return null;
+  const lvlIdx = Math.max(active.program.minLevelIdx, mostFrequentLevel(sessions));
+  return { discId: today.discId, focusId: today.focusId, lvlIdx, reason: `Semana ${active.week} — ${active.program.name}: ${today.label}` };
+}
+
 function getDailyPlan(sessions) {
   const today = todayKey();
-  const candidates = dailyPlanCandidates(sessions);
+  const programCandidate = programDailyCandidate(sessions);
+  const candidates = programCandidate ? [programCandidate, ...dailyPlanCandidates(sessions)] : dailyPlanCandidates(sessions);
   const cached = store.get("daily_plan", null);
-  if (cached && cached.date === today) {
+  if (cached && cached.date === today && cached.fromProgram === !!programCandidate) {
     return { plan: cached.plan, index: cached.index, candidates };
   }
   const plan = candidates[0];
-  store.set("daily_plan", { date: today, plan, index: 0 });
+  store.set("daily_plan", { date: today, plan, index: 0, fromProgram: !!programCandidate });
   return { plan, index: 0, candidates };
 }
 
@@ -3215,6 +3317,96 @@ function LibraryExerciseCard({ ex, onOpen }) {
         </div>
       </div>
     </button>
+  );
+}
+
+function ProgramsScreen({ onBack }) {
+  const [detail, setDetail] = useState(null);
+  const [, setTick] = useState(0);
+  const profile = store.get("profile", {});
+  const active = getActiveProgram();
+
+  if (detail) {
+    const isActive = active?.programId === detail.id;
+    return (
+      <div className="screen">
+        <button onClick={() => setDetail(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Programas</button>
+        <div style={{ fontSize: 40, marginTop: 8 }}>{detail.emoji}</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 6, color: detail.color }}>{detail.name}</h2>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 8, lineHeight: 1.5 }}>{detail.desc}</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <StatBox label="Duración" value={`${detail.durationWeeks} sem`} accent={detail.color} />
+          <StatBox label="Días/semana" value={detail.daysPerWeek} accent={detail.color} />
+          <StatBox label="Nivel mín." value={LEVELS[detail.minLevelIdx]?.name} accent={detail.color} />
+        </div>
+        <div className="sec-title">Estructura semanal</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((day, i) => (
+            <div key={day} className="card" style={{ display: "flex", justifyContent: "space-between", padding: "9px 12px" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>{day}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, textAlign: "right" }}>{detail.structure[i]?.label || "Descanso"}</span>
+            </div>
+          ))}
+        </div>
+        {isActive ? (
+          <>
+            <div className="card" style={{ marginTop: 14, textAlign: "center", padding: "14px", borderColor: `${detail.color}55` }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: detail.color }}>Semana {active.week} de {detail.durationWeeks} en curso</span>
+            </div>
+            <button
+              className="btn-xl"
+              onClick={() => { stopProgram(); setTick((n) => n + 1); }}
+              style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}
+            >
+              Detener programa
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn-xl"
+            onClick={() => { startProgram(detail.id); setTick((n) => n + 1); }}
+            style={{ marginTop: 14, background: detail.color, color: "#07070C" }}
+          >
+            ▶ Iniciar programa
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Entrenar</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📋 Programas</h2>
+      <p className="muted" style={{ marginTop: 2 }}>Planes de varias semanas con estructura fija</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+        {PROGRAMS.map((p) => {
+          const recommended = profile.goal && p.goalTags.includes(profile.goal);
+          const isActive = active?.programId === p.id;
+          return (
+            <button
+              key={p.id} className="card" onClick={() => setDetail(p)}
+              style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${p.color}` }}
+            >
+              <span style={{ fontSize: 26 }}>{p.emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>{p.name}</span>
+                  {recommended && !isActive && (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: C.green, padding: "2px 6px", borderRadius: 99 }}>RECOMENDADO</span>
+                  )}
+                  {isActive && (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: p.color, padding: "2px 6px", borderRadius: 99 }}>ACTIVO</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{p.durationWeeks} sem · {p.daysPerWeek} días/sem · Nivel mín. {LEVELS[p.minLevelIdx]?.name}</div>
+              </div>
+              <span style={{ color: C.dim }}>›</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -5832,6 +6024,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "viaje") return <TravelMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
+  if (special === "programas") {
+    return <ProgramsScreen onBack={() => setSpecial(null)} />;
+  }
   if (special === "biblioteca") {
     return (
       <ExerciseLibrary
@@ -5935,6 +6130,13 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           <div>
             <div style={{ fontSize: 13, fontWeight: 800 }}>Biblioteca</div>
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Explora todos los ejercicios disponibles</div>
+          </div>
+        </button>
+        <button className="card" onClick={() => setSpecial("programas")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+          <span style={{ fontSize: 24 }}>📋</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Programas</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Planes de varias semanas prediseñados</div>
           </div>
         </button>
 
@@ -9944,16 +10146,78 @@ function Body({ onComplete }) {
 /* ═══════════════════ APP RAÍZ ═══════════════════ */
 
 const TABS = [
-  { id: "inicio", label: "Inicio", Icon: IconHome },
+  { id: "inicio", label: "Hoy", Icon: IconHome },
   { id: "entrenar", label: "Entrenar", Icon: IconTrain },
-  { id: "progreso", label: "Progreso", Icon: IconProgress },
-  { id: "cuerpo", label: "Cuerpo", Icon: IconBody },
-  { id: "comunidad", label: "Comunidad", Icon: IconCommunity },
+  { id: "yo", label: "Yo", Icon: IconProgress },
+  { id: "explorar", label: "Explorar", Icon: IconCommunity },
 ];
 
 /* Función (no objeto estático) para que refleje el tema activo al vuelo */
 function getTabAccent(tabId) {
-  return { inicio: C.cyan, entrenar: C.green, progreso: C.purple, cuerpo: "#60A5FA", comunidad: C.orange }[tabId];
+  return { inicio: C.cyan, entrenar: C.green, yo: C.purple, explorar: C.orange }[tabId];
+}
+
+/* ─── YO: perfil, progreso, cuerpo, comunidad y configuración en un solo lugar ─── */
+const YO_SECTIONS = [
+  { id: "progreso", label: "📊 Progreso" },
+  { id: "cuerpo", label: "🧘 Cuerpo" },
+  { id: "comunidad", label: "👥 Comunidad" },
+];
+
+function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart, onCompleteBody, name, onOpenSettings }) {
+  return (
+    <div className="screen">
+      <div className="chip-wrap">
+        {YO_SECTIONS.map((s) => (
+          <button
+            key={s.id} className={`chip ${section === s.id ? "on" : ""}`}
+            style={section === s.id ? { background: C.purple } : {}}
+            onClick={() => onSection(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+        <button onClick={onOpenSettings} className="chip">⚙️ Configuración</button>
+      </div>
+      {section === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} />}
+      {section === "cuerpo" && <Body onComplete={onCompleteBody} />}
+      {section === "comunidad" && <Community name={name} sessions={sessions} streak={streak} freezes={freezes} />}
+    </div>
+  );
+}
+
+/* ─── EXPLORAR: biblioteca de ejercicios, programas y tips ─── */
+const EXPLORAR_SECTIONS = [
+  { id: "biblioteca", label: "📚 Biblioteca" },
+  { id: "programas", label: "📋 Programas" },
+  { id: "tips", label: "💡 Tips" },
+];
+
+function ExplorarScreen({ section, onSection, sessions, onAddToRoutine }) {
+  return (
+    <div className="screen">
+      <div className="chip-wrap">
+        {EXPLORAR_SECTIONS.map((s) => (
+          <button
+            key={s.id} className={`chip ${section === s.id ? "on" : ""}`}
+            style={section === s.id ? { background: C.orange } : {}}
+            onClick={() => onSection(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      {section === "biblioteca" && <ExerciseLibrary sessions={sessions} onAddToRoutine={onAddToRoutine} onBack={() => {}} />}
+      {section === "programas" && <ProgramsScreen onBack={() => {}} />}
+      {section === "tips" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+          {DAILY_TIPS.map((t, i) => (
+            <div key={i} className="card" style={{ padding: "11px 14px", fontSize: 13, lineHeight: 1.4 }}>💡 {t}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function App() {
@@ -9970,6 +10234,8 @@ export default function App() {
   });
   const [heroes, setHeroes] = useState(() => store.get("heroes_unlocked", store.get("heroes", [])));
   const [tab, setTab] = useState("inicio");
+  const [yoSection, setYoSection] = useState("progreso");
+  const [explorarSection, setExplorarSection] = useState("biblioteca");
   const [live, setLive] = useState(null);
   const [accent, setAccent] = useState(() => getTabAccent("inicio"));
   const [online, setOnline] = useState(() => navigator.onLine);
@@ -10448,7 +10714,7 @@ export default function App() {
                     onTrain={() => changeTab("entrenar")} mode={mode}
                     onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
                     onStartPlan={(discId, focusId, lvlIdx) => {
-                      if (discId === "cuerpo") { changeTab("cuerpo"); return; }
+                      if (discId === "cuerpo") { setYoSection("cuerpo"); changeTab("yo"); return; }
                       const p = buildPlanFor(discId, focusId, lvlIdx);
                       if (p) setLive(p);
                     }}
@@ -10465,9 +10731,19 @@ export default function App() {
                 sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
               />
             )}
-            {tab === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive} />}
-            {tab === "cuerpo" && <Body onComplete={completeBody} />}
-            {tab === "comunidad" && <Community name={name} sessions={sessions} streak={streak} freezes={freezes} />}
+            {tab === "yo" && (
+              <YoScreen
+                section={yoSection} onSection={setYoSection}
+                sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive}
+                onCompleteBody={completeBody} name={name} onOpenSettings={() => setShowSettings(true)}
+              />
+            )}
+            {tab === "explorar" && (
+              <ExplorarScreen
+                section={explorarSection} onSection={setExplorarSection}
+                sessions={sessions} onAddToRoutine={() => {}}
+              />
+            )}
           </>
         )}
       </div>
