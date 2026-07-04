@@ -502,6 +502,14 @@ input[type='number'] {
   animation: splashDrop 600ms ease-in forwards;
 }
 
+@keyframes supercompPulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 0 transparent; }
+  50% { opacity: 0.75; text-shadow: 0 0 8px #22FF8888; }
+}
+.supercomp-pulse {
+  animation: supercompPulse 1.4s ease-in-out infinite;
+}
+
 @keyframes confettiFall {
   0% { transform: translateY(0) rotate(0deg); opacity: 1; }
   100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }

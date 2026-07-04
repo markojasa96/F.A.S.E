@@ -2762,6 +2762,22 @@ function nextMuscleSuggestion(focusLabel) {
   return NEXT_MUSCLE_SUGGESTION[focusKey] || "Otro grupo muscular";
 }
 
+/* ─── DUP: Daily Undulating Periodization — el esquema rota cada sesión del mismo enfoque ─── */
+const DUP_SCHEMES = {
+  strength: { name: "Fuerza", color: C.red, sets: 4, reps: "3-5", pct: [0.85, 0.90], restMin: 180, restMax: 300 },
+  hypertrophy: { name: "Hipertrofia", color: C.green, sets: 3, reps: "8-12", pct: [0.67, 0.75], restMin: 60, restMax: 90 },
+  endurance: { name: "Resistencia", color: C.cyan, sets: 3, reps: "15-20", pct: [0.55, 0.65], restMin: 30, restMax: 45 },
+};
+const DUP_ROTATION = { strength: "hypertrophy", hypertrophy: "endurance", endurance: "strength" };
+
+function getDUPDay(sessions, focusLabel) {
+  const relevant = sessions
+    .filter((s) => s.kind === "entreno" && s.disc === "gimnasio" && s.focusLabel === focusLabel && s.dupType)
+    .slice(-3);
+  const lastType = relevant[relevant.length - 1]?.dupType || "endurance";
+  return DUP_ROTATION[lastType] || "strength";
+}
+
 /* Descanso coherente según el rango de repeticiones: fuerza (1-5) 3-5min,
    hipertrofia (6-12) 60-90s, resistencia (13+) 30-45s */
 function repRangeRestBounds(repsStr) {
@@ -3191,8 +3207,32 @@ function updateRecoveryState(session) {
   else if (session.methodology === "gvt") intensityKey = "gvt";
   const hoursNeeded = getRecoveryTime(group, intensityKey);
   const recovery = store.get("recovery", {});
-  recovery[group] = { lastSession: session.ts, hoursNeeded };
+  recovery[group] = { lastSession: session.ts, hoursNeeded, intensityKey };
   store.set("recovery", recovery);
+}
+
+/* ─── Modelo de supercompensación: fase fisiológica real de cada grupo muscular ─── */
+const SUPERCOMP_RECOVERY_MULTIPLIER = {
+  Piernas: 1.3, Espalda: 1.2, Pecho: 1.0, Hombros: 1.0, Brazos: 0.8, Core: 0.6,
+  Atletismo: 1.0, "Fútbol": 1.0, Básquetbol: 1.0, Calistenia: 1.0, Cuerpo: 0.5,
+};
+
+function getSupercompensationPhase(lastSessionTs, muscleGroup, intensityKey) {
+  const hoursSince = (Date.now() - lastSessionTs) / 3600000;
+  const recoveryMult = SUPERCOMP_RECOVERY_MULTIPLIER[muscleGroup] ?? 1.0;
+  const intensityMult = RECOVERY_INTENSITY_MULTIPLIER[intensityKey] ?? 1.0;
+  const optimalWindow = 48 * recoveryMult * intensityMult;
+
+  if (hoursSince < optimalWindow * 0.5) {
+    return { phase: "fatigue", color: "#FF3B5C", label: "En fatiga", trainNow: false };
+  }
+  if (hoursSince < optimalWindow * 0.9) {
+    return { phase: "recovery", color: "#FF8800", label: "Recuperando", trainNow: false };
+  }
+  if (hoursSince < optimalWindow * 1.4) {
+    return { phase: "supercompensation", color: "#22FF88", label: "⚡ PICO DE ADAPTACIÓN", trainNow: true };
+  }
+  return { phase: "detraining", color: "#6B7280", label: "Ventana pasando", trainNow: true };
 }
 
 /* Estado agregado de recuperación para mostrar en Inicio */
@@ -3202,14 +3242,20 @@ function getRecoveryStatus() {
   const groups = Object.entries(recovery).map(([group, info]) => {
     const hoursElapsed = (now - info.lastSession) / 3600000;
     const hoursLeft = Math.max(0, Math.round(info.hoursNeeded - hoursElapsed));
-    return { group, hoursLeft, recovered: hoursLeft <= 0 };
+    const supercomp = getSupercompensationPhase(info.lastSession, group, info.intensityKey || "campeon");
+    return { group, hoursLeft, recovered: hoursLeft <= 0, ...supercomp };
   });
+  const peakGroups = groups.filter((g) => g.phase === "supercompensation");
   const worst = groups.filter((g) => !g.recovered).sort((a, b) => b.hoursLeft - a.hoursLeft)[0];
   const recentIntenseSessions = Object.values(recovery).filter((r) => now - r.lastSession < 3 * 86400000).length;
   let level = "green";
   let message = "Listo para entrenar fuerte";
   let chipLabel = "🟢 Listo para entrenar";
-  if (worst && worst.hoursLeft > 24) {
+  if (peakGroups.length) {
+    level = "green";
+    message = `${peakGroups.map((g) => g.group).join(" y ")} ${peakGroups.length > 1 ? "están" : "está"} en su pico de adaptación hoy. Es el mejor momento para entrenarlos.`;
+    chipLabel = `⚡ Pico: ${peakGroups.map((g) => g.group).join(", ")}`;
+  } else if (worst && worst.hoursLeft > 24) {
     level = "red";
     message = "Sesión ligera recomendada";
     chipLabel = "🔴 Descanso o movilidad";
@@ -3218,7 +3264,7 @@ function getRecoveryStatus() {
     message = worst ? `Puedes entrenar, evita ${worst.group}` : "Puedes entrenar, con moderación";
     chipLabel = worst ? `🟡 Evita ${worst.group.toLowerCase()} hoy` : "🟡 Entrena con moderación";
   }
-  return { level, message, chipLabel, groups: groups.sort((a, b) => a.hoursLeft - b.hoursLeft), worst };
+  return { level, message, chipLabel, groups: groups.sort((a, b) => a.hoursLeft - b.hoursLeft), worst, peakGroups };
 }
 
 /* Devuelve una lista de sugerencias (la primera es la principal; "ver otro plan" rota entre el resto) */
@@ -3447,18 +3493,32 @@ function candidateMuscleGroup(c) {
   return null;
 }
 
+/* Prioriza los músculos que están en su pico de supercompensación hoy */
+function prioritizePeakGroups(candidates, peakGroups) {
+  if (!peakGroups?.length) return candidates;
+  const peakSet = new Set(peakGroups.map((g) => g.group));
+  const peak = [];
+  const rest = [];
+  candidates.forEach((c) => {
+    const group = candidateMuscleGroup(c);
+    (group && peakSet.has(group) ? peak : rest).push(c);
+  });
+  return peak.length ? [...peak, ...rest] : candidates;
+}
+
 /* Evita sugerir en primer lugar un grupo muscular que aún no está recuperado */
 function deprioritizeUnrecovered(candidates) {
   const status = getRecoveryStatus();
+  const prioritized = prioritizePeakGroups(candidates, status.peakGroups);
   const unrecoveredGroups = new Set(status.groups.filter((g) => !g.recovered).map((g) => g.group));
-  if (!unrecoveredGroups.size) return candidates;
+  if (!unrecoveredGroups.size) return prioritized;
   const ready = [];
   const resting = [];
-  candidates.forEach((c) => {
+  prioritized.forEach((c) => {
     const group = candidateMuscleGroup(c);
     (group && unrecoveredGroups.has(group) ? resting : ready).push(c);
   });
-  return ready.length ? [...ready, ...resting] : candidates;
+  return ready.length ? [...ready, ...resting] : prioritized;
 }
 
 function getDailyPlan(sessions) {
@@ -4980,8 +5040,11 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                           {status.groups.map((g) => (
                             <div key={g.group} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                               <span style={{ color: C.mut }}>{g.group}</span>
-                              <span style={{ fontWeight: 700, color: g.recovered ? C.green : g.hoursLeft > 24 ? C.red : C.yellow }}>
-                                {g.recovered ? "🟢 Recuperado" : `${g.hoursLeft > 24 ? "🔴" : "🟡"} ${g.hoursLeft}h restantes`}
+                              <span
+                                className={g.phase === "supercompensation" ? "supercomp-pulse" : ""}
+                                style={{ fontWeight: 700, color: g.color }}
+                              >
+                                {g.phase === "supercompensation" ? g.label : g.phase === "fatigue" ? `🔴 ${g.label}` : g.phase === "recovery" ? `🟡 ${g.label}` : `🟢 Listo`}
                               </span>
                             </div>
                           ))}
@@ -5852,6 +5915,140 @@ function CenturySetMode({ onFinish, onSave, sessions }) {
             <button key={n} className="btn-xl" onClick={() => addReps(n)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, minWidth: 70 }}>+{n}</button>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Modo especial: Wendler 5/3/1 ─── */
+const WENDLER_EXERCISES = ["Sentadilla", "Press banca", "Peso muerto", "Press militar"];
+const WENDLER_WEEK_SCHEMES = {
+  1: { label: "Volumen", sets: [{ pct: 0.65, reps: "5" }, { pct: 0.75, reps: "5" }, { pct: 0.85, reps: "5+", amrap: true }] },
+  2: { label: "Intensidad", sets: [{ pct: 0.70, reps: "3" }, { pct: 0.80, reps: "3" }, { pct: 0.90, reps: "3+", amrap: true }] },
+  3: { label: "Peak", sets: [{ pct: 0.75, reps: "5" }, { pct: 0.85, reps: "3" }, { pct: 0.95, reps: "1+", amrap: true }] },
+  4: { label: "Deload", sets: [{ pct: 0.40, reps: "5" }, { pct: 0.50, reps: "5" }, { pct: 0.60, reps: "5" }] },
+};
+const wendlerRound = (x) => Math.round(x / 2.5) * 2.5;
+
+function WendlerMode({ onFinish, onSave }) {
+  const [exercise, setExercise] = useState(null);
+  const [setIdx, setSetIdx] = useState(0);
+  const [amrapReps, setAmrapReps] = useState("");
+  const [done, setDone] = useState(false);
+  const oneRM = store.get("1rm", {});
+
+  if (!exercise) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
+        <div style={{ fontSize: 40, marginTop: 12 }}>🏆</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Wendler 5/3/1</h2>
+        <p className="muted" style={{ marginTop: 4 }}>
+          El programa de fuerza más probado del mundo. 4 semanas de ciclos con porcentajes exactos. Para los 4 básicos.
+        </p>
+        <div className="chip-wrap" style={{ marginTop: 16, justifyContent: "center" }}>
+          {WENDLER_EXERCISES.map((e) => {
+            const hasRM = !!oneRM[e]?.rm;
+            return (
+              <button key={e} className="chip" onClick={() => hasRM && setExercise(e)} style={{ opacity: hasRM ? 1 : 0.4 }}>
+                {e}{!hasRM && " 🔒"}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ fontSize: 11, color: C.dim, marginTop: 14 }}>
+          Necesitas guardar tu 1RM de cada ejercicio primero en Progreso → Mi fuerza.
+        </p>
+      </div>
+    );
+  }
+
+  const wendlerData = store.get("wendler", {});
+  const state = wendlerData[exercise] || { trainingMax: wendlerRound(oneRM[exercise].rm * 0.9), currentWeek: 1, currentCycle: 1 };
+  const scheme = WENDLER_WEEK_SCHEMES[state.currentWeek];
+  const set = scheme.sets[setIdx];
+  const setWeight = wendlerRound(state.trainingMax * set.pct);
+
+  const finishSession = () => {
+    const next = { ...state };
+    if (state.currentWeek >= 4) {
+      next.currentWeek = 1;
+      next.currentCycle = state.currentCycle + 1;
+      next.trainingMax = state.trainingMax + (exercise === "Sentadilla" || exercise === "Peso muerto" ? 5 : 2.5);
+    } else {
+      next.currentWeek = state.currentWeek + 1;
+    }
+    const allData = { ...wendlerData, [exercise]: next };
+    store.set("wendler", allData);
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "gimnasio", methodology: "wendler",
+      focusLabel: `Wendler 5/3/1 — ${exercise}`, levelIdx: 3,
+      exercises: [{
+        name: exercise,
+        sets: scheme.sets.map((s, i) => ({
+          weight: wendlerRound(state.trainingMax * s.pct),
+          reps: i === scheme.sets.length - 1 && s.amrap ? parseInt(amrapReps, 10) || 0 : parseInt(s.reps, 10) || 0,
+          ok: true,
+        })),
+      }],
+    });
+    setDone(true);
+  };
+
+  if (done) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+        <div className="pop" style={{ fontSize: 56 }}>🏆</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 8 }}>Sesión Wendler guardada</h2>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>
+          {state.currentWeek >= 4 ? `Ciclo completado. Nuevo Training Max calculado para ${exercise}.` : `Próxima: Semana ${state.currentWeek + 1}.`}
+        </p>
+        <button className="btn-xl" onClick={onFinish} style={{ marginTop: 20, background: C.cyan, color: "#07070C" }}>VOLVER</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
+        Wendler 5/3/1 — Ciclo {state.currentCycle}, Semana {state.currentWeek} ({scheme.label})
+      </p>
+      <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 8 }}>{exercise}</h2>
+      <p style={{ fontSize: 12, color: C.dim, marginTop: 2 }}>Training Max: {state.trainingMax}kg</p>
+
+      <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
+        {scheme.sets.map((s, i) => {
+          const w = wendlerRound(state.trainingMax * s.pct);
+          return (
+            <div
+              key={i}
+              style={{
+                display: "flex", justifyContent: "space-between", padding: "8px 0",
+                borderBottom: i < scheme.sets.length - 1 ? `1px solid ${C.border}` : "none",
+                opacity: i === setIdx ? 1 : i < setIdx ? 0.5 : 0.7,
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: i === setIdx ? 800 : 600 }}>Set {i + 1}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: i === setIdx ? C.cyan : C.text }}>
+                {w}kg × {s.reps}{s.amrap ? " ← máximo posible" : ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {set.amrap ? (
+        <div style={{ marginTop: 16 }}>
+          <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>REPS LOGRADAS EN {setWeight}KG</label>
+          <input className="input" type="number" value={amrapReps} onChange={(e) => setAmrapReps(e.target.value)} style={{ marginTop: 6 }} />
+          <button className="btn-xl" onClick={finishSession} disabled={!amrapReps} style={{ marginTop: 12, background: C.cyan, color: "#07070C" }}>
+            ✓ Terminar sesión Wendler
+          </button>
+        </div>
+      ) : (
+        <button className="btn-xl" onClick={() => setSetIdx((i) => i + 1)} style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}>
+          ✓ Completé el set {setIdx + 1}
+        </button>
       )}
     </div>
   );
@@ -6917,6 +7114,13 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const isConcreteDisc = discId && discId !== "futbol" && discId !== "basquetbol" && discId !== "atletismo";
   const disc = isConcreteDisc ? DISCIPLINES[discId] : null;
 
+  const focusLabelForDUP = isConcreteDisc ? DISCIPLINES[discId]?.focuses.find((f) => f.id === focusId)?.label : null;
+  const dupType = useMemo(() => {
+    if (discId !== "gimnasio" || gymMethod !== "dup") return null;
+    return getDUPDay(sessions, focusLabelForDUP);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discId, gymMethod, focusLabelForDUP]);
+
   const routine = useMemo(() => {
     if (!isConcreteDisc || lvlIdx === null) return null;
     /* Con poca energía: un nivel menos y una serie menos por ejercicio */
@@ -6930,8 +7134,12 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     });
     if (energy === "low") r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
     if (energy === "high") r = r.map((e, i) => (i === 0 ? { ...e, sets: Math.min(6, e.sets + 1) } : e));
+    if (dupType && r.some((e) => e.type === "peso")) {
+      const dup = DUP_SCHEMES[dupType];
+      r = r.map((e) => (e.type !== "peso" ? e : { ...e, sets: dup.sets, reps: dup.reps, rest: dup.restMin + (dup.restMax - dup.restMin) / 2, dupType }));
+    }
     return r;
-  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment]);
+  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment, dupType]);
 
   const atletRoutine = useMemo(() => {
     if (discId !== "atletismo" || !distance || lvlIdx === null) return null;
@@ -6957,6 +7165,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   }
   if (special === "gvt") return <GvtMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} sessions={sessions} />;
   if (special === "century") return <CenturySetMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} sessions={sessions} />;
+  if (special === "wendler") return <WendlerMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "viaje") return <TravelMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
@@ -7338,9 +7547,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     const userLvl = mostFrequentLevel(sessions);
     const METHODOLOGIES = [
       { id: "standard", emoji: "📊", name: "Estándar", desc: "Series y reps fijas. Para todos los niveles.", minLvl: 0 },
+      { id: "dup", emoji: "🌊", name: "DUP", desc: "El esquema cambia cada sesión: fuerza, hipertrofia o resistencia.", minLvl: 2 },
       { id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "1-2 series al fallo total. Requiere Campeón+", minLvl: 2 },
       { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio. Volumen extremo.", minLvl: 1 },
       { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones. Descanso libre.", minLvl: 0 },
+      { id: "wendler", emoji: "🏆", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes exactos para los 4 básicos. Requiere 1RM guardado.", minLvl: 3 },
     ];
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
@@ -7357,8 +7568,8 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                 key={m.id} className="card"
                 onClick={() => {
                   if (!available) return;
-                  if (m.id === "standard") setGymMethod("standard");
-                  else { setSpecial(m.id === "heavyduty" ? "heavyduty" : m.id); setDiscId(null); }
+                  if (m.id === "standard" || m.id === "dup") setGymMethod(m.id);
+                  else { setSpecial(m.id); setDiscId(null); }
                 }}
                 style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", opacity: available ? 1 : 0.5 }}
               >
@@ -7467,6 +7678,17 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         ))}
       </div>
 
+      {dupType && (
+        <div style={{ marginTop: 12, textAlign: "center" }}>
+          <span style={{
+            fontSize: 12, fontWeight: 800, color: DUP_SCHEMES[dupType].color, background: `${DUP_SCHEMES[dupType].color}18`,
+            padding: "6px 14px", borderRadius: 99, border: `1px solid ${DUP_SCHEMES[dupType].color}44`,
+          }}>
+            DUP — Hoy toca: {DUP_SCHEMES[dupType].name} {dupType === "strength" ? "🔴" : dupType === "hypertrophy" ? "💪" : "🔵"}
+          </span>
+        </div>
+      )}
+
       {routine ? (
         <>
           <div className="sec-title">Tu rutina · {routine.length} ejercicios</div>
@@ -7496,7 +7718,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             </button>
             <button
               className="btn-xl"
-              onClick={() => startAndFinishTutorial({ discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === focusId).label, lvlIdx, exercises: routine, calLocation: discId === "calistenia" ? calLocation : undefined })}
+              onClick={() => startAndFinishTutorial({ discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === focusId).label, lvlIdx, exercises: routine, calLocation: discId === "calistenia" ? calLocation : undefined, dupType })}
               style={{ flex: 2, background: disc.color, color: "#07070C", fontSize: 15 }}
             >
               COMENZAR SESIÓN
@@ -7858,6 +8080,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       sesionRapida: sessionSecs < 300,
       cooldownBonus: !!gotCooldownBonus,
       note: sanitizeNote(quickNote) || undefined,
+      dupType: plan.dupType || undefined,
       exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i], technique: techniqueRatings[i] || null })),
     };
     onSave(record);
