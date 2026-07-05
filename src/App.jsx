@@ -1152,16 +1152,24 @@ DISCIPLINES.atletismo = {
 
 const ATLETISMO_BENCH = {
   "100m": [
-    { l: "Iniciado", t: ">14s" }, { l: "Guerrero", t: "12s" }, { l: "Campeón", t: "11s" },
-    { l: "Élite", t: "10.5s" }, { l: "Leyenda", t: "10s" }, { l: "THE ONE", t: "<9.8s" },
+    { l: "Iniciado", t: ">14.0s" }, { l: "Guerrero", t: "13.0-14.0s" }, { l: "Campeón", t: "11.5-13.0s" },
+    { l: "Élite", t: "10.8-11.5s" }, { l: "Leyenda", t: "10.2-10.8s" }, { l: "THE ONE", t: "<10.2s" },
   ],
   "1000m": [
-    { l: "Iniciado", t: ">6:00" }, { l: "Guerrero", t: "5:00" }, { l: "Campeón", t: "4:30" },
-    { l: "Élite", t: "4:00" }, { l: "Leyenda", t: "3:30" }, { l: "THE ONE", t: "<3:00" },
+    { l: "Iniciado", t: ">6:00 /km" }, { l: "Guerrero", t: "5:00-6:00 /km" }, { l: "Campeón", t: "4:15-5:00 /km" },
+    { l: "Élite", t: "3:45-4:15 /km" }, { l: "Leyenda", t: "3:15-3:45 /km" }, { l: "THE ONE", t: "<3:15 /km" },
   ],
   "5km": [
-    { l: "Iniciado", t: ">35:00" }, { l: "Guerrero", t: "28:00" }, { l: "Campeón", t: "23:00" },
-    { l: "Élite", t: "18:00" }, { l: "Leyenda", t: "15:00" }, { l: "THE ONE", t: "<13:00" },
+    { l: "Iniciado", t: ">35 min" }, { l: "Guerrero", t: "28-35 min" }, { l: "Campeón", t: "22-28 min" },
+    { l: "Élite", t: "18-22 min" }, { l: "Leyenda", t: "15-18 min" }, { l: "THE ONE", t: "<15 min" },
+  ],
+  "10km": [
+    { l: "Iniciado", t: ">70 min" }, { l: "Guerrero", t: "55-70 min" }, { l: "Campeón", t: "45-55 min" },
+    { l: "Élite", t: "38-45 min" }, { l: "Leyenda", t: "32-38 min" }, { l: "THE ONE", t: "<32 min" },
+  ],
+  maraton: [
+    { l: "Iniciado", t: ">5h" }, { l: "Guerrero", t: "4-5h" }, { l: "Campeón", t: "3:30-4h" },
+    { l: "Élite", t: "3-3:30h" }, { l: "Leyenda", t: "2:45-3h" }, { l: "THE ONE", t: "<2:45h" },
   ],
 };
 
@@ -1177,6 +1185,11 @@ const ATLETISMO_EXDB = {
     { n: "Sprint máximo", t: "tiempo", s: 4, r: "60 m", rest: 180, lv: [3, 5], tip: "Inclinación de 45° al salir. Brazos en 90° que se mueven adelante-atrás sin cruzar el centro. Fase de máxima velocidad entre 40-60m." },
     { n: "Sprint resistido (cuesta o banda)", t: "tiempo", s: 4, r: "20 m", rest: 150, lv: [4, 5], tip: "Mayor resistencia = mayor fuerza en la salida." },
     { n: "Pliometría: saltos horizontales", t: "reps", s: 4, r: "6", rest: 120, lv: [3, 5], tip: "Distancia máxima. Simula la zancada explosiva." },
+    { n: "Marcha atlética básica", t: "tiempo", s: 2, r: "50 m", rest: 60, lv: [0, 0], tip: "Un pie siempre en contacto con el suelo. Caderas activas. Movilidad y técnica base." },
+    { n: "Salida parado reacción", t: "tiempo", s: 4, r: "20 m", rest: 90, lv: [0, 0], tip: "Posición baja, primera zancada explosiva. Aplica a cualquier distancia de sprint." },
+    { n: "Drills frecuencia de zancada", t: "tiempo", s: 5, r: "15 m", rest: 90, lv: [5, 5], tip: "Pasos muy cortos y muy rápidos. Activa el patrón neurológico de velocidad máxima." },
+    { n: "Carrera en curva técnica", t: "tiempo", s: 4, r: "60 m curva", rest: 120, lv: [5, 5], tip: "Inclínate hacia el interior de la curva. Fundamental para 200m y 400m." },
+    { n: "Resistencia de velocidad 300m", t: "tiempo", s: 3, r: "300 m", rest: 240, lv: [5, 5], tip: "Al 85-90% de máxima velocidad. La distancia más dura del atletismo. Recuperación completa entre reps." },
   ],
   "400m": [
     { n: "Repeticiones de 300 m a ritmo de carrera", t: "tiempo", s: 4, r: "300 m", rest: 240, tip: "Ritmo agresivo pero sostenible toda la distancia." },
@@ -1283,6 +1296,25 @@ const EXDB = {
     { n: "Zancada inversa con barra", t: "peso", f: ["piernas", "gluteos"], lv: [2, 5], s: 3, r: "8 c/pierna", rest: 90, tip: "Paso atrás controlado, más amable con las rodillas." },
     { n: "Step-up con mancuernas", t: "peso", f: ["piernas", "gluteos"], lv: [1, 4], s: 3, r: "10 c/pierna", rest: 90, tip: "Empuja con la pierna de arriba, no impulses con la de abajo." },
     { n: "Abducción de cadera en polea", t: "peso", f: ["gluteos"], lv: [0, 3], s: 3, r: "12 c/pierna", rest: 60, tip: "Pierna recta hacia el lado, sin inclinar el torso." },
+    { n: "Press banca agarre cerrado", t: "peso", f: ["pecho", "brazos"], lv: [1, 5], s: 3, r: "10", rest: 75, tip: "Manos a anchura de hombros. Énfasis en tríceps y pecho interno. Codos más pegados al cuerpo." },
+    { n: "Press declinado mancuernas", t: "peso", f: ["pecho"], lv: [1, 4], s: 3, r: "12", rest: 75, tip: "Banco a -20°. Activa porción inferior del pecho. No bajar más de -30° para proteger hombros." },
+    { n: "Pullover con mancuerna", t: "peso", f: ["pecho", "espalda"], lv: [0, 4], s: 3, r: "12", rest: 60, tip: "Codos ligeramente doblados. Baja hasta sentir el estiramiento del dorsal. Expande la caja torácica." },
+    { n: "Cruce de poleas alto a bajo", t: "peso", f: ["pecho"], lv: [1, 5], s: 3, r: "15", rest: 45, tip: "Polea alta, cruza hacia abajo y al centro. Porción inferior del pecho. Contracción máxima en el centro." },
+    { n: "Cruce de poleas bajo a alto", t: "peso", f: ["pecho"], lv: [1, 5], s: 3, r: "15", rest: 45, tip: "Polea baja, cruza hacia arriba y al centro. Porción clavicular. Control en todo el rango." },
+    { n: "Press con agarre neutro mancuernas", t: "peso", f: ["pecho"], lv: [0, 4], s: 3, r: "10", rest: 75, tip: "Palmas enfrentadas durante todo el movimiento. Menos estrés en el hombro." },
+    { n: "Aperturas en polea baja", t: "peso", f: ["pecho"], lv: [0, 4], s: 3, r: "15", rest: 45, tip: "De abajo hacia arriba en arco. Porción superior del pecho. Brazos casi rectos." },
+    { n: "Remo en polea baja sentado", t: "peso", f: ["espalda"], lv: [0, 4], s: 4, r: "10", rest: 75, tip: "Espalda recta perpendicular al suelo. Codos pegados al cuerpo. Aprieta escápulas al llegar al final." },
+    { n: "Remo agarre supino barra", t: "peso", f: ["espalda", "brazos"], lv: [2, 5], s: 4, r: "8", rest: 90, tip: "Palmas hacia arriba. Mayor activación de bíceps como asistente. Codos pegados al cuerpo." },
+    { n: "Dominadas agarre neutro", t: "reps", f: ["espalda"], lv: [1, 4], s: 3, r: "8", rest: 90, tip: "Palmas enfrentadas en barra paralela. Menos estrés en los hombros que el agarre prono." },
+    { n: "Remo en T-bar", t: "peso", f: ["espalda"], lv: [2, 5], s: 4, r: "8", rest: 90, tip: "Pecho sobre el pad. Jala hacia el esternón. Excelente para grosor de espalda." },
+    { n: "Hiperextensión en banco romano", t: "reps", f: ["espalda", "gluteos"], lv: [0, 4], s: 3, r: "15", rest: 60, tip: "No hiperextender la espalda baja. Para cuando el torso quede paralelo. Mantén cuello neutro." },
+    { n: "Nordic hamstring curl", t: "reps", f: ["piernas"], lv: [3, 5], s: 3, r: "5", rest: 120, tip: "El mejor preventivo de lesión de isquiotibiales. Baja MUY lento (4-5 segundos). Usa los brazos para frenar si es necesario." },
+    { n: "Peso muerto con mancuernas", t: "peso", f: ["piernas", "gluteos"], lv: [0, 3], s: 3, r: "12", rest: 75, tip: "Igual que el convencional pero con mancuernas. Más libertad de movimiento para principiantes." },
+    { n: "Elevaciones laterales en cable", t: "peso", f: ["hombros"], lv: [1, 5], s: 3, r: "15", rest: 45, tip: "Tensión constante vs mancuerna. Codo ligeramente doblado. No balancear el torso." },
+    { n: "Rear delt fly en máquina", t: "peso", f: ["hombros"], lv: [0, 4], s: 3, r: "15", rest: 45, tip: "Sentado al revés en la máquina de peck deck. Deltoides posterior. Esencial para hombros saludables." },
+    { n: "Press con agarre neutro", t: "peso", f: ["hombros"], lv: [0, 4], s: 3, r: "10", rest: 75, tip: "Palmas enfrentadas. Menos estrés en el manguito rotador. Buena opción si hay dolor en press normal." },
+    { n: "Rotación externa con cable", t: "peso", f: ["hombros"], lv: [1, 5], s: 3, r: "15", rest: 45, tip: "Codo a 90° pegado al cuerpo. Rota el antebrazo hacia afuera. Manguito rotador — prevención de lesión." },
+    { n: "Elevaciones frontales alternas", t: "peso", f: ["hombros"], lv: [0, 4], s: 3, r: "12 c/brazo", rest: 60, tip: "Alterna brazos. Palma hacia abajo. Solo sube hasta la altura del hombro." },
   ],
   calistenia: [
     { n: "Flexiones con rodillas", t: "reps", f: ["empuje"], lv: [0, 0], s: 3, r: "8-12", rest: 60, tip: "Cuerpo alineado de rodillas a cabeza, pecho al suelo." },
@@ -1343,6 +1375,11 @@ const EXDB = {
     { n: "Broad jumps", t: "reps", f: ["explosivo", "piernas"], lv: [1, 4], s: 3, r: "6", rest: 90, tip: "Salta lo más lejos posible y aterriza estable." },
     { n: "Sprawls", t: "reps", f: ["explosivo"], lv: [0, 2], s: 3, r: "12", rest: 60, tip: "Como burpee sin flexión: cae, extiende y levántate rápido." },
     { n: "High knees a máxima velocidad", t: "tiempo", f: ["explosivo"], lv: [0, 2], s: 3, r: "20s", rest: 45, tip: "Rodillas a la cadera con braceo rápido." },
+    { n: "Dominadas explosivas", t: "reps", f: ["tiron", "explosivo"], lv: [3, 5], s: 4, r: "5", rest: 150, tip: "Sube tan rápido que las manos despegan brevemente de la barra. Base del muscle-up." , bar: true },
+    { n: "Planche lean", t: "tiempo", f: ["empuje", "core"], lv: [3, 5], s: 3, r: "20s", rest: 120, tip: "Inclínate hacia adelante con brazos rectos. Progresión gradual al planche completo." },
+    { n: "Handstand contra pared", t: "tiempo", f: ["empuje", "core"], lv: [2, 5], s: 3, r: "20s", rest: 120, tip: "Panza hacia la pared para aprender. Fuerza de hombros y propiocepción. Construye la base del pino libre." },
+    { n: "Archer push-up en barras", t: "reps", f: ["empuje"], lv: [3, 5], s: 3, r: "6 c/lado", rest: 120, tip: "Un brazo extendido, el otro hace el trabajo. Progresión al fondo a una mano." , bar: true },
+    { n: "Flexiones spiderman", t: "reps", f: ["empuje", "core"], lv: [1, 4], s: 3, r: "10", rest: 90, tip: "Al bajar, lleva la rodilla al codo del mismo lado. Core y pecho simultáneos." },
   ],
   futbolGym: [
     { n: "Sentadilla con salto (carga ligera)", t: "peso", f: ["velocidad", "salto"], lv: [1, 4], s: 4, r: "5-6", rest: 120, tip: "Mancuernas ligeras, salta con máxima intención." },
@@ -7068,6 +7105,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [distance, setDistance] = useState(null);
   const [customRoutines, setCustomRoutines] = useState(() => store.get("custom_routines", []));
   const [trainCards] = useState(() => orderedTrainCards());
+  const [showProgramsHint, dismissProgramsHint] = useFirstTime("programs");
+  const [hdNotSeen, markHdSeen] = useFirstTime("hd_unlock");
+  const hdSeen = !hdNotSeen;
+  const [showHdUnlock, setShowHdUnlock] = useState(false);
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
   const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "dueto" | "partido"
@@ -7240,9 +7281,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   /* ── Pantalla 1: lista de disciplinas ── */
   if (!discId) {
     return (
-      <div className="screen">
+      <div className="screen" style={{ position: "relative" }}>
         <h2 style={{ fontSize: 18, fontWeight: 800 }}>Entrenar</h2>
         <p className="muted" style={{ marginTop: 2 }}>Elige tu disciplina de hoy</p>
+        <FeatureTooltip visible={showProgramsHint} onDismiss={dismissProgramsHint} text="💡 Tenemos metodologías avanzadas aquí (Gimnasio → Estándar/DUP/Heavy Duty…)" />
         {showTutorial && (
           <div className="card" style={{ marginTop: 10, padding: "9px 12px", borderColor: `${C.cyan}66`, background: "rgba(0,229,255,0.08)" }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>👇 Elige tu disciplina</p>
@@ -7609,12 +7651,12 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     };
 
     const METHODOLOGIES = [
-      { id: "standard", emoji: "📊", name: "Estándar", desc: "Series y reps fijas. Para todos los niveles." },
-      { id: "dup", emoji: "🌊", name: "DUP", desc: "El esquema cambia cada sesión: fuerza, hipertrofia o resistencia." },
-      { id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "1-2 series al fallo total." },
-      { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio. Volumen extremo." },
-      { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones. Descanso libre." },
-      { id: "wendler", emoji: "🏆", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes exactos para los 4 básicos." },
+      { id: "standard", emoji: "📊", name: "Estándar", desc: "Progresión clásica probada", stats: "Series: 3-5 · Reps: 6-15 · Rest: 60-90s" },
+      { id: "dup", emoji: "🔄", name: "DUP", desc: "Fuerza, hipertrofia y resistencia rotando", stats: "Series: 3-5 · Reps: Varía · Rest: Varía" },
+      { id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "Máxima intensidad, mínimo volumen", stats: "Series: 1-2 · Reps: Al fallo · Rest: 3-5 min" },
+      { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio", stats: "Series: 10 · Reps: 10 · Rest: 60s exactos" },
+      { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones contra el reloj", stats: "Series: 1 · Reps: 100 · Rest: Cuando necesites" },
+      { id: "wendler", emoji: "📈", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes", stats: "Series: 3 · Reps: 5/3/1+ · Rest: 3-5 min" },
     ];
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
@@ -7639,12 +7681,16 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                   <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>
                     {available ? m.desc : av.msg}
                   </div>
+                  {available && (
+                    <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>{m.stats}</div>
+                  )}
                   {!available && av.progress && (
                     <div style={{ fontSize: 10, color: C.cyan, marginTop: 3, fontWeight: 700 }}>{av.progress}</div>
                   )}
                   {available ? (
                     <button
                       onClick={() => {
+                        if (m.id === "heavyduty" && !hdSeen) { setShowHdUnlock(true); return; }
                         if (m.id === "standard" || m.id === "dup") setGymMethod(m.id);
                         else { setSpecial(m.id); setDiscId(null); }
                       }}
@@ -7662,6 +7708,30 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             );
           })}
         </div>
+        {showHdUnlock && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div className="card" style={{ maxWidth: 340, textAlign: "center", padding: 20 }}>
+              <div style={{ fontSize: 30 }}>🔓</div>
+              <p style={{ fontSize: 15, fontWeight: 800, marginTop: 8 }}>Heavy Duty disponible</p>
+              <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>
+                1-2 series al fallo absoluto. Es el método de los atletas serios.
+              </p>
+              <button
+                className="btn-xl"
+                onClick={() => { markHdSeen(); setShowHdUnlock(false); setSpecial("heavyduty"); setDiscId(null); }}
+                style={{ marginTop: 14, background: C.red, color: "#fff" }}
+              >
+                Probarlo ahora
+              </button>
+              <button
+                onClick={() => { markHdSeen(); setShowHdUnlock(false); }}
+                style={{ marginTop: 10, minHeight: 44, color: C.mut, fontSize: 13, fontWeight: 700 }}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -10225,9 +10295,11 @@ function DNARadar({ sessions, streak }) {
   const strongestIdx = values.indexOf(Math.max(...values));
   const weakestIdx = values.indexOf(Math.min(...values));
 
+  const [showDnaHint, dismissDnaHint] = useFirstTime("dna");
   return (
-    <div className="card" style={{ marginTop: 10 }}>
+    <div className="card" style={{ marginTop: 10, position: "relative" }}>
       <p style={{ fontSize: 13, fontWeight: 800 }}>🧬 Mi DNA Atlético</p>
+      <FeatureTooltip visible={showDnaHint} onDismiss={dismissDnaHint} text="🧬 Aquí está tu perfil atlético único" />
       <svg viewBox={`0 0 ${size} ${size}`} width="100%" style={{ maxWidth: 280, display: "block", margin: "8px auto 0" }}>
         {gridLevels.map((lvl) => {
           const gridPts = Array.from({ length: axes }, (_, i) => radarPoint(lvl, i, axes, center, radius));
@@ -11654,6 +11726,37 @@ const TABS = [
   { id: "explorar", label: "Explorar", Icon: IconCommunity },
 ];
 
+/* Hint de primera vez para una feature: seen_<key> en localStorage */
+function useFirstTime(key) {
+  const [seen, setSeenState] = useState(() => store.get(`seen_${key}`, false));
+  const markSeen = () => { store.set(`seen_${key}`, true); setSeenState(true); };
+  return [!seen, markSeen];
+}
+
+function FeatureTooltip({ visible, onDismiss, text }) {
+  useEffect(() => {
+    if (!visible) return undefined;
+    const t = setTimeout(onDismiss, 4000);
+    return () => clearTimeout(t);
+  }, [visible, onDismiss]);
+  if (!visible) return null;
+  return (
+    <div
+      onClick={onDismiss}
+      className="pop"
+      style={{
+        position: "absolute", top: "100%", left: 0, marginTop: 8,
+        background: C.cyan, color: "#07070C", fontSize: 12, fontWeight: 700,
+        padding: "8px 12px", borderRadius: 10, zIndex: 100, maxWidth: 220,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)", cursor: "pointer",
+      }}
+    >
+      {text}
+      <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>Toca para cerrar</div>
+    </div>
+  );
+}
+
 /* Función (no objeto estático) para que refleje el tema activo al vuelo */
 function getTabAccent(tabId) {
   return { inicio: C.cyan, entrenar: C.green, yo: C.purple, explorar: C.orange }[tabId];
@@ -11879,9 +11982,15 @@ export default function App() {
     return () => navigator.serviceWorker.removeEventListener("message", onMessage);
   }, []);
 
+  const [visitedTabs, setVisitedTabs] = useState(() => store.get("visited_tabs", { inicio: true }));
   const changeTab = (t) => {
     setTab(t);
     setAccent(getTabAccent(t));
+    if (!visitedTabs[t]) {
+      const next = { ...visitedTabs, [t]: true };
+      setVisitedTabs(next);
+      store.set("visited_tabs", next);
+    }
   };
 
   /* Skeleton loaders breves: al entrar a una pestaña (más si el historial es grande) */
@@ -12257,8 +12366,11 @@ export default function App() {
           return (
             <button
               key={t.id} className={`tab ${active ? "on" : ""}`} onClick={() => changeTab(t.id)}
-              style={{ "--glow-color": `${accent}50` }}
+              style={{ "--glow-color": `${accent}50`, position: "relative" }}
             >
+              {!visitedTabs[t.id] && (
+                <span style={{ position: "absolute", top: 6, right: "28%", width: 8, height: 8, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}` }} />
+              )}
               <span className="ico"><t.Icon color={active ? accent : C.dim} /></span>
               {t.label}
             </button>
