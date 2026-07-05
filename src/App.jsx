@@ -3073,6 +3073,13 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   if (pool.length < 5) pool = db.filter((e) => matchBar(e) && matchEquip(e));
   if (pool.length < 5) pool = db.filter(matchFocus);
 
+  /* Filtra ejercicios desaconsejados por limitaciones físicas del onboarding */
+  const healthIssues = store.get("health_issues", []);
+  if (healthIssues.length && !healthIssues.includes("ninguna")) {
+    const filtered = filterExercisesByHealth(pool, healthIssues);
+    if (filtered.length >= 4) pool = filtered;
+  }
+
   const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
 
   /* Para gimnasio, calcula cuántos ejercicios hacen falta para acercarse
@@ -4515,12 +4522,6 @@ const MODE_OPTIONS = [
   { id: "pro", emoji: "⚙️", label: "Control total", desc: "Datos puros, sin distracciones" },
 ];
 
-const NOTIF_HOURS = [
-  { id: "morning", label: "Mañana 7am", hour: 7 },
-  { id: "afternoon", label: "Tarde 5pm", hour: 17 },
-  { id: "night", label: "Noche 8pm", hour: 20 },
-];
-
 const GOAL_OPTIONS = [
   { id: "rendimiento", emoji: "🏆", label: "Rendimiento deportivo", desc: "Fútbol, atletismo",
     msg: "Tu camino al alto rendimiento empieza hoy. F.A.S.E. te llevará ahí." },
@@ -4534,230 +4535,532 @@ const GOAL_OPTIONS = [
     msg: "Cuidar tu cuerpo es la inversión más importante que harás. Empecemos con calma." },
 ];
 
-const EXPERIENCE_OPTIONS = [
-  { id: "nuevo", emoji: "🥚", label: "Soy nuevo", desc: "Menos de 3 meses" },
-  { id: "base", emoji: "🌱", label: "Tengo algo de base", desc: "3-12 meses" },
-  { id: "año", emoji: "💪", label: "Llevo más de un año", desc: "Experiencia sólida" },
-  { id: "atleta", emoji: "🔥", label: "Soy atleta o entreno serio", desc: "Alto nivel" },
+const GENDER_OPTIONS = [
+  { id: "m", emoji: "♂", label: "Masculino" },
+  { id: "f", emoji: "♀", label: "Femenino" },
+  { id: "x", emoji: "🫥", label: "Prefiero no decir" },
 ];
+
+const FITNESS_LEVEL_OPTIONS = [
+  { id: "iniciado", emoji: "🔵", label: "Iniciado", desc: "Llevo menos de 6 meses entrenando o estoy empezando desde cero.", lvlIdx: 0 },
+  { id: "intermedio", emoji: "🟢", label: "Intermedio", desc: "Llevo más de 6 meses y conozco los ejercicios básicos.", lvlIdx: 1 },
+  { id: "avanzado", emoji: "🔴", label: "Avanzado", desc: "Llevo más de 2 años y entreno con consistencia real.", lvlIdx: 3 },
+];
+
+const HEALTH_ISSUE_OPTIONS = [
+  { id: "ninguna", emoji: "✅", label: "Ninguna" },
+  { id: "rodilla", emoji: "🦵", label: "Rodilla" },
+  { id: "cadera", emoji: "🦴", label: "Cadera" },
+  { id: "espalda", emoji: "🔙", label: "Espalda o hernia" },
+  { id: "hombros", emoji: "💪", label: "Hombros o brazos" },
+  { id: "tobillos", emoji: "🦶", label: "Tobillos o pies" },
+  { id: "cardio", emoji: "❤️", label: "Condición cardíaca" },
+  { id: "saltos", emoji: "⚡", label: "No puedo hacer saltos" },
+];
+
+/* Ejercicios a evitar o advertir según limitaciones físicas (usado en genRoutine) */
+const HEALTH_FILTERS = {
+  rodilla: {
+    avoid: ["sentadilla con salto", "pistol squat", "zancada con salto", "step-up", "sentadilla búlgara con salto"],
+    warn: ["sentadilla", "zancada", "prensa de piernas"],
+    warnMessage: "Ve con cuidado — implica rodillas",
+  },
+  cadera: {
+    avoid: ["sentadilla profunda", "peso muerto sumo", "zancada lateral"],
+    warn: ["hip thrust", "sentadilla", "zancada"],
+    warnMessage: "Rango reducido recomendado",
+  },
+  espalda: {
+    avoid: ["peso muerto convencional", "buenos días", "hiperextensión"],
+    warn: ["sentadilla", "peso muerto rumano", "remo con barra"],
+    warnMessage: "Mantén espalda estrictamente neutral",
+  },
+  hombros: {
+    avoid: ["press militar", "elevaciones laterales pesadas", "fondos en paralelas", "fondos lastrados", "press inclinado"],
+    warn: ["press banca", "jalón al pecho", "dominadas"],
+    warnMessage: "Rango limitado, cuidado con el dolor",
+  },
+  tobillos: {
+    avoid: ["salto al cajón", "burpee", "sprint máximo", "saltos"],
+    warn: ["sentadilla", "zancada", "step-up"],
+    warnMessage: "Superficie plana, sin impacto alto",
+  },
+  saltos: {
+    avoid: ["burpee", "salto al cajón", "saltos laterales", "sentadilla con salto", "zancadas con salto", "flexiones con aplauso", "flexiones con palmada"],
+    warn: [],
+    warnMessage: "",
+  },
+};
+
+function healthAvoidSet(issues) {
+  const avoid = new Set();
+  (issues || []).forEach((id) => (HEALTH_FILTERS[id]?.avoid || []).forEach((t) => avoid.add(t)));
+  return avoid;
+}
+function exerciseHealthWarning(name, issues) {
+  const n = name.toLowerCase();
+  for (const id of issues || []) {
+    const f = HEALTH_FILTERS[id];
+    if (f && f.warn.some((t) => n.includes(t))) return f.warnMessage;
+  }
+  return null;
+}
+function filterExercisesByHealth(pool, issues) {
+  if (!issues || !issues.length || issues.includes("ninguna")) return pool;
+  const avoid = healthAvoidSet(issues);
+  return pool.filter((e) => {
+    const n = (e.n || e.name || "").toLowerCase();
+    return ![...avoid].some((t) => n.includes(t));
+  });
+}
+
+function OnboardingProgress({ step, total }) {
+  return (
+    <div style={{ height: 4, background: C.border, borderRadius: 99, overflow: "hidden", margin: "0 0 4px" }}>
+      <div style={{ height: "100%", width: `${(step / total) * 100}%`, background: C.cyan, borderRadius: 99, transition: "width 0.4s ease" }} />
+    </div>
+  );
+}
+
+function SelectionCard({ emoji, name, subtitle, selected, onSelect, color }) {
+  const c = color || C.cyan;
+  return (
+    <button
+      onClick={onSelect}
+      style={{
+        padding: "16px 20px", borderRadius: 14, border: `2px solid ${selected ? c : C.border}`,
+        background: selected ? `${c}18` : C.card, display: "flex", alignItems: "center", gap: 14,
+        textAlign: "left", transition: "all 0.15s ease", transform: selected ? "scale(1.01)" : "scale(1)", width: "100%",
+      }}
+    >
+      <div style={{
+        width: 24, height: 24, borderRadius: "50%", border: `2px solid ${selected ? c : C.border}`,
+        background: selected ? c : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        {selected && (
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <polyline points="2,6 5,9 10,3" stroke="#07070C" strokeWidth="2" fill="none" strokeLinecap="round" />
+          </svg>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{emoji} {name}</div>
+        {subtitle && <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{subtitle}</div>}
+      </div>
+    </button>
+  );
+}
+
+/* Selector deslizable de números (edad, altura, peso). 56px por fila. */
+function ScrollPicker({ value, onChange, min, max, unit = "", step = 1 }) {
+  const rowH = 56;
+  const items = useMemo(() => {
+    const arr = [];
+    for (let i = min; i <= max; i += step) arr.push(Math.round(i * 10) / 10);
+    return arr;
+  }, [min, max, step]);
+  const idxOf = (v) => Math.max(0, Math.min(items.length - 1, Math.round((v - min) / step)));
+  const [scrollY, setScrollY] = useState(idxOf(value) * rowH);
+  const [dragging, setDragging] = useState(false);
+  const startY = useRef(0);
+  const startScroll = useRef(0);
+
+  const onStart = (clientY) => { startY.current = clientY; startScroll.current = scrollY; setDragging(true); };
+  const onMove = (clientY) => {
+    const delta = startY.current - clientY;
+    setScrollY(Math.max(0, Math.min(startScroll.current + delta, (items.length - 1) * rowH)));
+  };
+  const onEnd = () => {
+    setDragging(false);
+    const idx = Math.round(scrollY / rowH);
+    setScrollY(idx * rowH);
+    onChange(items[idx]);
+  };
+
+  const activeIdx = Math.round(scrollY / rowH);
+
+  return (
+    <div
+      style={{ height: rowH * 3, overflow: "hidden", position: "relative", touchAction: "none", userSelect: "none" }}
+      onTouchStart={(e) => onStart(e.touches[0].clientY)}
+      onTouchMove={(e) => onMove(e.touches[0].clientY)}
+      onTouchEnd={onEnd}
+      onMouseDown={(e) => { e.preventDefault(); onStart(e.clientY); }}
+      onMouseMove={(e) => { if (dragging) onMove(e.clientY); }}
+      onMouseUp={onEnd}
+      onMouseLeave={() => dragging && onEnd()}
+    >
+      <div style={{ position: "absolute", top: rowH, left: 0, right: 0, height: rowH, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, pointerEvents: "none", zIndex: 1 }} />
+      <div style={{ transform: `translateY(${rowH - scrollY}px)`, transition: dragging ? "none" : "transform 0.2s ease" }}>
+        {items.map((item, i) => {
+          const distance = Math.abs(i - activeIdx);
+          return (
+            <div
+              key={item}
+              style={{
+                height: rowH, display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: distance === 0 ? 42 : distance === 1 ? 26 : 18,
+                fontWeight: distance === 0 ? 900 : 400,
+                color: distance === 0 ? C.text : `rgba(255,255,255,${Math.max(0.08, 0.3 - distance * 0.1)})`,
+                transition: "all 0.1s ease",
+              }}
+            >
+              {item}{unit}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: rowH, background: `linear-gradient(to bottom, ${C.bg}, transparent)`, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: rowH, background: `linear-gradient(to top, ${C.bg}, transparent)`, pointerEvents: "none" }} />
+    </div>
+  );
+}
+
+const ONBOARD_TOTAL_STEPS = 10;
 
 function Welcome({ onDone }) {
   const [step, setStep] = useState(1);
+  const [slide, setSlide] = useState("visible");
   const [value, setValue] = useState("");
+  const [gender, setGender] = useState(null);
+  const [age, setAge] = useState(20);
+  const [height, setHeight] = useState(170);
+  const [weight, setWeight] = useState(70);
+  const [targetWeight, setTargetWeight] = useState(70);
   const [goal, setGoal] = useState(null);
-  const [experience, setExperience] = useState(null);
+  const [fitnessLevel, setFitnessLevel] = useState(null);
+  const [healthIssues, setHealthIssues] = useState([]);
   const [days, setDays] = useState(4);
-  const [mode, setMode] = useState(null);
+  const [mode, setMode] = useState("guiado");
 
-  const chooseMode = (m) => {
-    setMode(m);
-    setStep(6);
+  const go = (next) => {
+    setSlide("exit-left");
+    setTimeout(() => {
+      setStep(next);
+      setSlide("enter-right");
+      requestAnimationFrame(() => setSlide("visible"));
+    }, 180);
   };
+  const back = (prev) => {
+    setSlide("exit-left");
+    setTimeout(() => {
+      setStep(prev);
+      setSlide("enter-right");
+      requestAnimationFrame(() => setSlide("visible"));
+    }, 180);
+  };
+
+  const toggleHealthIssue = (id) => {
+    setHealthIssues((prev) => {
+      if (id === "ninguna") return ["ninguna"];
+      const withoutNone = prev.filter((x) => x !== "ninguna");
+      return withoutNone.includes(id) ? withoutNone.filter((x) => x !== id) : [...withoutNone, id];
+    });
+  };
+
+  const skipAll = () => {
+    onDone(sanitize(value) || "Atleta", "guiado");
+  };
+
   const finish = () => {
-    store.set("profile", { goal, experience, days });
+    store.set("gender", gender);
+    store.set("age", age);
+    store.set("height", height);
+    store.set("weight", weight);
+    store.set("target_weight", targetWeight);
+    store.set("training_goal", goal);
+    store.set("fitness_level", fitnessLevel?.id || null);
+    store.set("health_issues", healthIssues);
     store.set("weekly_goal", days);
+    store.set("profile", { goal, days });
+    if (weight) saveWeightEntry(weight);
+    const goalObj = TRAINING_GOALS.find((g) => g.id === goal);
+    const waterGoal = Math.max(4, Math.round((weight * 0.035) / 0.25));
+    store.set("water_goal", waterGoal);
     onDone(sanitize(value), mode);
+    void goalObj;
   };
 
-  const acceptNotifs = async (hourId) => {
-    try {
-      if (window.Notification) {
-        const perm = await Notification.requestPermission();
-        if (perm === "granted") {
-          store.set("notif_hour", hourId);
-          if (navigator.serviceWorker) {
-            navigator.serviceWorker.register("/sw.js").catch(() => {});
-          }
-        }
-      }
-    } catch {
-      /* notificaciones no disponibles */
-    }
-    setStep(7);
-  };
-
-  const wrap = (children) => (
-    <div className="fade-up" style={{ minHeight: "100svh", display: "flex", flexDirection: "column", justifyContent: "center", padding: 28, gap: 12 }}>
-      {children}
+  const wrap = (children, { showSkip = false, showBack = true } = {}) => (
+    <div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", background: C.bg }}>
+      <div style={{ padding: "16px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
+        {showBack && step > 1 ? (
+          <button onClick={() => back(step - 1)} style={{ color: C.mut, fontSize: 18, padding: 4 }}>←</button>
+        ) : <div style={{ width: 26 }} />}
+        <div style={{ flex: 1 }}><OnboardingProgress step={step} total={ONBOARD_TOTAL_STEPS} /></div>
+        {showSkip && (
+          <button onClick={skipAll} style={{ color: C.dim, fontSize: 12, fontWeight: 700 }}>Saltar →</button>
+        )}
+        {!showSkip && <div style={{ width: 40 }} />}
+      </div>
+      <div className={`exercise-card-${slide}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "8px 24px 24px", gap: 14 }}>
+        {children}
+      </div>
     </div>
   );
 
-  if (step === 7) {
-    const g = GOAL_OPTIONS.find((o) => o.id === goal);
-    return wrap(
-      <div style={{ textAlign: "center" }}>
-        <div className="pop" style={{ fontSize: 70 }}>🥚</div>
-        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 14 }}>¡Bienvenido, {value.trim()}!</h2>
-        <p style={{ fontSize: 14, color: C.mut, marginTop: 10, lineHeight: 1.6, padding: "0 8px" }}>
-          {g ? g.msg : "Tu momento es ahora. Empecemos."}
-        </p>
+  const continueBtn = (onClick, disabled, label = "Continuar") => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: "100%", height: 56, background: "#fff", color: "#07070C", fontWeight: 800, fontSize: 17,
+        borderRadius: 99, border: "none", marginTop: 18, opacity: disabled ? 0.4 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  /* Paso 11 — Resumen final */
+  if (step === 11) {
+    const goalObj = TRAINING_GOALS.find((g) => g.id === goal) || TRAINING_GOALS[0];
+    const w = weight, h = height, a = age;
+    const sex = gender === "f" ? "f" : "m";
+    const tmb = sex === "f" ? 10 * w + 6.25 * h - 5 * a - 161 : 10 * w + 6.25 * h - 5 * a + 5;
+    const activityMult = days >= 5 ? 1.55 : days >= 3 ? 1.375 : 1.2;
+    const tdee = tmb * activityMult;
+    const calGoal = goal === "fat_loss" ? tdee - 400 : goal === "muscle" ? tdee + 300 : goal === "athletic" || goal === "endurance" ? tdee + 200 : tdee;
+    const calories = Math.round(calGoal);
+    const protein = Math.round(w * (goal === "fat_loss" ? 2.2 : 2.0));
+    const waterVasos = Math.max(4, Math.round((w * 0.035) / 0.25));
+    const hero0 = HEROES[0];
+    const lvlIdxStart = fitnessLevel?.lvlIdx ?? 0;
+    const estMinutes = 30 + lvlIdxStart * 5;
+    const hasIssues = healthIssues.length && !healthIssues.includes("ninguna");
+    return (
+      <div style={{ minHeight: "100svh", background: C.bg, padding: "32px 20px", display: "flex", flexDirection: "column" }} className="fade-up">
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ fontSize: 28, fontWeight: 900 }}>✨ Tu plan está listo</h1>
+          <p style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>Personalizado para ti, {value.trim() || "atleta"}</p>
+        </div>
+
+        <div style={{ marginTop: 20, textAlign: "center" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: goalObj.color, background: `${goalObj.color}18`, padding: "8px 16px", borderRadius: 99 }}>
+            {goalObj.emoji} {goalObj.name}
+          </span>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 20 }}>
+          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: C.orange }}>{calories}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🔥 kcal/día</div>
+          </div>
+          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: C.red }}>{protein}g</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🥩 proteína</div>
+          </div>
+          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: C.cyan }}>{waterVasos}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>💧 vasos/día</div>
+          </div>
+          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: C.green }}>{days}x</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>📅 ~{estMinutes} min/sesión</div>
+          </div>
+        </div>
+
+        <div className="card" style={{ marginTop: 12, textAlign: "center", padding: "14px" }}>
+          <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>EMPIEZAS COMO</p>
+          <div style={{ fontSize: 40, marginTop: 6 }}>{hero0.emoji}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>{hero0.name}</div>
+          <div style={{ fontSize: 12, color: C.mut, fontStyle: "italic", marginTop: 4 }}>“{hero0.quote}”</div>
+        </div>
+
+        {hasIssues && (
+          <div className="card" style={{ marginTop: 10, padding: "10px 14px", borderColor: `${C.green}55` }}>
+            <p style={{ fontSize: 12, color: C.green, fontWeight: 700 }}>✓ Rutinas adaptadas a tu condición física</p>
+          </div>
+        )}
+
+        <div className="chip-wrap" style={{ marginTop: 14, justifyContent: "center" }}>
+          {MODE_OPTIONS.map((m) => (
+            <button key={m.id} className={`chip ${mode === m.id ? "on" : ""}`} style={mode === m.id ? { background: goalObj.color } : {}} onClick={() => setMode(m.id)}>
+              {m.emoji} {m.label}
+            </button>
+          ))}
+        </div>
+
         <button
           className="btn-xl"
           onClick={finish}
-          style={{ marginTop: 24, background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, color: "#07070C" }}
+          style={{ marginTop: 20, height: 64, background: goalObj.color, color: "#07070C", fontSize: 18, fontWeight: 900, borderRadius: 99 }}
         >
-          COMENZAR
+          Comenzar mi plan →
         </button>
       </div>
     );
   }
 
-  if (step === 6) {
+  /* Paso 10 — Días disponibles */
+  if (step === 10) {
     return wrap(
       <>
-        <div style={{ textAlign: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 40 }}>🔔</div>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuántos días a la semana puedes entrenar?</p>
+        <div style={{ textAlign: "center", marginTop: 10 }}>
+          <div style={{ fontSize: 56, fontWeight: 900, color: C.cyan }}>{days}x</div>
+          <div style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>por semana</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center" }}>
+            {[2, 3, 4, 5, 6].map((n) => (
+              <button
+                key={n} onClick={() => setDays(n)}
+                style={{ width: 44, height: 44, borderRadius: "50%", border: `1px solid ${days === n ? C.cyan : C.border}`, background: days === n ? `${C.cyan}20` : C.card, color: days === n ? C.cyan : C.text, fontWeight: 800 }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
-        <p style={{ color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center", lineHeight: 1.5 }}>
-          ¿Quieres que F.A.S.E. te recuerde entrenar cada día? Solo te avisaremos una vez al día.
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-          {NOTIF_HOURS.map((h) => (
-            <button key={h.id} className="card" onClick={() => acceptNotifs(h.id)} style={{ textAlign: "center", padding: "12px 8px" }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>Sí, recuérdame — {h.label}</span>
-            </button>
-          ))}
-        </div>
-        <button
-          className="btn-xl"
-          onClick={() => setStep(7)}
-          style={{ marginTop: 8, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
-        >
-          Ahora no
-        </button>
+        {continueBtn(() => go(11))}
       </>
     );
   }
 
+  /* Paso 9 — Limitaciones de salud */
+  if (step === 9) {
+    return wrap(
+      <>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Tienes alguna limitación física?</p>
+        <p style={{ color: C.dim, fontSize: 11, textAlign: "center" }}>Puedes elegir varias</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+          {HEALTH_ISSUE_OPTIONS.map((h) => (
+            <SelectionCard key={h.id} emoji={h.emoji} name={h.label} selected={healthIssues.includes(h.id)} onSelect={() => toggleHealthIssue(h.id)} color={C.green} />
+          ))}
+        </div>
+        {continueBtn(() => go(10), false)}
+      </>
+    );
+  }
+
+  /* Paso 8 — Nivel de fitness */
+  if (step === 8) {
+    return wrap(
+      <>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu nivel actual?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
+          {FITNESS_LEVEL_OPTIONS.map((f) => (
+            <SelectionCard key={f.id} emoji={f.emoji} name={f.label} subtitle={f.desc} selected={fitnessLevel?.id === f.id} onSelect={() => setFitnessLevel(f)} />
+          ))}
+        </div>
+        {continueBtn(() => go(9), !fitnessLevel)}
+      </>
+    );
+  }
+
+  /* Paso 7 — Objetivo principal */
+  if (step === 7) {
+    return wrap(
+      <>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Qué quieres lograr?</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
+          {TRAINING_GOALS.map((g) => (
+            <button
+              key={g.id} onClick={() => setGoal(g.id)}
+              style={{
+                padding: "14px 10px", borderRadius: 14, textAlign: "left",
+                border: `2px solid ${goal === g.id ? g.color : C.border}`,
+                background: goal === g.id ? `${g.color}18` : C.card,
+              }}
+            >
+              <div style={{ fontSize: 22 }}>{g.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4, color: goal === g.id ? g.color : C.text }}>{g.name}</div>
+              <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{g.subtitle}</div>
+            </button>
+          ))}
+        </div>
+        {continueBtn(() => go(8), !goal)}
+      </>
+    );
+  }
+
+  /* Paso 6 — Peso objetivo */
+  if (step === 6) {
+    const diff = Math.round((targetWeight - weight) * 10) / 10;
+    const diffLabel = diff < -0.4 ? `Perder ${Math.abs(diff)}kg` : diff > 0.4 ? `Ganar ${diff}kg` : "Mantener mi peso";
+    return wrap(
+      <>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu peso objetivo?</p>
+        <ScrollPicker value={targetWeight} onChange={setTargetWeight} min={40} max={200} unit="kg" />
+        <p style={{ textAlign: "center", fontSize: 13, color: C.mut, fontWeight: 700 }}>{diffLabel}</p>
+        {continueBtn(() => go(7))}
+      </>
+    );
+  }
+
+  /* Paso 5 — Peso actual */
   if (step === 5) {
     return wrap(
       <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Cómo prefieres entrenar?</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
-          {MODE_OPTIONS.map((m) => (
-            <button key={m.id} className="card" onClick={() => chooseMode(m.id)} style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
-              <span style={{ fontSize: 30 }}>{m.emoji}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>{m.label}</div>
-                <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{m.desc}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setStep(4)} style={{ color: C.dim, fontSize: 13, marginTop: 12, fontWeight: 600 }}>‹ Volver</button>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuánto pesas actualmente?</p>
+        <ScrollPicker value={weight} onChange={setWeight} min={40} max={200} unit="kg" />
+        {continueBtn(() => go(6))}
       </>
     );
   }
 
+  /* Paso 4 — Altura */
   if (step === 4) {
     return wrap(
       <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Cuántos días a la semana puedes entrenar?</p>
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          {[2, 3, 4, 5, 6].map((n) => (
-            <button
-              key={n}
-              className="card"
-              onClick={() => setDays(n)}
-              style={{ flex: 1, padding: "14px 4px", textAlign: "center", border: `1px solid ${days === n ? C.cyan : C.border}` }}
-            >
-              <span style={{ fontSize: 16, fontWeight: 800, color: days === n ? C.cyan : C.text }}>{n}</span>
-            </button>
-          ))}
-        </div>
-        <button className="btn-xl" onClick={() => setStep(5)} style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}>CONTINUAR</button>
-        <button onClick={() => setStep(3)} style={{ color: C.dim, fontSize: 13, marginTop: 8, fontWeight: 600 }}>‹ Volver</button>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuánto mides?</p>
+        <ScrollPicker value={height} onChange={setHeight} min={140} max={220} unit="cm" />
+        {continueBtn(() => go(5))}
       </>
     );
   }
 
+  /* Paso 3 — Edad */
   if (step === 3) {
     return wrap(
       <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Cuánto tiempo llevas entrenando?</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
-          {EXPERIENCE_OPTIONS.map((e) => (
-            <button key={e.id} className="card" onClick={() => { setExperience(e.id); setStep(4); }} style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
-              <span style={{ fontSize: 26 }}>{e.emoji}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>{e.label}</div>
-                <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{e.desc}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setStep(2)} style={{ color: C.dim, fontSize: 13, marginTop: 12, fontWeight: 600 }}>‹ Volver</button>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuántos años tienes?</p>
+        <ScrollPicker value={age} onChange={setAge} min={13} max={80} unit="" />
+        {continueBtn(() => go(4))}
       </>
     );
   }
 
+  /* Paso 2 — Género */
   if (step === 2) {
     return wrap(
       <>
-        <div style={{ textAlign: "center", marginBottom: 4 }}>
-          <div style={{ fontSize: 40 }}>👋</div>
-          <p style={{ color: C.text, fontSize: 18, fontWeight: 700, marginTop: 8 }}>Hola, {value.trim()}</p>
-        </div>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 600, textAlign: "center" }}>¿Qué quieres lograr?</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-          {GOAL_OPTIONS.map((g) => (
-            <button key={g.id} className="card" onClick={() => { setGoal(g.id); setStep(3); }} style={{ textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
-              <span style={{ fontSize: 26 }}>{g.emoji}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>{g.label}</div>
-                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{g.desc}</div>
-              </div>
-            </button>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu género?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
+          {GENDER_OPTIONS.map((g) => (
+            <SelectionCard key={g.id} emoji={g.emoji} name={g.label} selected={gender === g.id} onSelect={() => setGender(g.id)} color={C.green} />
           ))}
         </div>
-        <button onClick={() => setStep(1)} style={{ color: C.dim, fontSize: 13, marginTop: 10, fontWeight: 600 }}>‹ Volver</button>
+        {continueBtn(() => go(3), !gender)}
       </>
     );
   }
 
+  /* Paso 1 — Nombre */
   return wrap(
     <>
-      <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div className="pop" style={{ fontSize: 64, marginBottom: 12 }}>⚡</div>
-        <h1
-          style={{
-            fontSize: 44,
-            fontWeight: 900,
-            letterSpacing: 4,
-            background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`,
-            WebkitBackgroundClip: "text",
-            backgroundClip: "text",
-            color: "transparent",
-          }}
-        >
+      <div style={{ textAlign: "center", marginBottom: 12 }}>
+        <div className="pop" style={{ fontSize: 56, marginBottom: 10 }}>⚡</div>
+        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: 3, background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
           F.A.S.E.
         </h1>
-        <p style={{ color: C.mut, fontSize: 12, marginTop: 8 }}>
-          Formación Atlética y Sistemas de Entrenamiento
-        </p>
       </div>
-      <p style={{ color: C.text, fontSize: 16, fontWeight: 600 }}>¿Cómo te llamas?</p>
+      <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cómo te llamas?</p>
       <input
         className="input"
         placeholder="Tu nombre"
         value={value}
         maxLength={24}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && value.trim() && setStep(2)}
+        onKeyDown={(e) => e.key === "Enter" && value.trim() && go(2)}
         autoFocus
+        style={{ textAlign: "center", fontSize: 18 }}
       />
-      <button
-        className="btn-xl"
-        disabled={!value.trim()}
-        onClick={() => setStep(2)}
-        style={{ background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, color: "#07070C", marginTop: 8 }}
-      >
-        CONTINUAR
-      </button>
-      <p style={{ color: C.dim, fontSize: 12, textAlign: "center", marginTop: 8 }}>
+      {continueBtn(() => go(2), !value.trim())}
+      <p style={{ color: C.dim, fontSize: 12, textAlign: "center", marginTop: 4 }}>
         Sin cuentas ni correos. Todo se guarda solo en tu dispositivo.
       </p>
-    </>
+    </>,
+    { showSkip: true, showBack: false }
   );
 }
 
@@ -9161,6 +9464,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           {ex.tip}
         </p>
         {showGuide && <TechniqueGuideSheet exerciseName={ex.name} tip={ex.tip} onClose={() => setShowGuide(false)} />}
+        {(() => {
+          const warnMsg = exerciseHealthWarning(ex.name, store.get("health_issues", []));
+          return warnMsg ? (
+            <p style={{ marginTop: 6, fontSize: 11, color: C.yellow, fontWeight: 700 }}>⚠️ {warnMsg}</p>
+          ) : null;
+        })()}
         {showSwipeHint && phase === "work" && ex.type !== "tiempo" && (
           <p style={{ marginTop: 8, fontSize: 11, color: C.cyan, textAlign: "center" }}>💡 Desliza arriba para completar serie</p>
         )}
