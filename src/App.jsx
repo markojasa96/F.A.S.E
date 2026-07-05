@@ -986,12 +986,12 @@ function DisciplineCelebration({ discId }) {
 
 /* ─── Niveles de entrenamiento ─── */
 const LEVELS = [
-  { name: "Iniciado", emoji: "🔵", color: C.blue, desc: "Estoy empezando" },
+  { name: "Iniciado", emoji: "🔵", color: C.blue, desc: "Estoy comenzando" },
   { name: "Guerrero", emoji: "🟢", color: C.green, desc: "Entreno regularmente" },
-  { name: "Campeón", emoji: "🟡", color: C.yellow, desc: "Llevo más de 6 meses" },
+  { name: "Campeón", emoji: "🟡", color: C.yellow, desc: "6+ meses de base" },
   { name: "Élite", emoji: "🟠", color: C.orange, desc: "Es mi estilo de vida" },
-  { name: "Leyenda", emoji: "🔴", color: C.red, desc: "Entreno como profesional" },
-  { name: "THE ONE", emoji: "⚡", color: C.purple, desc: "Soy el límite" },
+  { name: "Leyenda", emoji: "🔴", color: C.red, desc: "Nivel competitivo" },
+  { name: "THE ONE", emoji: "⚡", color: C.purple, desc: "Sin límites" },
 ];
 
 /* Umbrales de sesiones totales para el nivel global (Iniciado 0-4, Guerrero 5-14, Campeón 15-29, Élite 30-59, Leyenda 60-99, THE ONE 100+) */
@@ -1060,13 +1060,13 @@ const DISCIPLINES = {
     desc: "1 hora · Fuerza aplicada al campo, por posición",
     focuses: [
       { id: "todo", label: "Todo", tags: null },
-      { id: "portero", label: "🧤 Portero", tags: ["estabilidad", "salto"] },
-      { id: "defensaCentral", label: "🛡️ Defensa Central", tags: ["fuerza", "salto"] },
-      { id: "lateral", label: "↔️ Lateral", tags: ["velocidad", "resistencia"] },
-      { id: "pivote", label: "⚓ Pivote/Contención", tags: ["fuerza", "estabilidad"] },
-      { id: "mediocampista", label: "🎯 Mediocampista", tags: ["resistencia", "estabilidad"] },
-      { id: "extremo", label: "🏃 Extremo", tags: ["velocidad", "salto"] },
-      { id: "delantero", label: "⚡ Delantero", tags: ["velocidad", "fuerza"] },
+      { id: "portero", label: "🧤 Portero", tags: ["estabilidad", "salto"], desc: "Reflejos y dominio del área" },
+      { id: "defensaCentral", label: "🛡️ Defensa Central", tags: ["fuerza", "salto"], desc: "Fuerza y anticipación" },
+      { id: "lateral", label: "↔️ Lateral", tags: ["velocidad", "resistencia"], desc: "Velocidad y resistencia" },
+      { id: "pivote", label: "⚓ Pivote/Contención", tags: ["fuerza", "estabilidad"], desc: "Control y recuperación" },
+      { id: "mediocampista", label: "🎯 Mediocampista", tags: ["resistencia", "estabilidad"], desc: "Motor del equipo" },
+      { id: "extremo", label: "🏃 Extremo", tags: ["velocidad", "salto"], desc: "Velocidad y 1vs1" },
+      { id: "delantero", label: "⚡ Delantero", tags: ["velocidad", "fuerza"], desc: "Finalización y movimiento" },
     ],
   },
   futbolParque: {
@@ -1076,20 +1076,20 @@ const DISCIPLINES = {
     desc: "1 hora · Velocidad y técnica con balón, por posición",
     focuses: [
       { id: "todo", label: "Todo", tags: null },
-      { id: "portero", label: "🧤 Portero", tags: ["velocidad", "ritmo"] },
-      { id: "defensaCentral", label: "🛡️ Defensa Central", tags: ["velocidad", "resistencia"] },
-      { id: "lateral", label: "↔️ Lateral", tags: ["regate", "ritmo", "velocidad"] },
-      { id: "pivote", label: "⚓ Pivote/Contención", tags: ["resistencia", "ritmo"] },
-      { id: "mediocampista", label: "🎯 Mediocampista", tags: ["regate", "resistencia"] },
-      { id: "extremo", label: "🏃 Extremo", tags: ["regate", "ritmo", "velocidad"] },
-      { id: "delantero", label: "⚡ Delantero", tags: ["tiro", "regate"] },
+      { id: "portero", label: "🧤 Portero", tags: ["velocidad", "ritmo"], desc: "Reflejos y dominio del área" },
+      { id: "defensaCentral", label: "🛡️ Defensa Central", tags: ["velocidad", "resistencia"], desc: "Fuerza y anticipación" },
+      { id: "lateral", label: "↔️ Lateral", tags: ["regate", "ritmo", "velocidad"], desc: "Velocidad y resistencia" },
+      { id: "pivote", label: "⚓ Pivote/Contención", tags: ["resistencia", "ritmo"], desc: "Control y recuperación" },
+      { id: "mediocampista", label: "🎯 Mediocampista", tags: ["regate", "resistencia"], desc: "Motor del equipo" },
+      { id: "extremo", label: "🏃 Extremo", tags: ["regate", "ritmo", "velocidad"], desc: "Velocidad y 1vs1" },
+      { id: "delantero", label: "⚡ Delantero", tags: ["tiro", "regate"], desc: "Finalización y movimiento" },
     ],
   },
   basquetCancha: {
     label: "Básquetbol — Con cancha",
     icon: "🏀",
     color: "#A855F7",
-    desc: "Con aro · Tiro, dribleo y juego",
+    desc: "Técnica + físico completo",
     focuses: [
       { id: "todo", label: "Todo", tags: null },
       { id: "tiro", label: "Tiro", tags: ["tiro"] },
@@ -1103,7 +1103,7 @@ const DISCIPLINES = {
     label: "Básquetbol — Sin cancha",
     icon: "🏀",
     color: "#A855F7",
-    desc: "Sin aro · Fuerza y explosividad",
+    desc: "Físico puro para el juego",
     focuses: [
       { id: "todo", label: "Todo", tags: null },
       { id: "fuerza", label: "Fuerza de piernas", tags: ["fuerza"] },
@@ -1644,7 +1644,7 @@ function verifyHistory(sessions) {
 }
 
 /* Sesiones "rápidas" (<5 min) no cuentan para la racha ni los récords de constancia */
-const streakEligible = (sessions) => sessions.filter((s) => !s.sesionRapida);
+const streakEligible = (sessions) => sessions.filter((s) => !s.sesionRapida && (!s.partial || (s.exercises || []).length >= 3));
 
 function calcStreak(sessions, frozen = []) {
   const elig = streakEligible(sessions);
@@ -4807,6 +4807,19 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   const [showRecovery, setShowRecovery] = useState(false);
   const [heroExpanded, setHeroExpanded] = useState(false);
   const longPressRef = useRef(null);
+  const prevStreakRef = useRef(streak);
+  const [streakBounce, setStreakBounce] = useState(false);
+  const [showFreezeConfirm, setShowFreezeConfirm] = useState(false);
+  const freezesLeft = 1;
+  useEffect(() => {
+    if (streak > prevStreakRef.current) {
+      setStreakBounce(true);
+      const t = setTimeout(() => setStreakBounce(false), 500);
+      prevStreakRef.current = streak;
+      return () => clearTimeout(t);
+    }
+    prevStreakRef.current = streak;
+  }, [streak]);
 
   /* Plan del día */
   const [dailyPlanState, setDailyPlanState] = useState(() => getDailyPlan(sessions));
@@ -5010,7 +5023,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
               </div>
             </div>
             <button
-              className="btn-xl"
+              className="btn-xl btn-physics"
               onClick={() => onStartPlan?.(dp.discId, dp.focusId, dp.lvlIdx)}
               style={{ marginTop: 12, background: info.color, color: "#07070C", fontSize: 20, minHeight: 68, boxShadow: `0 8px 24px ${info.color}40` }}
             >
@@ -5063,49 +5076,71 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
       <DeloadBanner sessions={sessions} />
 
       {/* Racha (o mensaje motivacional si se rompió) */}
+      {showFreezeConfirm && (
+        <div
+          onClick={() => setShowFreezeConfirm(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", animation: "fadeIn 0.2s ease" }}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 430, textAlign: "center", padding: "20px 20px calc(20px + env(safe-area-inset-bottom))", borderRadius: "20px 20px 0 0", animation: "sheetUp 0.3s ease-out" }}>
+            <p style={{ fontSize: 16, fontWeight: 800 }}>¿Usar freeze hoy?</p>
+            <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>Te queda{freezesLeft === 1 ? "" : "n"} {freezesLeft} este mes.</p>
+            <button className="btn-xl" onClick={() => { onFreeze(); setShowFreezeConfirm(false); }} style={{ marginTop: 16, minHeight: 56, background: C.cyan, color: "#07070C" }}>
+              Sí, proteger hoy
+            </button>
+            <button onClick={() => setShowFreezeConfirm(false)} style={{ marginTop: 12, minHeight: 44, color: C.mut, fontSize: 13, fontWeight: 700 }}>
+              No, entrenaré
+            </button>
+          </div>
+        </div>
+      )}
       {pro ? (
         <div className="card" style={{ marginTop: 12, padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13, color: C.mut, fontWeight: 700 }}>Racha</span>
-          <span style={{ fontSize: 18, fontWeight: 800 }}>{streak} {streak === 1 ? "día" : "días"}</span>
+          <span className={streakBounce ? "number-bounce" : ""} style={{ fontSize: 18, fontWeight: 800 }}>{streak} {streak === 1 ? "día" : "días"}</span>
         </div>
       ) : broken ? (
-        <div className="card fade-up" style={{ marginTop: 12, textAlign: "center", padding: "20px 16px" }}>
+        <div className="card fade-up" style={{ marginTop: 12, textAlign: "center", padding: "20px 16px", border: `1px solid ${C.cyan}33` }}>
           <div style={{ fontSize: 34 }}>🌅</div>
-          <p style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>
-            {name}, tu racha se rompió en {broken.lost} {broken.lost === 1 ? "día" : "días"}. ¿Empezamos una nueva?
-          </p>
-          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
-            Tus héroes desbloqueados se quedan contigo para siempre.
+          <p style={{ fontSize: 15, fontWeight: 800, marginTop: 8 }}>Nuevo comienzo</p>
+          <p style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>
+            Tu mejor racha: {broken.lost} {broken.lost === 1 ? "día" : "días"}.<br />Hoy empieza la siguiente.
           </p>
           <button
-            className="btn-xl"
+            className="btn-xl btn-physics"
             onClick={onTrain}
-            style={{ marginTop: 14, background: `linear-gradient(90deg, ${C.orange}, ${C.red})`, color: "#fff" }}
+            style={{ marginTop: 14, background: C.cyan, color: "#07070C" }}
           >
-            🔥 REINICIAR RACHA — ENTRENA AHORA
+            ▶ Entrenar ahora
           </button>
           {canFreeze && (
             <button
-              className="btn-xl"
-              onClick={onFreeze}
-              style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.cyan}55`, color: C.cyan, fontSize: 14 }}
+              onClick={() => setShowFreezeConfirm(true)}
+              style={{ marginTop: 10, fontSize: 12, color: C.cyan, fontWeight: 700 }}
             >
-              🧊 Congelar racha (1 disponible al mes)
+              ❄️ {freezesLeft} disponibles
             </button>
           )}
         </div>
       ) : (
         <div className="card" style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {streak >= 7 && (
+                <span style={{ fontSize: 10, fontWeight: 800, color: C.yellow, background: `${C.yellow}18`, padding: "2px 8px", borderRadius: 99 }}>
+                  ⭐ {streak >= 30 ? `${Math.floor(streak / 7)} semanas` : "1 semana"}
+                </span>
+              )}
+            </div>
+            {canFreeze && (
+              <button
+                onClick={() => setShowFreezeConfirm(true)}
+                style={{ fontSize: 12, fontWeight: 700, color: C.cyan, background: `${C.cyan}14`, border: `1px solid ${C.cyan}33`, borderRadius: 99, padding: "6px 12px", minHeight: 44 }}
+              >
+                ❄️ {freezesLeft} disponibles
+              </button>
+            )}
+          </div>
           <StreakBar streak={streak} />
-          {canFreeze && (
-            <button
-              className="btn-xl"
-              onClick={onFreeze}
-              style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.cyan}55`, color: C.cyan, fontSize: 12, padding: 13 }}
-            >
-              🧊 Congelar racha (1 disponible al mes)
-            </button>
-          )}
         </div>
       )}
 
@@ -5154,10 +5189,10 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
               <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{todaySessions.length} {todaySessions.length === 1 ? "sesión" : "sesiones"} hoy{todayVolume > 0 ? ` · ${todayVolume} kg` : ""}</p>
             </div>
           ) : daysSince !== null && daysSince >= 2 ? (
-            <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `2px solid ${C.red}`, animation: "flame 1.6s ease-in-out infinite" }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: C.red }}>{name}, han pasado {daysSince} días desde tu último entrenamiento</p>
-              <button className="btn-xl" onClick={onTrain} style={{ marginTop: 10, background: C.red, color: "#fff", fontSize: 13 }}>
-                Volver a entrenar ahora
+            <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `1px solid ${C.cyan}33` }}>
+              <p style={{ fontSize: 13, fontWeight: 800 }}>{name}, ¡sigue así! 💪</p>
+              <button className="btn-xl btn-physics" onClick={onTrain} style={{ marginTop: 10, background: C.cyan, color: "#07070C", fontSize: 13 }}>
+                Entrenar hoy
               </button>
             </div>
           ) : (
@@ -5522,7 +5557,7 @@ function HeavyDutyMode({ onFinish, onSave, lvlIdx }) {
   const [failMsg, setFailMsg] = useState(false);
   const restRef = useRef(240);
 
-  const canDo = lvlIdx >= 2;
+  const canDo = true; // el acceso ya se filtra en la pantalla de selección de metodología
   const exercises = group ? HEAVY_DUTY_EXERCISES[group] : null;
   const ex = exercises?.[exIdx];
 
@@ -7545,13 +7580,41 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   /* ── Gimnasio: preguntar metodología antes del enfoque ── */
   if (discId === "gimnasio" && !gymMethod) {
     const userLvl = mostFrequentLevel(sessions);
+    const LEVEL_IDS = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
+    const levelId = LEVEL_IDS[userLvl];
+    const gymSessions = sessions.filter((s) => s.kind === "entreno" && s.disc === "gimnasio").length;
+    const oneRM = store.get("1rm", {});
+    const wendlerMissing = WENDLER_EXERCISES.filter((e) => !oneRM[e]?.rm);
+
+    const access = {
+      standard: { ok: true },
+      dup: {
+        ok: gymSessions >= 15 || ["campeon", "elite", "leyenda", "the_one"].includes(levelId),
+        msg: "Disponible con 15 sesiones de gimnasio", progress: `${gymSessions}/15 sesiones registradas`,
+      },
+      heavyduty: {
+        ok: gymSessions >= 30 || ["elite", "leyenda", "the_one"].includes(levelId),
+        msg: "Disponible con 30 sesiones de gimnasio", progress: `${gymSessions}/30 sesiones registradas`,
+      },
+      gvt: {
+        ok: gymSessions >= 20 || ["campeon", "elite", "leyenda", "the_one"].includes(levelId),
+        msg: "Disponible con 20 sesiones de gimnasio", progress: `${gymSessions}/20 sesiones registradas`,
+      },
+      century: { ok: true },
+      wendler: {
+        ok: wendlerMissing.length === 0,
+        msg: "Requiere 1RM registrado en los 4 ejercicios básicos. Ve a Progreso → Calculadora 1RM para registrarlos.",
+        progress: `${WENDLER_EXERCISES.length - wendlerMissing.length}/${WENDLER_EXERCISES.length} 1RM registrados`,
+      },
+    };
+
     const METHODOLOGIES = [
-      { id: "standard", emoji: "📊", name: "Estándar", desc: "Series y reps fijas. Para todos los niveles.", minLvl: 0 },
-      { id: "dup", emoji: "🌊", name: "DUP", desc: "El esquema cambia cada sesión: fuerza, hipertrofia o resistencia.", minLvl: 2 },
-      { id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "1-2 series al fallo total. Requiere Campeón+", minLvl: 2 },
-      { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio. Volumen extremo.", minLvl: 1 },
-      { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones. Descanso libre.", minLvl: 0 },
-      { id: "wendler", emoji: "🏆", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes exactos para los 4 básicos. Requiere 1RM guardado.", minLvl: 3 },
+      { id: "standard", emoji: "📊", name: "Estándar", desc: "Series y reps fijas. Para todos los niveles." },
+      { id: "dup", emoji: "🌊", name: "DUP", desc: "El esquema cambia cada sesión: fuerza, hipertrofia o resistencia." },
+      { id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "1-2 series al fallo total." },
+      { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio. Volumen extremo." },
+      { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones. Descanso libre." },
+      { id: "wendler", emoji: "🏆", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes exactos para los 4 básicos." },
     ];
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
@@ -7562,25 +7625,40 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Cómo quieres entrenar hoy?</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
           {METHODOLOGIES.map((m) => {
-            const available = userLvl >= m.minLvl;
+            const av = access[m.id];
+            const available = av.ok;
             return (
-              <button
+              <div
                 key={m.id} className="card"
-                onClick={() => {
-                  if (!available) return;
-                  if (m.id === "standard" || m.id === "dup") setGymMethod(m.id);
-                  else { setSpecial(m.id); setDiscId(null); }
-                }}
-                style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", opacity: available ? 1 : 0.5 }}
+                style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, textAlign: "left", opacity: available ? 1 : 0.5 }}
               >
+                {!available && <span style={{ position: "absolute", top: 8, right: 10, fontSize: 14 }}>🔒</span>}
                 <span style={{ fontSize: 24 }}>{m.emoji}</span>
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 800 }}>{m.name}</div>
                   <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>
-                    {available ? m.desc : `Disponible desde ${LEVELS[m.minLvl].name}`}
+                    {available ? m.desc : av.msg}
                   </div>
+                  {!available && av.progress && (
+                    <div style={{ fontSize: 10, color: C.cyan, marginTop: 3, fontWeight: 700 }}>{av.progress}</div>
+                  )}
+                  {available ? (
+                    <button
+                      onClick={() => {
+                        if (m.id === "standard" || m.id === "dup") setGymMethod(m.id);
+                        else { setSpecial(m.id); setDiscId(null); }
+                      }}
+                      style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "8px 14px", borderRadius: 10, minHeight: 36 }}
+                    >
+                      Seleccionar
+                    </button>
+                  ) : m.id === "wendler" ? (
+                    <p style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: C.cyan }}>
+                      Progreso → Calculadora 1RM
+                    </p>
+                  ) : null}
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -7633,18 +7711,38 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
               <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>Selecciona tu enfoque</p>
             </div>
           )}
-          <div className="chip-wrap">
-            {disc.focuses.map((f) => (
-              <button
-                key={f.id}
-                className={`chip ${focusId === f.id ? "on" : ""}`}
-                style={focusId === f.id ? { background: disc.color } : {}}
-                onClick={() => setFocusId(f.id)}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+          {discId?.startsWith("futbol") ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {disc.focuses.map((f) => (
+                <button
+                  key={f.id}
+                  className="card"
+                  style={{
+                    textAlign: "left", padding: "8px 10px",
+                    border: `1px solid ${focusId === f.id ? disc.color : C.border}`,
+                    background: focusId === f.id ? `${disc.color}18` : C.card,
+                  }}
+                  onClick={() => setFocusId(f.id)}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 800, color: focusId === f.id ? disc.color : C.text }}>{f.label}</div>
+                  {f.desc && <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{f.desc}</div>}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="chip-wrap">
+              {disc.focuses.map((f) => (
+                <button
+                  key={f.id}
+                  className={`chip ${focusId === f.id ? "on" : ""}`}
+                  style={focusId === f.id ? { background: disc.color } : {}}
+                  onClick={() => setFocusId(f.id)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {FOCUS_ZONES[discId] && (
             <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
@@ -8105,12 +8203,18 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
 
   const logSet = (ok, repsOverride = null) => {
     ensureAudio(); // el AudioContext debe nacer en un gesto del usuario (móvil)
-    if (ok && navigator.vibrate) navigator.vibrate(100);
+    if (ok && navigator.vibrate) navigator.vibrate(50);
     const repsVal = repsOverride !== null ? repsOverride : parseInt(reps, 10) || 0;
     const entry = { reps: repsVal, weight: parseFloat(weight) || 0, ok };
     const updatedLogs = logs.map((arr, i) => (i === exIdx ? [...arr, entry] : arr));
     setLogs(updatedLogs);
     setReps("");
+    if (ok) {
+      setJustCompletedSet(setNum);
+      setTimeout(() => setJustCompletedSet(null), 300);
+      setShowXpBadge(true);
+      setTimeout(() => setShowXpBadge(false), 800);
+    }
     if (ok) {
       const thisExIdx = exIdx;
       const thisSetIdx = updatedLogs[exIdx].length - 1;
@@ -8151,22 +8255,54 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     }
   };
 
+  const [slideState, setSlideState] = useState("visible");
+  const [justCompletedSet, setJustCompletedSet] = useState(null);
+  const [showXpBadge, setShowXpBadge] = useState(false);
+
   const nextExercise = () => {
     if (isLastEx) {
       /* Reserva de seguridad: normalmente ya se pasó a "finished" automáticamente desde logSet */
       finishSession(logs);
     } else {
-      const nextEx = plan.exercises[exIdx + 1];
-      setExIdx((i) => i + 1);
-      setSetNum(0);
-      setWeight("");
-      setField(nextEx.type === "peso" ? "weight" : "reps");
-      setPhase("work");
+      setSlideState("exit-left");
+      setTimeout(() => {
+        const nextEx = plan.exercises[exIdx + 1];
+        setExIdx((i) => i + 1);
+        setSetNum(0);
+        setWeight("");
+        setField(nextEx.type === "peso" ? "weight" : "reps");
+        setPhase("work");
+        setSlideState("enter-right");
+        requestAnimationFrame(() => setSlideState("visible"));
+      }, 200);
     }
   };
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const quit = () => setShowExitConfirm(true);
+
+  const completedExCount = logs.filter((arr) => arr.some((s) => s.ok)).length;
+  const completedSetCount = logs.reduce((a, arr) => a + arr.filter((s) => s.ok).length, 0);
+
+  const saveAndExit = () => {
+    if (completedExCount === 0) { onClose(); return; }
+    const record = {
+      id: Date.now(),
+      ts: Date.now(),
+      kind: "entreno",
+      disc: plan.discId,
+      focusLabel: plan.focusLabel,
+      levelIdx: plan.lvlIdx,
+      calLocation: plan.calLocation,
+      durationMin: Math.round(sessionSecs / 60),
+      partial: true,
+      exercises: plan.exercises
+        .map((e, i) => ({ name: e.name, sets: logs[i], technique: techniqueRatings[i] || null }))
+        .filter((_, i) => logs[i].some((s) => s.ok)),
+    };
+    onSave(record);
+    onClose();
+  };
 
   /* Educación integrada: card breve antes de empezar (o saltar) */
   if (phase === "education") {
@@ -8611,21 +8747,39 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30 }}>
       <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
       {showExitConfirm && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div className="card" style={{ maxWidth: 340, textAlign: "center", padding: 20 }}>
-            <p style={{ fontSize: 15, fontWeight: 700 }}>¿Seguro que quieres salir?</p>
-            <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>Perderás el progreso de esta sesión</p>
-            <button
-              className="btn-xl" onClick={onClose} aria-label="Confirmar salida de la sesión"
-              style={{ marginTop: 16, background: C.red, color: "#fff" }}
-            >
-              Sí, salir
-            </button>
+        <div
+          onClick={() => setShowExitConfirm(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", animation: "fadeIn 0.2s ease" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card"
+            style={{ width: "100%", maxWidth: 430, textAlign: "center", padding: "20px 20px calc(20px + env(safe-area-inset-bottom))", borderRadius: "20px 20px 0 0", animation: "sheetUp 0.3s ease-out" }}
+          >
+            <p style={{ fontSize: 16, fontWeight: 800 }}>¿Salir de la sesión?</p>
+            <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>
+              Llevas {completedSetCount} {completedSetCount === 1 ? "serie" : "series"} y {completedExCount} {completedExCount === 1 ? "ejercicio completado" : "ejercicios completados"}.
+              {completedExCount < 3 ? " El progreso de esta sesión se perderá." : ""}
+            </p>
             <button
               className="btn-xl" onClick={() => setShowExitConfirm(false)} aria-label="Continuar entrenando"
-              style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+              style={{ marginTop: 16, minHeight: 56, background: C.green, color: "#07070C" }}
             >
               Continuar entrenando
+            </button>
+            {completedExCount >= 3 && (
+              <button
+                className="btn-xl" onClick={saveAndExit} aria-label="Guardar y salir"
+                style={{ marginTop: 10, minHeight: 48, background: C.cyan, color: "#07070C", fontSize: 14 }}
+              >
+                Guardar y salir
+              </button>
+            )}
+            <button
+              onClick={onClose} aria-label="Salir sin guardar"
+              style={{ marginTop: 12, minHeight: 44, color: C.red, fontSize: 13, fontWeight: 700 }}
+            >
+              Salir sin guardar
             </button>
           </div>
         </div>
@@ -8746,12 +8900,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       </p>
 
       <div
-        className="card fade-up"
+        className={`card exercise-card-${slideState}`}
         key={exIdx}
         style={{
           marginTop: 10, borderLeft: `4px solid ${plan.discColor}`,
           boxShadow: flashDone ? `0 0 0 2px ${C.green}` : "none",
-          transition: "box-shadow .3s ease",
+          transition: slideState === "visible" ? "box-shadow .3s ease, transform 0.2s ease-out, opacity 0.2s ease-out" : undefined,
         }}
         onTouchStart={(e) => { touchYRef.current = e.touches[0].clientY; }}
         onTouchEnd={(e) => {
@@ -8824,6 +8978,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
         {Array.from({ length: ex.sets }).map((_, i) => {
           const log = doneSets[i];
+          const isJustCompleted = justCompletedSet === i;
+          const isNextActive = i === setNum && phase === "work" && log === undefined;
           return (
             <div
               key={i}
@@ -8832,6 +8988,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
                 display: "flex", flexDirection: "column", justifyContent: "center",
                 background: log ? (log.ok ? "rgba(34,255,136,0.10)" : "rgba(255,59,92,0.10)") : i === setNum && phase === "work" ? C.card2 : C.surface,
                 border: `1px solid ${log ? (log.ok ? "rgba(34,255,136,0.4)" : "rgba(255,59,92,0.4)") : i === setNum && phase === "work" ? plan.discColor : C.border}`,
+                animation: isJustCompleted ? "setPulse 0.3s ease" : isNextActive ? "nextSetPulse 1.2s ease infinite" : "none",
               }}
             >
               <div style={{ fontSize: 11, color: C.dim }}>
@@ -8954,13 +9111,26 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             </p>
           )}
           <NumPad onKey={pressKey} />
-          <button
-            className="btn-xl"
-            onClick={attemptComplete}
-            style={{ marginTop: 14, background: plan.discColor, color: "#07070C", minHeight: 64, fontSize: 18 }}
-          >
-            ✓ SERIE COMPLETADA
-          </button>
+          <div style={{ position: "relative" }}>
+            {showXpBadge && (
+              <span
+                style={{
+                  position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)",
+                  fontSize: 14, fontWeight: 900, color: C.green, pointerEvents: "none",
+                  animation: "xpFloat 0.8s ease-out forwards", zIndex: 5,
+                }}
+              >
+                ✓ +10 XP
+              </span>
+            )}
+            <button
+              className="btn-xl btn-physics"
+              onClick={attemptComplete}
+              style={{ marginTop: 14, background: plan.discColor, color: "#07070C", minHeight: 64, fontSize: 18 }}
+            >
+              ✓ SERIE COMPLETADA
+            </button>
+          </div>
           <button
             className="btn-xl"
             onClick={() => logSet(false)}
