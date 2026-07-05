@@ -996,9 +996,64 @@ const TRAINING_GOALS = [
   { id: "aesthetics", emoji: "🎨", name: "Estética / Físico", subtitle: "Forma, proporción y definición", desc: "Entrenar para verse bien. Zonas específicas, proporción y definición muscular.", color: "#A855F7", params: { repsRange: [10, 15], setsMultiplier: 1.1, restSeconds: 60 } },
 ];
 
+/* ─── Enfoques estéticos de Gimnasio (prioridades de rutina) ─── */
+const GYM_FOCUSES = [
+  { id: "gains", emoji: "💪", name: "Ganancias generales", desc: "Más músculo en todo el cuerpo", color: "#22FF88" },
+  { id: "strength_focus", emoji: "🏋️", name: "Fuerza pura", desc: "Los 4 básicos al máximo peso", color: "#FF6B2B" },
+  { id: "v_shape", emoji: "🔺", name: "Forma en V", desc: "Espalda ancha, hombros grandes", color: "#00E5FF" },
+  { id: "glutes", emoji: "🍑", name: "Glúteos y piernas", desc: "Para desarrollar glúteos y forma", color: "#FF9EC4" },
+  { id: "upper_body", emoji: "👆", name: "Tren superior", desc: "Pecho, espalda, hombros, brazos", color: "#A855F7" },
+  { id: "definition", emoji: "✂️", name: "Definición", desc: "Circuitos, más quema, menos descanso", color: "#FFD600" },
+  { id: "full_body", emoji: "🔄", name: "Full body", desc: "Todo el cuerpo en cada sesión", color: "#4ADE80" },
+];
+
+/* Reordena/ajusta la rutina de gimnasio según el enfoque estético elegido */
+function applyGymFocusToExercises(exercises, focusId) {
+  if (!focusId) return exercises;
+  let out = [...exercises];
+  const findByName = (needle) => out.find((e) => e.name.toLowerCase().includes(needle));
+  const bringFirst = (needles) => {
+    for (const needle of needles) {
+      const ex = findByName(needle);
+      if (ex) { out = [ex, ...out.filter((e) => e !== ex)]; return true; }
+    }
+    return false;
+  };
+  if (focusId === "v_shape") {
+    bringFirst(["jalón al pecho agarre ancho", "dominadas agarre ancho", "jalón al pecho", "dominadas"]);
+  } else if (focusId === "glutes") {
+    bringFirst(["hip thrust"]);
+  } else if (focusId === "definition") {
+    out = out.map((e) => ({ ...e, rest: Math.min(e.rest, 45) }));
+  } else if (focusId === "strength_focus") {
+    const compounds = out.filter((e) => classifyExerciseOrder(e.name).startsWith("compound"));
+    out = (compounds.length >= 3 ? compounds : out).map((e) => ({ ...e, sets: Math.max(4, e.sets), rest: Math.max(180, e.rest) }));
+  }
+  return out;
+}
+
 function getTrainingGoal() {
   const id = store.get("training_goal", null);
   return TRAINING_GOALS.find((g) => g.id === id) || null;
+}
+
+/* Copy contextual según el objetivo activo (plan del día y banner de inicio de sesión) */
+const GOAL_CONTEXT_COPY = {
+  fat_loss: "Alta intensidad. Pocos descansos. 🔥",
+  strength: "Pesado y técnico. Descansa bien. 💀",
+  muscle: "Siente el músculo en cada rep. 💪",
+  athletic: "Velocidad y potencia. CNS activo. ⚡",
+  health: "Movimiento como medicina. 🌱",
+  endurance: "Ritmo sostenido. Respira. 🏃",
+  aesthetics: "Contracción consciente. Forma. 🎨",
+  recomposition: "Músculo en, grasa fuera. ⚖️",
+};
+function goalContextCopy() {
+  const goal = getTrainingGoal();
+  if (!goal) return null;
+  if (goal.id === "aesthetics" && store.get("gym_focus", null) === "glutes") return "Activa glúteo en cada ejercicio. 🍑";
+  if (goal.id === "aesthetics" && store.get("gym_focus", null) === "v_shape") return "Dorsales anchos, hombros grandes. 🔺";
+  return GOAL_CONTEXT_COPY[goal.id] || null;
 }
 
 /* Ajusta series y descanso de una rutina de gimnasio según el objetivo activo (sin tocar reps en formato string) */
@@ -3133,7 +3188,9 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
   });
   const sorted = sortExercises(built);
-  return discId === "gimnasio" ? applyGoalToExercises(sorted, store.get("training_goal", null)) : sorted;
+  if (discId !== "gimnasio") return sorted;
+  const withFocus = applyGymFocusToExercises(sorted, store.get("gym_focus", null));
+  return applyGoalToExercises(withFocus, store.get("training_goal", null));
 }
 
 /* Orden real de atletismo: técnica/pliometría primero, sprints/tempo después, recuperación al final */
@@ -5275,6 +5332,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   const prevStreakRef = useRef(streak);
   const [streakBounce, setStreakBounce] = useState(false);
   const [showFreezeConfirm, setShowFreezeConfirm] = useState(false);
+  const [showRegimenPreview, setShowRegimenPreview] = useState(false);
+  const [previewTip, setPreviewTip] = useState(null);
   const freezesLeft = 1;
   useEffect(() => {
     if (streak > prevStreakRef.current) {
@@ -5491,6 +5550,10 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                 <p style={{ fontSize: 15, fontWeight: 900, marginTop: 2 }}>
                   {info.label}{info.focusLabel ? ` · ${info.focusLabel}` : ""}
                 </p>
+                {(() => {
+                  const ctx = goalContextCopy();
+                  return ctx ? <p style={{ fontSize: 11, color: C.dim, fontStyle: "italic", marginTop: 2 }}>{ctx}</p> : null;
+                })()}
                 <p style={{ fontSize: 12, fontWeight: 700, marginTop: 2, color: LEVELS[dp.lvlIdx]?.color }}>
                   {LEVELS[dp.lvlIdx]?.emoji} {LEVELS[dp.lvlIdx]?.name} · ~{duration} min
                 </p>
@@ -5514,6 +5577,62 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                 Ver otro plan 🔄
               </button>
             )}
+            <div style={{ textAlign: "center" }}>
+              <button onClick={() => setShowRegimenPreview(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
+                Ver ejercicios de hoy →
+              </button>
+            </div>
+            {showRegimenPreview && (() => {
+              let previewExercises = [];
+              try { previewExercises = genRoutine(dp.discId, dp.focusId, dp.lvlIdx) || []; } catch { previewExercises = []; }
+              const totalMin = previewExercises.reduce((a, e) => a + Math.round((e.sets * 15 + e.sets * e.rest) / 60), 0);
+              return (
+                <div
+                  onClick={() => setShowRegimenPreview(false)}
+                  style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+                >
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="card"
+                    style={{ width: "100%", maxWidth: 430, maxHeight: "80vh", display: "flex", flexDirection: "column", borderRadius: "20px 20px 0 0", padding: "20px 20px calc(16px + env(safe-area-inset-bottom))", animation: "sheetUp 0.3s ease-out" }}
+                  >
+                    <p style={{ fontSize: 16, fontWeight: 800 }}>{info.label}{info.focusLabel ? ` — ${info.focusLabel}` : ""} — {LEVELS[dp.lvlIdx]?.name}</p>
+                    <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{previewExercises.length} ejercicios · ~{totalMin} minutos</p>
+                    <div style={{ overflowY: "auto", marginTop: 10, flex: 1 }}>
+                      {previewExercises.map((ex, i) => {
+                        const cat = movementCategory(ex.name);
+                        const color = MOVEMENT_COLORS[cat];
+                        const exMin = Math.round((ex.sets * 15 + ex.sets * ex.rest) / 60);
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setPreviewTip(previewTip === i ? null : i)}
+                            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 0", borderBottom: i < previewExercises.length - 1 ? `1px solid ${C.border}` : "none" }}
+                          >
+                            <div style={{ width: 48, height: 48, borderRadius: 10, background: `${color}14`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                              <div style={{ transform: "scale(0.3)" }}><ExerciseIllustration category={cat} color={color} /></div>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</div>
+                              <div style={{ fontSize: 12, color: C.mut, marginTop: 1 }}>{ex.sets} × {ex.reps}</div>
+                              {previewTip === i && <div style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>{ex.tip}</div>}
+                            </div>
+                            <div style={{ fontSize: 11, color: C.dim, flexShrink: 0 }}>~{exMin} min</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      className="btn-xl btn-physics"
+                      onClick={() => { setShowRegimenPreview(false); onStartPlan?.(dp.discId, dp.focusId, dp.lvlIdx); }}
+                      style={{ marginTop: 12, minHeight: 64, background: info.color, color: "#07070C", fontSize: 18 }}
+                    >
+                      ▶ Empezar sesión
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
             {(() => {
               const goal = getTrainingGoal();
               return goal ? (
@@ -7555,6 +7674,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [seed, setSeed] = useState(0);
   const [calLocation, setCalLocation] = useState(null);
   const [gymMethod, setGymMethod] = useState(null);
+  const [gymFocus, setGymFocus] = useState(() => store.get("gym_focus", null));
   const [distance, setDistance] = useState(null);
   const [customRoutines, setCustomRoutines] = useState(() => store.get("custom_routines", []));
   const [trainCards] = useState(() => orderedTrainCards());
@@ -7598,6 +7718,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const backToDiscs = () => {
     setDiscId(null);
     setGymMethod(null);
+    setGymFocus(null);
     onAccent(null);
   };
 
@@ -8189,6 +8310,32 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     );
   }
 
+  /* ── Gimnasio: enfoque estético antes del nivel (solo estándar/DUP) ── */
+  if (discId === "gimnasio" && (gymMethod === "standard" || gymMethod === "dup") && !gymFocus) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={() => setGymMethod(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Metodología
+        </button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Qué quieres priorizar?</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
+          {GYM_FOCUSES.map((f) => (
+            <button
+              key={f.id}
+              className="card"
+              onClick={() => { setGymFocus(f.id); store.set("gym_focus", f.id); }}
+              style={{ textAlign: "left", padding: "12px 10px", border: `1px solid ${C.border}` }}
+            >
+              <div style={{ fontSize: 28 }}>{f.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4 }}>{f.name}</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{f.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="screen" key={discId}>
       <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
@@ -8465,6 +8612,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [showSwipeHint] = useState(() => store.get("session_count", 0) < 3);
   const [showGestureOverlay, setShowGestureOverlay] = useState(() => store.get("session_count", 0) === 0);
   const [showStep4, setShowStep4] = useState(() => store.get("session_count", 0) === 0 && !store.get("tutorial_done", false));
+  const [showGoalBanner, setShowGoalBanner] = useState(() => !!goalContextCopy());
   const restRef = useRef(0);
   const touchYRef = useRef(null);
 
@@ -8476,6 +8624,13 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       return () => clearTimeout(t);
     }
     return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!showGoalBanner) return undefined;
+    const t = setTimeout(() => setShowGoalBanner(false), 3000);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* El cronómetro real arranca cuando empieza el trabajo (no cuenta el calentamiento) */
@@ -9326,6 +9481,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       {showStep4 && (
         <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, textAlign: "center", padding: 14, borderColor: `${C.green}66` }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>¡Perfecto! La sesión empieza ahora</p>
+        </div>
+      )}
+      {showGoalBanner && goalContextCopy() && (
+        <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, textAlign: "center", padding: 14, borderColor: `${plan.discColor || C.cyan}66` }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: plan.discColor || C.cyan }}>{goalContextCopy()}</p>
         </div>
       )}
       {justWarmedUp && (
