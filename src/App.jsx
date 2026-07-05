@@ -3709,9 +3709,11 @@ function LibraryExerciseCard({ ex, onOpen }) {
   const diffEmoji = ex.lv ? LEVELS[Math.min(5, Math.round((ex.lv[0] + ex.lv[1]) / 2))]?.emoji : "⚡";
   return (
     <button className="card" onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left" }}>
-      <svg viewBox="0 0 130 100" width="60" height="40" style={{ flexShrink: 0, background: "#1A1A2E", borderRadius: 8 }}>
-        <StickFigure category={ex.demoCat} color={color} />
-      </svg>
+      <div style={{ flexShrink: 0, width: 60, height: 40, background: `${color}08`, borderRadius: 8, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ transform: "scale(0.32)" }}>
+          <ExerciseIllustration category={ex.demoCat} color={color} />
+        </div>
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.name}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
@@ -3834,10 +3836,8 @@ function ExerciseLibrary({ sessions, onAddToRoutine, onBack }) {
     return (
       <div className="screen">
         <button onClick={() => setDetail(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Biblioteca</button>
-        <div className="card" style={{ marginTop: 10, textAlign: "center" }}>
-          <svg viewBox="0 0 130 100" style={{ width: "60%", maxWidth: 160 }}>
-            <StickFigure category={detail.demoCat} color={color} />
-          </svg>
+        <div className="card" style={{ marginTop: 10, display: "flex", justifyContent: "center", padding: 16 }}>
+          <ExerciseIllustration category={detail.demoCat} color={color} />
         </div>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>{detail.name}</h2>
         <span style={{ fontSize: 11, fontWeight: 800, color, background: `${color}22`, padding: "3px 8px", borderRadius: 99 }}>
@@ -4015,99 +4015,101 @@ function NumPad({ onKey }) {
 
 /* Figuras de palo SVG animadas según la categoría de movimiento del ejercicio.
    Evita depender de URLs externas (GIFs) que pueden fallar o tener CORS. */
-function StickFigure({ category, color }) {
-  const strokeProps = { stroke: color, strokeWidth: 4, strokeLinecap: "round", fill: "none" };
-  switch (category) {
-    case "empuje":
-      return (
-        <g className="anim-empuje">
-          <circle cx="30" cy="35" r="7" fill={color} />
-          <path d="M30 42 L100 42" {...strokeProps} />
-          <path d="M45 42 L38 60" {...strokeProps} />
-          <path d="M85 42 L92 60" {...strokeProps} />
-          <path d="M50 44 L65 30 L80 44" {...strokeProps} />
-        </g>
-      );
-    case "tiron":
-      return (
-        <g>
-          <path d="M20 15 L110 15" {...strokeProps} />
-          <g className="anim-tiron">
-            <circle cx="65" cy="30" r="7" fill={color} />
-            <path d="M65 37 L65 65" {...strokeProps} />
-            <path d="M65 42 L45 20" {...strokeProps} />
-            <path d="M65 42 L85 20" {...strokeProps} />
-            <path d="M65 65 L52 85" {...strokeProps} />
-            <path d="M65 65 L78 85" {...strokeProps} />
-          </g>
-        </g>
-      );
-    case "sentadilla":
-      return (
-        <g className="anim-sentadilla">
-          <circle cx="65" cy="20" r="7" fill={color} />
-          <path d="M65 27 L65 55" {...strokeProps} />
-          <path d="M65 32 L50 45" {...strokeProps} />
-          <path d="M65 32 L80 45" {...strokeProps} />
-          <path className="anim-leg" d="M65 55 L52 70 L52 90" {...strokeProps} />
-          <path className="anim-leg" d="M65 55 L78 70 L78 90" {...strokeProps} />
-        </g>
-      );
-    case "core":
-      return (
-        <g>
-          <circle cx="25" cy="45" r="7" fill={color} />
-          <path d="M25 52 L100 60" {...strokeProps} />
-          <path d="M35 50 L45 38" {...strokeProps} />
-          <path className="anim-core" d="M100 60 L112 48" {...strokeProps} />
-        </g>
-      );
-    case "sprint":
-      return (
-        <g>
-          <circle cx="55" cy="18" r="7" fill={color} />
-          <path d="M55 25 L60 50" {...strokeProps} />
-          <path d="M60 30 L78 20" {...strokeProps} />
-          <path d="M60 35 L42 45" {...strokeProps} />
-          <path className="anim-leg1" d="M60 50 L78 62 L88 55" {...strokeProps} />
-          <path className="anim-leg2" d="M60 50 L42 68 L30 78" {...strokeProps} />
-        </g>
-      );
-    case "salto":
-      return (
-        <g className="anim-salto">
-          <circle cx="65" cy="20" r="7" fill={color} />
-          <path d="M65 27 L65 55" {...strokeProps} />
-          <path d="M65 32 L48 15" {...strokeProps} />
-          <path d="M65 32 L82 15" {...strokeProps} />
-          <path d="M65 55 L52 78" {...strokeProps} />
-          <path d="M65 55 L78 78" {...strokeProps} />
-        </g>
-      );
-    case "tiro":
-      return (
-        <g>
-          <circle cx="55" cy="18" r="7" fill={color} />
-          <path d="M55 25 L58 50" {...strokeProps} />
-          <path d="M58 30 L75 25" {...strokeProps} />
-          <path d="M58 34 L40 40" {...strokeProps} />
-          <path className="anim-plant-leg" d="M58 50 L45 65 L42 85" {...strokeProps} />
-          <path className="anim-kick-leg" d="M58 50 L78 60 L95 52" {...strokeProps} />
-          <circle className="anim-ball" cx="100" cy="48" r="5" fill={color} opacity="0.85" />
-        </g>
-      );
-    default:
-      return (
-        <g className="anim-generic">
-          <circle cx="65" cy="22" r="7" fill={color} />
-          <path d="M65 29 L65 58" {...strokeProps} />
-          <path d="M65 36 L48 48" {...strokeProps} />
-          <path d="M65 36 L82 48" {...strokeProps} />
-          <path d="M65 58 L52 82" {...strokeProps} />
-          <path d="M65 58 L78 82" {...strokeProps} />
-        </g>
-      );
-  }
+/* ─── Ilustraciones de ejercicio con figura humana en CSS (divs) ─── */
+const HUMAN_POSES = {
+  sentadilla: {
+    speed: 1000,
+    a: { leftArm: 20, rightArm: -20, leftLeg: 5, rightLeg: -5, torsoY: 0 },
+    b: { leftArm: 30, rightArm: -30, leftLeg: 35, rightLeg: -35, torsoY: 20 },
+  },
+  empuje: {
+    speed: 1000,
+    a: { leftArm: -100, rightArm: 100, leftLeg: 0, rightLeg: 0, torsoY: 0 },
+    b: { leftArm: -40, rightArm: 40, leftLeg: 0, rightLeg: 0, torsoY: 0 },
+  },
+  tiron: {
+    speed: 1000,
+    a: { leftArm: -170, rightArm: 170, leftLeg: 0, rightLeg: 0, torsoY: 0 },
+    b: { leftArm: -140, rightArm: 140, leftLeg: 0, rightLeg: 0, torsoY: -14 },
+  },
+  sprint: {
+    speed: 300,
+    a: { leftArm: -35, rightArm: 45, leftLeg: 35, rightLeg: -35, torsoY: 0 },
+    b: { leftArm: 45, rightArm: -35, leftLeg: -35, rightLeg: 35, torsoY: 0 },
+  },
+  salto: {
+    speed: 400,
+    a: { leftArm: 20, rightArm: -20, leftLeg: 25, rightLeg: -25, torsoY: 12 },
+    b: { leftArm: -160, rightArm: 160, leftLeg: -8, rightLeg: 8, torsoY: -18 },
+  },
+  core: {
+    speed: 1000,
+    a: { leftArm: -85, rightArm: 85, leftLeg: 0, rightLeg: 0, torsoY: 0, scale: 1 },
+    b: { leftArm: -85, rightArm: 85, leftLeg: 0, rightLeg: 0, torsoY: 0, scale: 1.02 },
+  },
+  tiro: {
+    speed: 800,
+    a: { leftArm: 10, rightArm: -60, leftLeg: 10, rightLeg: -10, torsoY: 0 },
+    b: { leftArm: 10, rightArm: -170, leftLeg: -15, rightLeg: 20, torsoY: -6 },
+  },
+  generic: {
+    speed: 1200,
+    a: { leftArm: 15, rightArm: -15, leftLeg: 6, rightLeg: -6, torsoY: 0 },
+    b: { leftArm: -15, rightArm: 15, leftLeg: -6, rightLeg: 6, torsoY: -4 },
+  },
+};
+
+function HumanFigure({ pose, color }) {
+  const scale = pose.scale || 1;
+  return (
+    <div style={{ position: "relative", width: 80, height: 120, transform: `translateY(${pose.torsoY}px) scale(${scale})`, transition: "transform 0.4s ease-in-out" }}>
+      <div style={{ position: "absolute", width: 20, height: 20, borderRadius: "50%", background: color, top: 0, left: 30, transition: "all 0.4s ease-in-out" }} />
+      <div style={{ position: "absolute", width: 24, height: 35, borderRadius: 8, background: color, top: 22, left: 28 }} />
+      <div style={{
+        position: "absolute", width: 10, height: 28, borderRadius: 5, background: color, top: 24, left: 16,
+        transformOrigin: "top center", transform: `rotate(${pose.leftArm}deg)`, transition: "transform 0.4s ease-in-out",
+      }} />
+      <div style={{
+        position: "absolute", width: 10, height: 28, borderRadius: 5, background: color, top: 24, right: 16,
+        transformOrigin: "top center", transform: `rotate(${pose.rightArm}deg)`, transition: "transform 0.4s ease-in-out",
+      }} />
+      <div style={{
+        position: "absolute", width: 11, height: 35, borderRadius: 5, background: color, top: 55, left: 24,
+        transformOrigin: "top center", transform: `rotate(${pose.leftLeg}deg)`, transition: "transform 0.4s ease-in-out",
+      }} />
+      <div style={{
+        position: "absolute", width: 11, height: 35, borderRadius: 5, background: color, top: 55, right: 24,
+        transformOrigin: "top center", transform: `rotate(${pose.rightLeg}deg)`, transition: "transform 0.4s ease-in-out",
+      }} />
+    </div>
+  );
+}
+
+function ExerciseIllustration({ category, color }) {
+  const def = HUMAN_POSES[category] || HUMAN_POSES.generic;
+  const [poseKey, setPoseKey] = useState("a");
+  useEffect(() => {
+    const t = setInterval(() => setPoseKey((k) => (k === "a" ? "b" : "a")), def.speed);
+    return () => clearInterval(t);
+  }, [def.speed]);
+  const pose = def[poseKey];
+  const isHorizontal = category === "empuje" || category === "core";
+  return (
+    <div style={{ transform: isHorizontal ? "rotate(90deg)" : "none" }}>
+      {category === "tiron" && (
+        <div style={{ width: 90, height: 6, background: "#4E4E70", borderRadius: 3, marginBottom: 8 }} />
+      )}
+      <HumanFigure pose={pose} color={color} />
+      {category === "tiro" && (
+        <div
+          style={{
+            position: "absolute", width: 10, height: 10, borderRadius: "50%", background: color, opacity: 0.85,
+            top: poseKey === "b" ? 10 : 40, left: poseKey === "b" ? 130 : 100, transition: "all 0.4s ease-in-out",
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
 function ExerciseDemo({ exerciseName }) {
@@ -4117,14 +4119,12 @@ function ExerciseDemo({ exerciseName }) {
     <div
       className="exercise-demo"
       style={{
-        width: "100%", maxHeight: 150, aspectRatio: "16 / 9",
-        borderRadius: 12, background: "#1A1A2E", border: `1px solid ${C.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden",
+        width: "100%", maxHeight: 160, minHeight: 140,
+        borderRadius: 12, background: `${color}08`, border: `1px solid ${C.border}`,
+        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden", position: "relative", padding: 16,
       }}
     >
-      <svg viewBox="0 0 130 100" style={{ width: "70%", maxWidth: 160 }}>
-        <StickFigure category={category} color={color} />
-      </svg>
+      <ExerciseIllustration category={category} color={color} />
     </div>
   );
 }
@@ -5012,7 +5012,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
             <button
               className="btn-xl"
               onClick={() => onStartPlan?.(dp.discId, dp.focusId, dp.lvlIdx)}
-              style={{ marginTop: 12, background: info.color, color: "#07070C", fontSize: 14 }}
+              style={{ marginTop: 12, background: info.color, color: "#07070C", fontSize: 20, minHeight: 68, boxShadow: `0 8px 24px ${info.color}40` }}
             >
               ▶ Empezar este plan
             </button>
@@ -8673,7 +8673,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <span style={{ fontSize: 12, fontWeight: 800, color: sessionSecs > 5400 ? C.orange : C.text, fontVariantNumeric: "tabular-nums" }}>
             ⏱ {String(Math.floor(sessionSecs / 60)).padStart(2, "0")}:{String(sessionSecs % 60).padStart(2, "0")}
           </span>
-          <button onClick={() => setShowExtras((v) => !v)} aria-label="Más opciones" style={{ fontSize: 16, padding: 4, color: C.dim }}>⋯</button>
+          <button onClick={() => setShowExtras((v) => !v)} aria-label="Más opciones" style={{ fontSize: 16, minWidth: 44, minHeight: 44, color: C.dim }}>⋯</button>
         </div>
       </div>
 
@@ -8828,7 +8828,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             <div
               key={i}
               style={{
-                minWidth: 46, height: 44, padding: "5px 8px", borderRadius: 11, textAlign: "center",
+                minWidth: 48, minHeight: 48, padding: "5px 8px", borderRadius: 11, textAlign: "center",
                 display: "flex", flexDirection: "column", justifyContent: "center",
                 background: log ? (log.ok ? "rgba(34,255,136,0.10)" : "rgba(255,59,92,0.10)") : i === setNum && phase === "work" ? C.card2 : C.surface,
                 border: `1px solid ${log ? (log.ok ? "rgba(34,255,136,0.4)" : "rgba(255,59,92,0.4)") : i === setNum && phase === "work" ? plan.discColor : C.border}`,
@@ -8899,7 +8899,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <button
             className="btn-xl"
             onClick={() => logSet(false, 0)}
-            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 14 }}
+            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, minHeight: 52, fontSize: 15 }}
           >
             No pude 😤
           </button>
@@ -8957,14 +8957,14 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <button
             className="btn-xl"
             onClick={attemptComplete}
-            style={{ marginTop: 14, background: plan.discColor, color: "#07070C" }}
+            style={{ marginTop: 14, background: plan.discColor, color: "#07070C", minHeight: 64, fontSize: 18 }}
           >
             ✓ SERIE COMPLETADA
           </button>
           <button
             className="btn-xl"
             onClick={() => logSet(false)}
-            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 14 }}
+            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, minHeight: 52, fontSize: 15 }}
           >
             No pude 😤
           </button>
@@ -10917,10 +10917,27 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
       </div>
 
       <div className="sec-title">Estadísticas</div>
-      <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="card" style={{ padding: "14px 10px", textAlign: "center", background: `linear-gradient(135deg, ${C.orange}14, transparent)` }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.orange }}>🔥 {streak}</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>días racha</div>
+        </div>
+        <div className="card" style={{ padding: "14px 10px", textAlign: "center", background: `linear-gradient(135deg, ${C.cyan}14, transparent)` }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.cyan }}>💪 {sessions.length}</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>sesiones</div>
+        </div>
+        <div className="card" style={{ padding: "14px 10px", textAlign: "center", background: `linear-gradient(135deg, ${C.green}14, transparent)` }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.green }}>🏋️ {formatVolume(totalVolumeShown)}</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>volumen</div>
+        </div>
+        <div className="card" style={{ padding: "14px 10px", textAlign: "center", background: `linear-gradient(135deg, ${C.purple}14, transparent)` }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.purple }}>⏱ {workouts.reduce((a, s) => a + (s.durationMin || 0), 0)}</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>min entrenados</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
         <StatBox label="Peso promedio" value={avgWeight ? `${avgWeight} kg` : "—"} accent={C.cyan} />
         <StatBox label="Reps promedio" value={avgReps || "—"} accent={C.green} />
-        <StatBox label="Sesiones" value={sessions.length} accent={C.orange} />
       </div>
 
       <div className="sec-title">El listón mundial</div>

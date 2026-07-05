@@ -15,10 +15,14 @@
 
 [data-theme="dark"] {
   --bg: #07070c;
-  --surface: #101018;
-  --card: #181822;
-  --border: #26263a;
+  --surface: #0f0f18;
+  --card: #161622;
+  --card-elevated: #1e1e2e;
+  --border: #2a2a3e;
+  --border-subtle: #1e1e2e;
   --text: #f2f2f8;
+  --text-secondary: #a0a0b8;
+  --text-tertiary: #6b6b80;
   --mut: #6b7280;
   --dim: #374151;
   --accent: #00e5ff;
@@ -30,8 +34,12 @@
   --bg: #f0f4f8;
   --surface: #ffffff;
   --card: #f8fafc;
+  --card-elevated: #ffffff;
   --border: #e2e8f0;
+  --border-subtle: #edf2f7;
   --text: #1a202c;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
   --mut: #64748b;
   --dim: #94a3b8;
   --accent: #0099cc;
@@ -143,7 +151,7 @@ input[type='number'] {
 
 .tab {
   flex: 1;
-  height: 52px;
+  height: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -152,7 +160,7 @@ input[type='number'] {
   padding: 0;
   border-radius: 12px;
   color: var(--dim);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   transition: color 0.2s ease;
 }
@@ -162,7 +170,7 @@ input[type='number'] {
 }
 
 .tab .ico {
-  font-size: 20px;
+  font-size: 26px;
   transition: transform 0.2s ease;
 }
 
@@ -187,11 +195,16 @@ input[type='number'] {
 
 .chip {
   padding: 8px 12px;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--mut);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -241,8 +254,9 @@ input[type='number'] {
 .btn-xl {
   width: 100%;
   padding: 14px;
+  min-height: 56px;
   border-radius: 16px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.6px;
   transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease;
@@ -370,103 +384,6 @@ input[type='number'] {
 .icon-anim {
   display: inline-block;
   animation: iconBounce 1.4s ease-in-out infinite;
-}
-
-/* ─── Animaciones de las figuras de ejercicio (SVG) ─── */
-@keyframes moveEmpuje {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(10px); }
-}
-.anim-empuje {
-  animation: moveEmpuje 1.6s ease-in-out infinite;
-  transform-origin: center;
-}
-
-@keyframes moveTiron {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-14px); }
-}
-.anim-tiron {
-  animation: moveTiron 1.7s ease-in-out infinite;
-  transform-origin: center;
-}
-
-@keyframes moveSentadilla {
-  0%, 100% { transform: translateY(0) scaleY(1); }
-  50% { transform: translateY(12px) scaleY(0.85); }
-}
-.anim-sentadilla {
-  animation: moveSentadilla 1.8s ease-in-out infinite;
-  transform-origin: center top;
-}
-
-@keyframes pulseCore {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-.anim-core {
-  animation: pulseCore 2s ease-in-out infinite;
-  transform-origin: left;
-}
-
-@keyframes legFront {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-22deg); }
-}
-@keyframes legBack {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(22deg); }
-}
-.anim-leg1 {
-  animation: legFront 0.5s ease-in-out infinite;
-  transform-origin: 60px 50px;
-}
-.anim-leg2 {
-  animation: legBack 0.5s ease-in-out infinite;
-  transform-origin: 60px 50px;
-}
-
-@keyframes moveSalto {
-  0%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-16px); }
-  60% { transform: translateY(-16px); }
-}
-.anim-salto {
-  animation: moveSalto 1.5s ease-in-out infinite;
-  transform-origin: center;
-}
-
-@keyframes moveGeneric {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-.anim-generic {
-  animation: moveGeneric 1.6s ease-in-out infinite;
-  transform-origin: center;
-}
-
-@keyframes kickLeg {
-  0%, 60%, 100% { transform: rotate(0deg); }
-  80% { transform: rotate(45deg); }
-}
-@keyframes plantLeg {
-  0%, 100% { transform: rotate(0deg); }
-  80% { transform: rotate(-6deg); }
-}
-@keyframes ballFly {
-  0%, 60% { transform: translate(0, 0); opacity: 0.85; }
-  100% { transform: translate(18px, -10px); opacity: 0; }
-}
-.anim-kick-leg {
-  animation: kickLeg 1.6s ease-in-out infinite;
-  transform-origin: 58px 50px;
-}
-.anim-plant-leg {
-  animation: plantLeg 1.6s ease-in-out infinite;
-  transform-origin: 58px 50px;
-}
-.anim-ball {
-  animation: ballFly 1.6s ease-in infinite;
 }
 
 @keyframes bubble {
