@@ -1923,6 +1923,7 @@ function speak(text) {
 function movementCategory(name) {
   const n = name.toLowerCase();
   if (/tiro|remate|disparo|lanzamiento|encest|gol\b|chut/.test(n)) return "tiro";
+  if (/hip thrust|puente de glúteos|puente de gluteos/.test(n)) return "hipthrust";
   if (/peso muerto/.test(n)) return "pesomuerto";
   if (/curl/.test(n)) return "curl";
   if (/flexion|press|fondo/.test(n)) return "empuje";
@@ -1936,7 +1937,22 @@ function movementCategory(name) {
 
 const MOVEMENT_COLORS = {
   empuje: "#22FF88", tiron: "#00E5FF", sentadilla: "#FF7A2F", pesomuerto: "#00E5FF", curl: "#22FF88",
-  core: "#FF3B5C", sprint: "#FFD600", salto: "#A855F7", tiro: "#FFD700", generic: "#6B7280",
+  core: "#FF3B5C", sprint: "#FFD600", salto: "#A855F7", tiro: "#FFD700", hipthrust: "#FF9EC4", generic: "#6B7280",
+};
+
+/* Opacidad de cada grupo (torso/brazos/piernas) según qué músculo trabaja el movimiento */
+const MOVEMENT_ACTIVE_PARTS = {
+  sentadilla: { torso: 0.5, arms: 0.35, legs: 1 },
+  pesomuerto: { torso: 0.6, arms: 0.4, legs: 1 },
+  hipthrust: { torso: 0.4, arms: 0.3, legs: 1 },
+  empuje: { torso: 1, arms: 1, legs: 0.35 },
+  tiron: { torso: 1, arms: 1, legs: 0.35 },
+  curl: { torso: 0.35, arms: 1, legs: 0.3 },
+  sprint: { torso: 0.6, arms: 0.7, legs: 1 },
+  salto: { torso: 0.6, arms: 0.6, legs: 1 },
+  core: { torso: 1, arms: 0.4, legs: 0.4 },
+  tiro: { torso: 0.6, arms: 1, legs: 0.6 },
+  generic: { torso: 0.7, arms: 0.7, legs: 0.7 },
 };
 
 /* Convierte "30-45s", "20 min", "300 m" en segundos objetivo (o null si no aplica) */
@@ -4208,6 +4224,11 @@ const SKELETON_POSES = {
     a: { leftArm: 0.1, leftForearm: 0, rightArm: 0.1, rightForearm: 2.9, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
     b: { leftArm: 0.1, leftForearm: 0, rightArm: 0.1, rightForearm: 0.7, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
   },
+  hipthrust: {
+    cycle: 2500,
+    a: { leftArm: 0, leftForearm: 0, rightArm: 0, rightForearm: 0, leftLeg: 0.9, leftShin: -1.3, rightLeg: -0.9, rightShin: 1.3, torsoY: 20, torsoAngle: 0 },
+    b: { leftArm: 0, leftForearm: 0, rightArm: 0, rightForearm: 0, leftLeg: 0.9, leftShin: -1.3, rightLeg: -0.9, rightShin: 1.3, torsoY: 0, torsoAngle: 0 },
+  },
   generic: {
     cycle: 1200,
     a: { leftArm: 0.25, leftForearm: 0.1, rightArm: -0.25, rightForearm: -0.1, leftLeg: 0.1, leftShin: -0.05, rightLeg: -0.1, rightShin: 0.05, torsoY: 0, torsoAngle: 0 },
@@ -4258,8 +4279,9 @@ function limbPoint(x0, y0, angle, len) {
   return { x: x0 + Math.sin(angle) * len, y: y0 + Math.cos(angle) * len };
 }
 
-function SkeletonFigure({ pose, color }) {
+function SkeletonFigure({ pose, color, activeParts }) {
   const scale = pose.scale || 1;
+  const active = activeParts || { torso: 1, arms: 1, legs: 1 };
   const shoulderL = { x: 36, y: 34 };
   const shoulderR = { x: 64, y: 34 };
   const hipL = { x: 43, y: 66 };
@@ -4273,28 +4295,34 @@ function SkeletonFigure({ pose, color }) {
   const kneeR = limbPoint(hipR.x, hipR.y, pose.rightLeg, 26);
   const footR = limbPoint(kneeR.x, kneeR.y, pose.rightLeg + pose.rightShin, 22);
   const footRot = (base) => `rotate(-10 ${base.x} ${base.y})`;
+  const lowestFootY = Math.max(footL.y, footR.y);
 
   return (
     <svg
       viewBox="0 0 100 160" width="100" height="160" style={{ overflow: "visible", transform: `translateY(${pose.torsoY}px) rotate(${(pose.torsoAngle || 0) * (180 / Math.PI)}deg) scale(${scale})`, transformOrigin: "50px 50px", transition: "transform 0.15s linear" }}
     >
-      <circle cx="50" cy="15" r="11" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <line x1="50" y1="26" x2="50" y2="32" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M35,32 Q50,30 65,32 L62,65 Q50,68 38,65 Z" fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
-      <line x1={shoulderL.x} y1={shoulderL.y} x2={elbowL.x} y2={elbowL.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx={elbowL.x} cy={elbowL.y} r="3" fill={color} />
-      <line x1={elbowL.x} y1={elbowL.y} x2={handL.x} y2={handL.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <line x1={shoulderR.x} y1={shoulderR.y} x2={elbowR.x} y2={elbowR.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx={elbowR.x} cy={elbowR.y} r="3" fill={color} />
-      <line x1={elbowR.x} y1={elbowR.y} x2={handR.x} y2={handR.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <line x1={hipL.x} y1={hipL.y} x2={kneeL.x} y2={kneeL.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx={kneeL.x} cy={kneeL.y} r="3.5" fill={color} />
-      <line x1={kneeL.x} y1={kneeL.y} x2={footL.x} y2={footL.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <rect x={footL.x - 2} y={footL.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footL)} />
-      <line x1={hipR.x} y1={hipR.y} x2={kneeR.x} y2={kneeR.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx={kneeR.x} cy={kneeR.y} r="3.5" fill={color} />
-      <line x1={kneeR.x} y1={kneeR.y} x2={footR.x} y2={footR.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <rect x={footR.x - 2} y={footR.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footR)} />
+      <line x1="0" y1={lowestFootY + 6} x2="100" y2={lowestFootY + 6} stroke={C.border} strokeWidth="1.5" opacity="0.5" />
+      <circle cx="50" cy="15" r="11" fill={color} fillOpacity={active.torso * 0.9} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="50" y1="26" x2="50" y2="32" stroke={color} strokeOpacity={active.torso} strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M35,32 Q50,30 65,32 L62,65 Q50,68 38,65 Z" fill={color} fillOpacity={active.torso * 0.3} stroke={color} strokeOpacity={active.torso} strokeWidth="2.5" strokeLinejoin="round" />
+      <g opacity={active.arms}>
+        <line x1={shoulderL.x} y1={shoulderL.y} x2={elbowL.x} y2={elbowL.y} stroke={color} strokeWidth="4" strokeLinecap="round" />
+        <circle cx={elbowL.x} cy={elbowL.y} r="3" fill={color} />
+        <line x1={elbowL.x} y1={elbowL.y} x2={handL.x} y2={handL.y} stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <line x1={shoulderR.x} y1={shoulderR.y} x2={elbowR.x} y2={elbowR.y} stroke={color} strokeWidth="4" strokeLinecap="round" />
+        <circle cx={elbowR.x} cy={elbowR.y} r="3" fill={color} />
+        <line x1={elbowR.x} y1={elbowR.y} x2={handR.x} y2={handR.y} stroke={color} strokeWidth="3" strokeLinecap="round" />
+      </g>
+      <g opacity={active.legs}>
+        <line x1={hipL.x} y1={hipL.y} x2={kneeL.x} y2={kneeL.y} stroke={color} strokeWidth="5" strokeLinecap="round" />
+        <circle cx={kneeL.x} cy={kneeL.y} r="3.5" fill={color} />
+        <line x1={kneeL.x} y1={kneeL.y} x2={footL.x} y2={footL.y} stroke={color} strokeWidth="3.5" strokeLinecap="round" />
+        <rect x={footL.x - 2} y={footL.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footL)} />
+        <line x1={hipR.x} y1={hipR.y} x2={kneeR.x} y2={kneeR.y} stroke={color} strokeWidth="5" strokeLinecap="round" />
+        <circle cx={kneeR.x} cy={kneeR.y} r="3.5" fill={color} />
+        <line x1={kneeR.x} y1={kneeR.y} x2={footR.x} y2={footR.y} stroke={color} strokeWidth="3.5" strokeLinecap="round" />
+        <rect x={footR.x - 2} y={footR.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footR)} />
+      </g>
     </svg>
   );
 }
@@ -4302,11 +4330,15 @@ function SkeletonFigure({ pose, color }) {
 function ExerciseIllustration({ category, color }) {
   const def = SKELETON_POSES[category] || SKELETON_POSES.generic;
   const pose = useAnimatedPose(def);
-  const isHorizontal = category === "empuje" || category === "core";
+  const activeParts = MOVEMENT_ACTIVE_PARTS[category] || MOVEMENT_ACTIVE_PARTS.generic;
+  const isHorizontal = category === "empuje" || category === "core" || category === "hipthrust";
   return (
     <div style={{ position: "relative", transform: isHorizontal ? "rotate(90deg)" : "none" }}>
       {category === "tiron" && (
         <div style={{ width: 110, height: 8, background: "#4E4E70", borderRadius: 4, boxShadow: "0 3px 6px rgba(0,0,0,0.4)", marginBottom: 4 }} />
+      )}
+      {category === "hipthrust" && (
+        <div style={{ position: "absolute", bottom: 4, left: "18%", width: "35%", height: 12, background: "#2A2A3E", borderRadius: 4 }} />
       )}
       {category === "pesomuerto" && (
         <svg width="100" height="8" style={{ position: "absolute", top: pose.torsoY < -10 ? 92 : 60, left: 0 }}>
@@ -4322,7 +4354,7 @@ function ExerciseIllustration({ category, color }) {
           ))}
         </div>
       )}
-      <SkeletonFigure pose={pose} color={color} />
+      <SkeletonFigure pose={pose} color={color} activeParts={activeParts} />
       {category === "curl" && (
         <div style={{ position: "absolute", width: 6, height: 18, background: color, borderRadius: 2, top: 60, right: 8 }} />
       )}
@@ -4615,6 +4647,38 @@ const HEALTH_ISSUE_OPTIONS = [
   { id: "saltos", emoji: "⚡", label: "No puedo hacer saltos" },
 ];
 
+const BODY_ZONE_OPTIONS = [
+  { id: "todo", name: "Todo el cuerpo" },
+  { id: "hombros", name: "Hombros" },
+  { id: "pecho", name: "Pecho" },
+  { id: "espalda", name: "Espalda" },
+  { id: "brazos", name: "Brazos" },
+  { id: "abdomen", name: "Abdomen" },
+  { id: "gluteos", name: "Glúteos" },
+  { id: "piernas", name: "Piernas" },
+];
+
+/* Silueta humana simple con zonas iluminables según fase_body_focus */
+function BodyZoneFigure({ selected }) {
+  const on = (id) => selected.includes(id) || selected.includes("todo");
+  const fillFor = (id) => (on(id) ? C.cyan : C.border);
+  return (
+    <svg viewBox="0 0 100 200" width="100%" height="220">
+      <circle cx="50" cy="20" r="14" fill={fillFor("todo")} opacity={on("todo") ? 1 : 0.5} />
+      <rect x="30" y="36" width="40" height="16" rx="6" fill={fillFor("hombros")} />
+      <rect x="34" y="52" width="32" height="30" rx="4" fill={fillFor("pecho")} />
+      <rect x="34" y="82" width="32" height="26" rx="4" fill={fillFor("abdomen")} />
+      <rect x="16" y="54" width="14" height="55" rx="6" fill={fillFor("brazos")} />
+      <rect x="70" y="54" width="14" height="55" rx="6" fill={fillFor("brazos")} />
+      <rect x="34" y="108" width="32" height="14" rx="5" fill={fillFor("gluteos")} />
+      <rect x="34" y="122" width="14" height="60" rx="6" fill={fillFor("piernas")} />
+      <rect x="52" y="122" width="14" height="60" rx="6" fill={fillFor("piernas")} />
+      {on("espalda") && <rect x="14" y="52" width="6" height="58" rx="3" fill={C.cyan} />}
+      {on("espalda") && <rect x="80" y="52" width="6" height="58" rx="3" fill={C.cyan} />}
+    </svg>
+  );
+}
+
 /* Ejercicios a evitar o advertir según limitaciones físicas (usado en genRoutine) */
 const HEALTH_FILTERS = {
   rodilla: {
@@ -4669,6 +4733,33 @@ function filterExercisesByHealth(pool, issues) {
     const n = (e.n || e.name || "").toLowerCase();
     return ![...avoid].some((t) => n.includes(t));
   });
+}
+
+function WeightProjectionChart({ currentWeight, targetWeight, weeks }) {
+  const width = 300, height = 120, padding = 20;
+  const startY = padding, endY = height - padding;
+  const startX = padding, endX = width - padding;
+  const losing = targetWeight < currentWeight;
+  const path = `M ${startX},${losing ? startY : endY} C ${startX + (endX - startX) * 0.6},${losing ? startY : endY} ${startX + (endX - startX) * 0.4},${losing ? endY : startY} ${endX},${losing ? endY : startY}`;
+  return (
+    <svg width="100%" viewBox={`0 0 ${width} ${height}`}>
+      <defs>
+        <linearGradient id="projGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FF6B2B" />
+          <stop offset="100%" stopColor="#22FF88" />
+        </linearGradient>
+      </defs>
+      {[0.25, 0.5, 0.75].map((t, i) => (
+        <line key={i} x1={padding} y1={padding + t * (height - 2 * padding)} x2={width - padding} y2={padding + t * (height - 2 * padding)} stroke={C.border} strokeWidth="1" strokeDasharray="4,4" />
+      ))}
+      <path d={path} fill="none" stroke="url(#projGrad)" strokeWidth="3" strokeLinecap="round" />
+      <circle cx={startX} cy={losing ? startY : endY} r="5" fill="#FF6B2B" />
+      <circle cx={endX} cy={losing ? endY : startY} r="5" fill="#22FF88" />
+      <text x={startX + 8} y={losing ? startY + 4 : endY - 8} fontSize="11" fill="#FF6B2B" fontWeight="700">{currentWeight}kg</text>
+      <text x={endX - 40} y={losing ? endY - 8 : startY + 4} fontSize="11" fill="#22FF88" fontWeight="700">{targetWeight}kg</text>
+      <text x={width / 2} y={height} fontSize="10" fill={C.dim} textAnchor="middle">~{weeks} semanas estimadas</text>
+    </svg>
+  );
 }
 
 function OnboardingProgress({ step, total }) {
@@ -4773,6 +4864,42 @@ function ScrollPicker({ value, onChange, min, max, unit = "", step = 1 }) {
   );
 }
 
+const PLAN_LOADING_MESSAGES = [
+  "Analizando tu perfil...",
+  "Calculando tu plan óptimo...",
+  "Ajustando para tu objetivo...",
+  "Configurando tus rutinas...",
+  "¡Tu plan está listo!",
+];
+
+function PlanLoadingScreen({ onDone }) {
+  const [msgIdx, setMsgIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const msgTimer = setInterval(() => setMsgIdx((i) => Math.min(PLAN_LOADING_MESSAGES.length - 1, i + 1)), 400);
+    const start = Date.now();
+    let raf;
+    const tick = () => {
+      const pct = Math.min(100, ((Date.now() - start) / 2000) * 100);
+      setProgress(pct);
+      if (pct < 100) raf = requestAnimationFrame(tick);
+      else onDone();
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { clearInterval(msgTimer); cancelAnimationFrame(raf); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div style={{ minHeight: "100svh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <div style={{ fontSize: 56, animation: "spin 1.6s linear infinite" }}>⚡</div>
+      <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, color: C.text }}>{PLAN_LOADING_MESSAGES[msgIdx]}</p>
+      <div style={{ width: "70%", height: 4, background: C.border, borderRadius: 99, overflow: "hidden", marginTop: 20 }}>
+        <div style={{ height: "100%", width: `${progress}%`, background: C.cyan, borderRadius: 99 }} />
+      </div>
+    </div>
+  );
+}
+
 const ONBOARD_TOTAL_STEPS = 10;
 
 function Welcome({ onDone }) {
@@ -4789,6 +4916,8 @@ function Welcome({ onDone }) {
   const [healthIssues, setHealthIssues] = useState([]);
   const [days, setDays] = useState(4);
   const [mode, setMode] = useState("guiado");
+  const [showPlanLoading, setShowPlanLoading] = useState(false);
+  const [bodyFocus, setBodyFocus] = useState([]);
 
   const go = (next) => {
     setSlide("exit-left");
@@ -4828,6 +4957,7 @@ function Welcome({ onDone }) {
     store.set("training_goal", goal);
     store.set("fitness_level", fitnessLevel?.id || null);
     store.set("health_issues", healthIssues);
+    store.set("body_focus", bodyFocus);
     store.set("weekly_goal", days);
     store.set("profile", { goal, days });
     if (weight) saveWeightEntry(weight);
@@ -4838,11 +4968,11 @@ function Welcome({ onDone }) {
     void goalObj;
   };
 
-  const wrap = (children, { showSkip = false, showBack = true } = {}) => (
+  const wrap = (children, { showSkip = false, showBack = true, backTo = null } = {}) => (
     <div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", background: C.bg }}>
       <div style={{ padding: "16px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
         {showBack && step > 1 ? (
-          <button onClick={() => back(step - 1)} style={{ color: C.mut, fontSize: 18, padding: 4 }}>←</button>
+          <button onClick={() => back(backTo ?? step - 1)} style={{ color: C.mut, fontSize: 18, padding: 4 }}>←</button>
         ) : <div style={{ width: 26 }} />}
         <div style={{ flex: 1 }}><OnboardingProgress step={step} total={ONBOARD_TOTAL_STEPS} /></div>
         {showSkip && (
@@ -4869,6 +4999,10 @@ function Welcome({ onDone }) {
     </button>
   );
 
+  if (showPlanLoading) {
+    return <PlanLoadingScreen onDone={() => { setShowPlanLoading(false); setStep(11); }} />;
+  }
+
   /* Paso 11 — Resumen final */
   if (step === 11) {
     const goalObj = TRAINING_GOALS.find((g) => g.id === goal) || TRAINING_GOALS[0];
@@ -4885,6 +5019,9 @@ function Welcome({ onDone }) {
     const lvlIdxStart = fitnessLevel?.lvlIdx ?? 0;
     const estMinutes = 30 + lvlIdxStart * 5;
     const hasIssues = healthIssues.length && !healthIssues.includes("ninguna");
+    const weightDiff = Math.round((targetWeight - weight) * 10) / 10;
+    const showProjection = Math.abs(weightDiff) >= 1;
+    const projectionWeeks = weightDiff < 0 ? Math.max(1, Math.round(Math.abs(weightDiff) / 0.5)) : Math.max(1, Math.round(weightDiff / 0.3));
     return (
       <div style={{ minHeight: "100svh", background: C.bg, padding: "32px 20px", display: "flex", flexDirection: "column" }} className="fade-up">
         <div style={{ textAlign: "center" }}>
@@ -4897,6 +5034,12 @@ function Welcome({ onDone }) {
             {goalObj.emoji} {goalObj.name}
           </span>
         </div>
+
+        {showProjection && (
+          <div className="card" style={{ marginTop: 16, padding: "10px 8px" }}>
+            <WeightProjectionChart currentWeight={weight} targetWeight={targetWeight} weeks={projectionWeeks} />
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 20 }}>
           <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
@@ -4968,7 +5111,7 @@ function Welcome({ onDone }) {
             ))}
           </div>
         </div>
-        {continueBtn(() => go(11))}
+        {continueBtn(() => setShowPlanLoading(true))}
       </>
     );
   }
@@ -5000,7 +5143,47 @@ function Welcome({ onDone }) {
           ))}
         </div>
         {continueBtn(() => go(9), !fitnessLevel)}
-      </>
+      </>,
+      { backTo: 7.5 }
+    );
+  }
+
+  /* Paso 7.5 — Zona corporal a priorizar (opcional) */
+  if (step === 7.5) {
+    const toggleZone = (id) => {
+      setBodyFocus((prev) => {
+        if (id === "todo") return ["todo"];
+        const without = prev.filter((z) => z !== "todo");
+        return without.includes(id) ? without.filter((z) => z !== id) : [...without, id];
+      });
+    };
+    return wrap(
+      <>
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Qué zona quieres trabajar más?</p>
+        <div style={{ display: "flex", gap: 12, marginTop: 6, alignItems: "center" }}>
+          <div style={{ width: "55%", display: "flex", flexDirection: "column", gap: 6 }}>
+            {BODY_ZONE_OPTIONS.map((z) => (
+              <button
+                key={z.id}
+                onClick={() => toggleZone(z.id)}
+                style={{
+                  padding: "8px 12px", borderRadius: 10, textAlign: "left", fontSize: 12, fontWeight: 700,
+                  border: `1px solid ${bodyFocus.includes(z.id) || bodyFocus.includes("todo") ? C.cyan : C.border}`,
+                  background: bodyFocus.includes(z.id) || bodyFocus.includes("todo") ? `${C.cyan}18` : C.card,
+                  color: bodyFocus.includes(z.id) || bodyFocus.includes("todo") ? C.cyan : C.text,
+                }}
+              >
+                {z.name}
+              </button>
+            ))}
+          </div>
+          <div style={{ width: "45%" }}>
+            <BodyZoneFigure selected={bodyFocus} />
+          </div>
+        </div>
+        {continueBtn(() => go(8))}
+      </>,
+      { backTo: 7 }
     );
   }
 
@@ -5025,7 +5208,7 @@ function Welcome({ onDone }) {
             </button>
           ))}
         </div>
-        {continueBtn(() => go(8), !goal)}
+        {continueBtn(() => go(7.5), !goal)}
       </>
     );
   }
