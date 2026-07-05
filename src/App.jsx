@@ -984,6 +984,35 @@ function DisciplineCelebration({ discId }) {
   return null;
 }
 
+/* ─── Objetivos de entrenamiento (afectan volumen, descansos y copy) ─── */
+const TRAINING_GOALS = [
+  { id: "muscle", emoji: "💪", name: "Ganar músculo", subtitle: "Hipertrofia máxima", desc: "Más volumen, reps moderadas, superávit calórico recomendado.", color: "#22FF88", params: { repsRange: [8, 12], setsMultiplier: 1.2, restSeconds: 75 } },
+  { id: "strength", emoji: "🏋️", name: "Ganar fuerza", subtitle: "Fuerza máxima", desc: "Pocas reps, mucho peso, descansos largos. Los básicos.", color: "#FF6B2B", params: { repsRange: [3, 6], setsMultiplier: 1.0, restSeconds: 180 } },
+  { id: "recomposition", emoji: "⚖️", name: "Recomposición", subtitle: "Músculo + perder grasa", desc: "Mantener o ganar músculo mientras pierdes grasa. Proceso más lento pero sostenible.", color: "#00E5FF", params: { repsRange: [8, 15], setsMultiplier: 1.0, restSeconds: 60 } },
+  { id: "fat_loss", emoji: "🔥", name: "Perder grasa", subtitle: "Definición y quema", desc: "Alta frecuencia, circuitos, menos descanso. Mantener músculo mientras se pierde grasa.", color: "#FF3B5C", params: { repsRange: [12, 20], setsMultiplier: 0.9, restSeconds: 45 } },
+  { id: "athletic", emoji: "⚡", name: "Rendimiento atlético", subtitle: "Velocidad, potencia, agilidad", desc: "Para deportistas. Fuerza explosiva, velocidad y resistencia específica.", color: "#FFD600", params: { repsRange: [3, 8], setsMultiplier: 1.0, restSeconds: 120 } },
+  { id: "health", emoji: "🌱", name: "Salud general", subtitle: "Bienestar y longevidad", desc: "Ejercicio moderado, movilidad, consistencia. Para sentirse bien a largo plazo.", color: "#86EFAC", params: { repsRange: [10, 15], setsMultiplier: 0.8, restSeconds: 90 } },
+  { id: "endurance", emoji: "🏃", name: "Resistencia", subtitle: "Cardio y aguante", desc: "Para corredores y deportes de fondo. Resistencia cardiovascular y muscular.", color: "#FDE68A", params: { repsRange: [15, 25], setsMultiplier: 0.9, restSeconds: 45 } },
+  { id: "aesthetics", emoji: "🎨", name: "Estética / Físico", subtitle: "Forma, proporción y definición", desc: "Entrenar para verse bien. Zonas específicas, proporción y definición muscular.", color: "#A855F7", params: { repsRange: [10, 15], setsMultiplier: 1.1, restSeconds: 60 } },
+];
+
+function getTrainingGoal() {
+  const id = store.get("training_goal", null);
+  return TRAINING_GOALS.find((g) => g.id === id) || null;
+}
+
+/* Ajusta series y descanso de una rutina de gimnasio según el objetivo activo (sin tocar reps en formato string) */
+function applyGoalToExercises(exercises, goalId) {
+  const goal = TRAINING_GOALS.find((g) => g.id === goalId);
+  if (!goal) return exercises;
+  const { setsMultiplier, restSeconds } = goal.params;
+  return exercises.map((e) => ({
+    ...e,
+    sets: Math.max(1, Math.min(6, Math.round(e.sets * setsMultiplier))),
+    rest: Math.round((e.rest + restSeconds) / 2 / 5) * 5,
+  }));
+}
+
 /* ─── Niveles de entrenamiento ─── */
 const LEVELS = [
   { name: "Iniciado", emoji: "🔵", color: C.blue, desc: "Estoy comenzando" },
@@ -1315,6 +1344,17 @@ const EXDB = {
     { n: "Press con agarre neutro", t: "peso", f: ["hombros"], lv: [0, 4], s: 3, r: "10", rest: 75, tip: "Palmas enfrentadas. Menos estrés en el manguito rotador. Buena opción si hay dolor en press normal." },
     { n: "Rotación externa con cable", t: "peso", f: ["hombros"], lv: [1, 5], s: 3, r: "15", rest: 45, tip: "Codo a 90° pegado al cuerpo. Rota el antebrazo hacia afuera. Manguito rotador — prevención de lesión." },
     { n: "Elevaciones frontales alternas", t: "peso", f: ["hombros"], lv: [0, 4], s: 3, r: "12 c/brazo", rest: 60, tip: "Alterna brazos. Palma hacia abajo. Solo sube hasta la altura del hombro." },
+    { n: "Jalón al pecho agarre ancho", t: "peso", f: ["espalda"], lv: [0, 4], s: 4, r: "8", rest: 90, tip: "Agarre más ancho que hombros. Jala hacia el pecho alto. Máxima contracción de dorsales." },
+    { n: "Dominadas agarre ancho", t: "reps", f: ["espalda"], lv: [2, 5], s: 4, r: "6", rest: 120, tip: "El ejercicio más efectivo para espalda ancha. Rango completo." },
+    { n: "Remo en polea agarre ancho", t: "peso", f: ["espalda"], lv: [1, 5], s: 3, r: "12", rest: 75, tip: "Codos hacia afuera en vez de pegados al cuerpo. Activa más la parte superior del dorsal." },
+    { n: "Elevaciones laterales pesadas", t: "peso", f: ["hombros"], lv: [2, 5], s: 5, r: "12", rest: 45, tip: "Los hombros anchos crean la ilusión de cintura más pequeña. Clave para la V." },
+    { n: "Sentadilla búlgara", t: "peso", f: ["gluteos", "piernas"], lv: [1, 5], s: 4, r: "10 c/pierna", rest: 90, tip: "Pie trasero en banco. Rodilla delantera no pasa la punta del pie. Activa glúteo y cuádriceps." },
+    { n: "Abducción en máquina", t: "peso", f: ["gluteos"], lv: [0, 4], s: 4, r: "20", rest: 45, tip: "Glúteo medio y menor. Crucial para la forma lateral del glúteo. Abre lento y controla el cierre." },
+    { n: "Kickback en polea baja", t: "peso", f: ["gluteos"], lv: [0, 4], s: 3, r: "15 c/pierna", rest: 45, tip: "Peso en tobillo. Extiende la pierna hacia atrás sin rotar la cadera. Extensión del glúteo." },
+    { n: "Peso muerto rumano unilateral", t: "peso", f: ["gluteos", "piernas"], lv: [2, 5], s: 3, r: "10 c/pierna", rest: 75, tip: "Una pierna. Estiramiento profundo del glúteo e isquiotibial. Excelente para dar forma." },
+    { n: "Sentadilla sumo con mancuerna", t: "peso", f: ["gluteos", "piernas"], lv: [0, 3], s: 3, r: "15", rest: 60, tip: "Pies muy abiertos. Mancuerna colgando al centro. Activa aductores y glúteos desde ángulo diferente." },
+    { n: "Puente de glúteos", t: "reps", f: ["gluteos"], lv: [0, 2], s: 3, r: "20", rest: 45, tip: "Sin banco. En el suelo. Contrae 1 segundo arriba. Accesible para todos los niveles." },
+    { n: "Step-up lateral con mancuerna", t: "peso", f: ["gluteos", "piernas"], lv: [1, 4], s: 3, r: "12 c/pierna", rest: 60, tip: "Sube de lado. Activa glúteo medio que el step-up frontal no alcanza." },
   ],
   calistenia: [
     { n: "Flexiones con rodillas", t: "reps", f: ["empuje"], lv: [0, 0], s: 3, r: "8-12", rest: 60, tip: "Cuerpo alineado de rodillas a cabeza, pecho al suelo." },
@@ -3070,7 +3110,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
 
-  return sortExercises(chosen.map((e, i) => {
+  const built = chosen.map((e, i) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
     const repBounds = repRangeRestBounds(e.r);
     let rest = Math.min(scaling.restMax, Math.max(scaling.restMin, e.rest));
@@ -3084,7 +3124,9 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     }
     const scheme = e.t === "peso" && sets >= 3 && !deloadActive ? schemeForExercise(effLvlIdx, i, chosen.length) : "standard";
     return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
-  }));
+  });
+  const sorted = sortExercises(built);
+  return discId === "gimnasio" ? applyGoalToExercises(sorted, store.get("training_goal", null)) : sorted;
 }
 
 /* Orden real de atletismo: técnica/pliometría primero, sprints/tempo después, recuperación al final */
@@ -5169,6 +5211,16 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                 Ver otro plan 🔄
               </button>
             )}
+            {(() => {
+              const goal = getTrainingGoal();
+              return goal ? (
+                <div style={{ marginTop: 8, textAlign: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: goal.color, background: `${goal.color}18`, padding: "4px 10px", borderRadius: 99 }}>
+                    Objetivo: {goal.emoji} {goal.name}
+                  </span>
+                </div>
+              ) : null;
+            })()}
             {!pro && (() => {
               const status = getRecoveryStatus();
               const color = status.level === "green" ? C.green : status.level === "yellow" ? C.yellow : C.red;
@@ -9580,6 +9632,27 @@ function SettingsScreen({
 
       <div className="sec-title">🎯 Mi entrenamiento</div>
       <div className="card">
+        <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>OBJETIVO DE ENTRENAMIENTO</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+          {TRAINING_GOALS.map((g) => {
+            const active = store.get("training_goal", null) === g.id;
+            return (
+              <button
+                key={g.id}
+                className="card"
+                onClick={() => { store.set("training_goal", active ? null : g.id); refresh(); }}
+                style={{ textAlign: "left", padding: "10px 10px", border: `1px solid ${active ? g.color : C.border}`, background: active ? `${g.color}18` : C.card }}
+              >
+                <div style={{ fontSize: 20 }}>{g.emoji}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, marginTop: 4, color: active ? g.color : C.text }}>{g.name}</div>
+                <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{g.subtitle}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 10 }}>
         {(() => {
           const discIds = ["gimnasio", "calistenia", "futbolGym", "atletismo", "basquetCancha"];
           const discLabels = { gimnasio: "Gimnasio", calistenia: "Calistenia", futbolGym: "Fútbol", atletismo: "Atletismo", basquetCancha: "Básquetbol" };
