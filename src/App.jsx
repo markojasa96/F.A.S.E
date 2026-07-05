@@ -1828,6 +1828,8 @@ function speak(text) {
 function movementCategory(name) {
   const n = name.toLowerCase();
   if (/tiro|remate|disparo|lanzamiento|encest|gol\b|chut/.test(n)) return "tiro";
+  if (/peso muerto/.test(n)) return "pesomuerto";
+  if (/curl/.test(n)) return "curl";
   if (/flexion|press|fondo/.test(n)) return "empuje";
   if (/domin|remo|jalón|jalon|tirón|tiron/.test(n)) return "tiron";
   if (/sentadill|zancada|squat|pistol/.test(n)) return "sentadilla";
@@ -1838,7 +1840,7 @@ function movementCategory(name) {
 }
 
 const MOVEMENT_COLORS = {
-  empuje: "#22FF88", tiron: "#00E5FF", sentadilla: "#FF7A2F",
+  empuje: "#22FF88", tiron: "#00E5FF", sentadilla: "#FF7A2F", pesomuerto: "#00E5FF", curl: "#22FF88",
   core: "#FF3B5C", sprint: "#FFD600", salto: "#A855F7", tiro: "#FFD700", generic: "#6B7280",
 };
 
@@ -4053,95 +4055,176 @@ function NumPad({ onKey }) {
 /* Figuras de palo SVG animadas según la categoría de movimiento del ejercicio.
    Evita depender de URLs externas (GIFs) que pueden fallar o tener CORS. */
 /* ─── Ilustraciones de ejercicio con figura humana en CSS (divs) ─── */
-const HUMAN_POSES = {
+/* Ángulos en radianes. torsoY en px, torsoAngle en radianes (inclinación del torso). */
+const SKELETON_POSES = {
   sentadilla: {
-    speed: 1000,
-    a: { leftArm: 20, rightArm: -20, leftLeg: 5, rightLeg: -5, torsoY: 0 },
-    b: { leftArm: 30, rightArm: -30, leftLeg: 35, rightLeg: -35, torsoY: 20 },
+    cycle: 2000,
+    a: { leftArm: 0.4, leftForearm: 0.3, rightArm: -0.4, rightForearm: -0.3, leftLeg: 0.1, leftShin: -0.1, rightLeg: -0.1, rightShin: 0.1, torsoY: 0, torsoAngle: 0.1 },
+    b: { leftArm: 0.6, leftForearm: 0.5, rightArm: -0.6, rightForearm: -0.5, leftLeg: 0.55, leftShin: -0.8, rightLeg: -0.55, rightShin: 0.8, torsoY: 22, torsoAngle: 0.25 },
   },
   empuje: {
-    speed: 1000,
-    a: { leftArm: -100, rightArm: 100, leftLeg: 0, rightLeg: 0, torsoY: 0 },
-    b: { leftArm: -40, rightArm: 40, leftLeg: 0, rightLeg: 0, torsoY: 0 },
+    cycle: 2500,
+    a: { leftArm: -1.5, leftForearm: 0, rightArm: 1.5, rightForearm: 0, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
+    b: { leftArm: -0.9, leftForearm: -0.9, rightArm: 0.9, rightForearm: 0.9, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
   },
   tiron: {
-    speed: 1000,
-    a: { leftArm: -170, rightArm: 170, leftLeg: 0, rightLeg: 0, torsoY: 0 },
-    b: { leftArm: -140, rightArm: 140, leftLeg: 0, rightLeg: 0, torsoY: -14 },
+    cycle: 2000,
+    a: { leftArm: -2.9, leftForearm: 0, rightArm: 2.9, rightForearm: 0, leftLeg: 0.05, leftShin: 0, rightLeg: -0.05, rightShin: 0, torsoY: 0, torsoAngle: 0 },
+    b: { leftArm: -2.4, leftForearm: -0.5, rightArm: 2.4, rightForearm: 0.5, leftLeg: 0.05, leftShin: 0, rightLeg: -0.05, rightShin: 0, torsoY: -16, torsoAngle: 0 },
   },
   sprint: {
-    speed: 300,
-    a: { leftArm: -35, rightArm: 45, leftLeg: 35, rightLeg: -35, torsoY: 0 },
-    b: { leftArm: 45, rightArm: -35, leftLeg: -35, rightLeg: 35, torsoY: 0 },
+    cycle: 350,
+    a: { leftArm: -0.7, leftForearm: 1.0, rightArm: 0.9, rightForearm: -0.7, leftLeg: 0.7, leftShin: -0.9, rightLeg: -0.6, rightShin: 0.4, torsoY: 0, torsoAngle: 0.38 },
+    b: { leftArm: 0.9, leftForearm: -0.7, rightArm: -0.7, rightForearm: 1.0, leftLeg: -0.6, leftShin: 0.4, rightLeg: 0.7, rightShin: -0.9, torsoY: 0, torsoAngle: 0.38 },
   },
   salto: {
-    speed: 400,
-    a: { leftArm: 20, rightArm: -20, leftLeg: 25, rightLeg: -25, torsoY: 12 },
-    b: { leftArm: -160, rightArm: 160, leftLeg: -8, rightLeg: 8, torsoY: -18 },
+    cycleA: 400, cycleB: 600,
+    a: { leftArm: 1.6, leftForearm: 0.8, rightArm: -1.6, rightForearm: -0.8, leftLeg: 0.9, leftShin: -1.4, rightLeg: -0.9, rightShin: 1.4, torsoY: 14, torsoAngle: 0.15 },
+    b: { leftArm: -2.6, leftForearm: -0.3, rightArm: 2.6, rightForearm: 0.3, leftLeg: -0.15, leftShin: 0.1, rightLeg: 0.15, rightShin: -0.1, torsoY: -15, torsoAngle: 0 },
   },
   core: {
-    speed: 1000,
-    a: { leftArm: -85, rightArm: 85, leftLeg: 0, rightLeg: 0, torsoY: 0, scale: 1 },
-    b: { leftArm: -85, rightArm: 85, leftLeg: 0, rightLeg: 0, torsoY: 0, scale: 1.02 },
+    cycle: 3000,
+    a: { leftArm: -1.4, leftForearm: 0, rightArm: 1.4, rightForearm: 0, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0, scale: 1 },
+    b: { leftArm: -1.4, leftForearm: 0, rightArm: 1.4, rightForearm: 0, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0, scale: 1.015 },
   },
   tiro: {
-    speed: 800,
-    a: { leftArm: 10, rightArm: -60, leftLeg: 10, rightLeg: -10, torsoY: 0 },
-    b: { leftArm: 10, rightArm: -170, leftLeg: -15, rightLeg: 20, torsoY: -6 },
+    cycle: 1500,
+    a: { leftArm: 0.2, leftForearm: 0.2, rightArm: -1.0, rightForearm: -1.6, leftLeg: 0.2, leftShin: -0.3, rightLeg: -0.2, rightShin: 0.4, torsoY: 8, torsoAngle: 0.15 },
+    b: { leftArm: 0.1, leftForearm: 0.1, rightArm: -2.8, rightForearm: -2.9, leftLeg: -0.1, leftShin: 0.15, rightLeg: 0.1, rightShin: -0.15, torsoY: -14, torsoAngle: -0.05 },
+  },
+  pesomuerto: {
+    cycle: 3000,
+    a: { leftArm: 0.15, leftForearm: 0, rightArm: -0.15, rightForearm: 0, leftLeg: 0.3, leftShin: -0.5, rightLeg: -0.3, rightShin: 0.5, torsoY: 0, torsoAngle: 0.9 },
+    b: { leftArm: 0.05, leftForearm: 0, rightArm: -0.05, rightForearm: 0, leftLeg: 0.05, leftShin: -0.05, rightLeg: -0.05, rightShin: 0.05, torsoY: -20, torsoAngle: 0 },
+  },
+  curl: {
+    cycle: 1800,
+    a: { leftArm: 0.1, leftForearm: 0, rightArm: 0.1, rightForearm: 2.9, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
+    b: { leftArm: 0.1, leftForearm: 0, rightArm: 0.1, rightForearm: 0.7, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
   },
   generic: {
-    speed: 1200,
-    a: { leftArm: 15, rightArm: -15, leftLeg: 6, rightLeg: -6, torsoY: 0 },
-    b: { leftArm: -15, rightArm: 15, leftLeg: -6, rightLeg: 6, torsoY: -4 },
+    cycle: 1200,
+    a: { leftArm: 0.25, leftForearm: 0.1, rightArm: -0.25, rightForearm: -0.1, leftLeg: 0.1, leftShin: -0.05, rightLeg: -0.1, rightShin: 0.05, torsoY: 0, torsoAngle: 0 },
+    b: { leftArm: -0.25, leftForearm: -0.1, rightArm: 0.25, rightForearm: 0.1, leftLeg: -0.1, leftShin: 0.05, rightLeg: 0.1, rightShin: -0.05, torsoY: -4, torsoAngle: 0 },
   },
 };
 
-function HumanFigure({ pose, color }) {
+/* Interpola suavemente hacia la pose objetivo alternando A/B, usando requestAnimationFrame */
+function useAnimatedPose(def) {
+  const [pose, setPose] = useState(def.a);
+  const targetRef = useRef(def.a);
+  const currentRef = useRef({ ...def.a });
+  useEffect(() => {
+    let toggle = false;
+    targetRef.current = def.a;
+    currentRef.current = { ...def.a };
+    const cycleA = def.cycleA || def.cycle;
+    const cycleB = def.cycleB || def.cycle;
+    let toggleTimer = setTimeout(function flip() {
+      toggle = !toggle;
+      targetRef.current = toggle ? def.b : def.a;
+      toggleTimer = setTimeout(flip, toggle ? cycleB : cycleA);
+    }, cycleA);
+    let raf;
+    const tick = () => {
+      const cur = currentRef.current;
+      const tgt = targetRef.current;
+      const next = {};
+      let changed = false;
+      for (const k in tgt) {
+        const c = cur[k] ?? tgt[k];
+        const d = tgt[k] - c;
+        if (Math.abs(d) > 0.001) changed = true;
+        next[k] = c + d * 0.18;
+      }
+      currentRef.current = next;
+      if (changed) setPose(next);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { clearTimeout(toggleTimer); cancelAnimationFrame(raf); };
+  }, [def]);
+  return pose;
+}
+
+/* Punto final de un segmento (hombro→codo, codo→mano, etc.) dado ángulo y longitud */
+function limbPoint(x0, y0, angle, len) {
+  return { x: x0 + Math.sin(angle) * len, y: y0 + Math.cos(angle) * len };
+}
+
+function SkeletonFigure({ pose, color }) {
   const scale = pose.scale || 1;
+  const shoulderL = { x: 36, y: 34 };
+  const shoulderR = { x: 64, y: 34 };
+  const hipL = { x: 43, y: 66 };
+  const hipR = { x: 57, y: 66 };
+  const elbowL = limbPoint(shoulderL.x, shoulderL.y, pose.leftArm, 18);
+  const handL = limbPoint(elbowL.x, elbowL.y, pose.leftArm + pose.leftForearm, 17);
+  const elbowR = limbPoint(shoulderR.x, shoulderR.y, pose.rightArm, 18);
+  const handR = limbPoint(elbowR.x, elbowR.y, pose.rightArm + pose.rightForearm, 17);
+  const kneeL = limbPoint(hipL.x, hipL.y, pose.leftLeg, 26);
+  const footL = limbPoint(kneeL.x, kneeL.y, pose.leftLeg + pose.leftShin, 22);
+  const kneeR = limbPoint(hipR.x, hipR.y, pose.rightLeg, 26);
+  const footR = limbPoint(kneeR.x, kneeR.y, pose.rightLeg + pose.rightShin, 22);
+  const footRot = (base) => `rotate(-10 ${base.x} ${base.y})`;
+
   return (
-    <div style={{ position: "relative", width: 80, height: 120, transform: `translateY(${pose.torsoY}px) scale(${scale})`, transition: "transform 0.4s ease-in-out" }}>
-      <div style={{ position: "absolute", width: 20, height: 20, borderRadius: "50%", background: color, top: 0, left: 30, transition: "all 0.4s ease-in-out" }} />
-      <div style={{ position: "absolute", width: 24, height: 35, borderRadius: 8, background: color, top: 22, left: 28 }} />
-      <div style={{
-        position: "absolute", width: 10, height: 28, borderRadius: 5, background: color, top: 24, left: 16,
-        transformOrigin: "top center", transform: `rotate(${pose.leftArm}deg)`, transition: "transform 0.4s ease-in-out",
-      }} />
-      <div style={{
-        position: "absolute", width: 10, height: 28, borderRadius: 5, background: color, top: 24, right: 16,
-        transformOrigin: "top center", transform: `rotate(${pose.rightArm}deg)`, transition: "transform 0.4s ease-in-out",
-      }} />
-      <div style={{
-        position: "absolute", width: 11, height: 35, borderRadius: 5, background: color, top: 55, left: 24,
-        transformOrigin: "top center", transform: `rotate(${pose.leftLeg}deg)`, transition: "transform 0.4s ease-in-out",
-      }} />
-      <div style={{
-        position: "absolute", width: 11, height: 35, borderRadius: 5, background: color, top: 55, right: 24,
-        transformOrigin: "top center", transform: `rotate(${pose.rightLeg}deg)`, transition: "transform 0.4s ease-in-out",
-      }} />
-    </div>
+    <svg
+      viewBox="0 0 100 160" width="100" height="160" style={{ overflow: "visible", transform: `translateY(${pose.torsoY}px) rotate(${(pose.torsoAngle || 0) * (180 / Math.PI)}deg) scale(${scale})`, transformOrigin: "50px 50px", transition: "transform 0.15s linear" }}
+    >
+      <circle cx="50" cy="15" r="11" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="50" y1="26" x2="50" y2="32" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M35,32 Q50,30 65,32 L62,65 Q50,68 38,65 Z" fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
+      <line x1={shoulderL.x} y1={shoulderL.y} x2={elbowL.x} y2={elbowL.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx={elbowL.x} cy={elbowL.y} r="3" fill={color} />
+      <line x1={elbowL.x} y1={elbowL.y} x2={handL.x} y2={handL.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <line x1={shoulderR.x} y1={shoulderR.y} x2={elbowR.x} y2={elbowR.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx={elbowR.x} cy={elbowR.y} r="3" fill={color} />
+      <line x1={elbowR.x} y1={elbowR.y} x2={handR.x} y2={handR.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <line x1={hipL.x} y1={hipL.y} x2={kneeL.x} y2={kneeL.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx={kneeL.x} cy={kneeL.y} r="3.5" fill={color} />
+      <line x1={kneeL.x} y1={kneeL.y} x2={footL.x} y2={footL.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <rect x={footL.x - 2} y={footL.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footL)} />
+      <line x1={hipR.x} y1={hipR.y} x2={kneeR.x} y2={kneeR.y} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx={kneeR.x} cy={kneeR.y} r="3.5" fill={color} />
+      <line x1={kneeR.x} y1={kneeR.y} x2={footR.x} y2={footR.y} stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <rect x={footR.x - 2} y={footR.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footR)} />
+    </svg>
   );
 }
 
 function ExerciseIllustration({ category, color }) {
-  const def = HUMAN_POSES[category] || HUMAN_POSES.generic;
-  const [poseKey, setPoseKey] = useState("a");
-  useEffect(() => {
-    const t = setInterval(() => setPoseKey((k) => (k === "a" ? "b" : "a")), def.speed);
-    return () => clearInterval(t);
-  }, [def.speed]);
-  const pose = def[poseKey];
+  const def = SKELETON_POSES[category] || SKELETON_POSES.generic;
+  const pose = useAnimatedPose(def);
   const isHorizontal = category === "empuje" || category === "core";
   return (
-    <div style={{ transform: isHorizontal ? "rotate(90deg)" : "none" }}>
+    <div style={{ position: "relative", transform: isHorizontal ? "rotate(90deg)" : "none" }}>
       {category === "tiron" && (
-        <div style={{ width: 90, height: 6, background: "#4E4E70", borderRadius: 3, marginBottom: 8 }} />
+        <div style={{ width: 110, height: 8, background: "#4E4E70", borderRadius: 4, boxShadow: "0 3px 6px rgba(0,0,0,0.4)", marginBottom: 4 }} />
       )}
-      <HumanFigure pose={pose} color={color} />
+      {category === "pesomuerto" && (
+        <svg width="100" height="8" style={{ position: "absolute", top: pose.torsoY < -10 ? 92 : 60, left: 0 }}>
+          <line x1="20" y1="4" x2="80" y2="4" stroke="#6B7280" strokeWidth="5" strokeLinecap="round" />
+          <circle cx="20" cy="4" r="7" fill="none" stroke="#6B7280" strokeWidth="3" />
+          <circle cx="80" cy="4" r="7" fill="none" stroke="#6B7280" strokeWidth="3" />
+        </svg>
+      )}
+      {category === "sprint" && (
+        <div style={{ position: "absolute", left: -22, top: 55 }}>
+          {[0.6, 0.4, 0.2].map((op, i) => (
+            <div key={i} style={{ width: 15 - i * 4, height: 2, background: color, opacity: op, borderRadius: 1, marginTop: i === 0 ? 0 : 8 }} />
+          ))}
+        </div>
+      )}
+      <SkeletonFigure pose={pose} color={color} />
+      {category === "curl" && (
+        <div style={{ position: "absolute", width: 6, height: 18, background: color, borderRadius: 2, top: 60, right: 8 }} />
+      )}
       {category === "tiro" && (
         <div
           style={{
             position: "absolute", width: 10, height: 10, borderRadius: "50%", background: color, opacity: 0.85,
-            top: poseKey === "b" ? 10 : 40, left: poseKey === "b" ? 130 : 100, transition: "all 0.4s ease-in-out",
+            top: pose.torsoY < -8 ? 6 : 40, left: pose.torsoY < -8 ? 78 : 55, transition: "all 0.4s ease-in-out",
           }}
         />
       )}
@@ -4942,11 +5025,26 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
     return <FullHistory sessions={sessions} onDelete={onDeleteSession} onBack={() => setShowFullHistory(false)} />;
   }
 
+  const greetHour = new Date().getHours();
+  const greetWord = greetHour < 12 ? "Buenos días" : greetHour < 19 ? "Buenas tardes" : "Buenas noches";
+
   return (
-    <div className="screen">
-      <p style={{ fontSize: 18, fontWeight: 800 }}>
-        Hola, <span style={{ color: C.cyan }}>{name}</span> {!pro && "👋"}
-      </p>
+    <div className="screen" style={{ paddingTop: 0 }}>
+      {!pro && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 -16px 12px", padding: "14px 16px 10px", background: C.surface, borderBottom: `1px solid ${C.borderSubtle || C.border}` }}>
+          <div style={{ fontSize: 42, lineHeight: 1, flexShrink: 0 }}>{hero.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: C.dim, marginBottom: 2 }}>{greetWord}, {name}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 2 }}>{hero.name}</div>
+            <div style={{ fontSize: 11, fontStyle: "italic", color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hero.quote}</div>
+          </div>
+          <div style={{ textAlign: "center", flexShrink: 0 }}>
+            <div className={streakBounce ? "number-bounce" : ""} style={{ fontSize: 20, fontWeight: 900, color: "#FF6B2B", lineHeight: 1 }}>🔥 {streak}</div>
+            <div style={{ fontSize: 10, color: C.dim }}>días</div>
+          </div>
+        </div>
+      )}
+      {pro && <p style={{ fontSize: 18, fontWeight: 800 }}>Hola, <span style={{ color: C.cyan }}>{name}</span></p>}
       <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
 
       {pro ? (
@@ -5334,8 +5432,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         <div className="card">
           <EmptyState
             icon={<EmptyHistoryIllustration />}
-            title="Aún no hay sesiones"
-            subtitle="¡Hoy es el día perfecto para la primera! 🚀"
+            title={`${name}, tu historia empieza aquí`}
+            subtitle="Cada sesión que completes aparecerá aquí con todos sus detalles."
           />
         </div>
       )}
@@ -9480,6 +9578,59 @@ function SettingsScreen({
       <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
       <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>⚙️ Configuración</h2>
 
+      <div className="sec-title">🎯 Mi entrenamiento</div>
+      <div className="card">
+        {(() => {
+          const discIds = ["gimnasio", "calistenia", "futbolGym", "atletismo", "basquetCancha"];
+          const discLabels = { gimnasio: "Gimnasio", calistenia: "Calistenia", futbolGym: "Fútbol", atletismo: "Atletismo", basquetCancha: "Básquetbol" };
+          const counts = {};
+          sessions.forEach((s) => { if (s.kind === "entreno") counts[s.disc] = (counts[s.disc] || 0) + 1; });
+          const favDisc = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+          const defaultMethod = store.get("default_methodology", "standard");
+          const methods = [
+            { id: "standard", label: "Estándar" },
+            { id: "heavyduty", label: "Heavy Duty" },
+            { id: "gvt", label: "GVT" },
+            { id: "dup", label: "DUP" },
+          ];
+          return (
+            <>
+              {favDisc && (
+                <p style={{ fontSize: 12, color: C.mut }}>Tu disciplina más frecuente: <b style={{ color: C.text }}>{discLabels[favDisc] || favDisc}</b></p>
+              )}
+              <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10 }}>METODOLOGÍA POR DEFECTO (GIMNASIO)</p>
+              <div className="chip-wrap" style={{ marginTop: 6 }}>
+                {methods.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`chip ${defaultMethod === m.id ? "on" : ""}`}
+                    style={defaultMethod === m.id ? { background: C.cyan } : {}}
+                    onClick={() => { store.set("default_methodology", m.id); refresh(); }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 14 }}>NIVEL POR DISCIPLINA</p>
+              <div style={{ marginTop: 6 }}>
+                {discIds.map((id) => {
+                  const discSessions = sessions.filter((s) => s.kind === "entreno" && s.disc === id);
+                  if (!discSessions.length) return null;
+                  const lvl = LEVELS[mostFrequentLevel(discSessions)];
+                  return (
+                    <div key={id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0" }}>
+                      <span style={{ color: C.mut }}>{discLabels[id]}</span>
+                      <span style={{ color: lvl.color, fontWeight: 700 }}>{lvl.emoji} {lvl.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>Se actualizan automáticamente según tu historial.</p>
+            </>
+          );
+        })()}
+      </div>
+
       <div className="sec-title">Perfil</div>
       <div className="card">
         <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>NOMBRE</label>
@@ -10951,8 +11102,8 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           <div className="card" style={{ marginTop: 10 }}>
             <EmptyState
               icon={<EmptyProgressIllustration />}
-              title="Tu progreso empieza aquí"
-              subtitle="Completa sesiones para ver tus estadísticas y gráficas."
+              title="Construye tu perfil atlético"
+              subtitle="Tu DNA Atlético se dibuja con cada sesión. Necesitas al menos 5."
               color={C.cyan}
             />
           </div>
