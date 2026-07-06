@@ -1078,6 +1078,17 @@ const LEVELS = [
   { name: "THE ONE", emoji: "⚡", color: C.purple, desc: "Sin límites" },
 ];
 
+const LEVEL_POWER_COLORS = ["#3B82F6", "#22C55E", "#EAB308", "#F97316", "#EF4444", "#A855F7"];
+function PowerBar({ levelIdx }) {
+  return (
+    <div style={{ display: "flex", gap: 2, marginTop: 4 }}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= levelIdx ? LEVEL_POWER_COLORS[levelIdx] : C.border, transition: "background 0.3s ease" }} />
+      ))}
+    </div>
+  );
+}
+
 /* Umbrales de sesiones totales para el nivel global (Iniciado 0-4, Guerrero 5-14, Campeón 15-29, Élite 30-59, Leyenda 60-99, THE ONE 100+) */
 const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 
@@ -1410,6 +1421,18 @@ const EXDB = {
     { n: "Sentadilla sumo con mancuerna", t: "peso", f: ["gluteos", "piernas"], lv: [0, 3], s: 3, r: "15", rest: 60, tip: "Pies muy abiertos. Mancuerna colgando al centro. Activa aductores y glúteos desde ángulo diferente." },
     { n: "Puente de glúteos", t: "reps", f: ["gluteos"], lv: [0, 2], s: 3, r: "20", rest: 45, tip: "Sin banco. En el suelo. Contrae 1 segundo arriba. Accesible para todos los niveles." },
     { n: "Step-up lateral con mancuerna", t: "peso", f: ["gluteos", "piernas"], lv: [1, 4], s: 3, r: "12 c/pierna", rest: 60, tip: "Sube de lado. Activa glúteo medio que el step-up frontal no alcanza." },
+    { n: "Curl predicador con barra Z", t: "peso", f: ["brazos"], lv: [2, 5], s: 4, r: "10", rest: 75, tip: "El banco Scott aísla el bíceps completamente. Sin impulso de hombro posible." },
+    { n: "Press francés con barra Z", t: "peso", f: ["brazos"], lv: [2, 5], s: 4, r: "10", rest: 75, tip: "Skullcrusher. Codos apuntando al techo. Solo se mueve el antebrazo." },
+    { n: "Extensión de tríceps sobre cabeza", t: "peso", f: ["brazos"], lv: [0, 4], s: 3, r: "12", rest: 60, tip: "La cabeza larga del tríceps se activa máximo con el brazo sobre la cabeza." },
+    { n: "Curl con barra recta", t: "peso", f: ["brazos"], lv: [1, 5], s: 3, r: "10", rest: 75, tip: "Agarre supino. Codos fijos al costado. Contracción completa arriba." },
+    { n: "Dip con asistencia para tríceps", t: "peso", f: ["brazos"], lv: [0, 3], s: 3, r: "12", rest: 60, tip: "Torso erguido = énfasis tríceps. Inclinado = énfasis pecho." },
+    { n: "Curl inverso", t: "peso", f: ["brazos"], lv: [1, 4], s: 3, r: "15", rest: 45, tip: "Agarre prono. Trabaja braquiorradial y antebrazos. Agarre más fuerte." },
+    { n: "Kickback en polea (tríceps)", t: "peso", f: ["brazos"], lv: [0, 4], s: 3, r: "15 c/brazo", rest: 45, tip: "Codo fijo al costado, arriba. Extiende completamente. Contrae 1s." },
+    { n: "Ab wheel / rueda abdominal", t: "reps", f: ["core"], lv: [2, 5], s: 3, r: "8", rest: 60, tip: "El ejercicio de core más efectivo. Espalda baja neutral. Baja lento." },
+    { n: "Plancha con elevación de brazo", t: "reps", f: ["core"], lv: [1, 4], s: 3, r: "10 c/lado", rest: 45, tip: "Estabilidad anti-rotación. Las caderas no deben moverse." },
+    { n: "Dragon flag negativo (gym)", t: "reps", f: ["core"], lv: [3, 5], s: 3, r: "5", rest: 90, tip: "Baja en 5 segundos. Cuerpo rígido. Bruce Lee lo popularizó." },
+    { n: "Press Pallof", t: "peso", f: ["core"], lv: [1, 5], s: 3, r: "12 c/lado", rest: 45, tip: "Anti-rotación. Estira los brazos al frente y resiste la rotación de la polea." },
+    { n: "Crunch en polea alta", t: "peso", f: ["core"], lv: [0, 4], s: 4, r: "15", rest: 45, tip: "Rodillas en el suelo. Polea en la nuca. Flexión del tronco, no tracción de brazos." },
   ],
   calistenia: [
     { n: "Flexiones con rodillas", t: "reps", f: ["empuje"], lv: [0, 0], s: 3, r: "8-12", rest: 60, tip: "Cuerpo alineado de rodillas a cabeza, pecho al suelo." },
@@ -1475,6 +1498,12 @@ const EXDB = {
     { n: "Handstand contra pared", t: "tiempo", f: ["empuje", "core"], lv: [2, 5], s: 3, r: "20s", rest: 120, tip: "Panza hacia la pared para aprender. Fuerza de hombros y propiocepción. Construye la base del pino libre." },
     { n: "Archer push-up en barras", t: "reps", f: ["empuje"], lv: [3, 5], s: 3, r: "6 c/lado", rest: 120, tip: "Un brazo extendido, el otro hace el trabajo. Progresión al fondo a una mano." , bar: true },
     { n: "Flexiones spiderman", t: "reps", f: ["empuje", "core"], lv: [1, 4], s: 3, r: "10", rest: 90, tip: "Al bajar, lleva la rodilla al codo del mismo lado. Core y pecho simultáneos." },
+    { n: "Front lever tucked", t: "tiempo", f: ["tiron", "core"], lv: [4, 5], s: 3, r: "10s", rest: 120, tip: "Rodillas al pecho, cuerpo paralelo al suelo. Progresión al front lever completo." , bar: true },
+    { n: "Back lever", t: "tiempo", f: ["tiron", "core"], lv: [4, 5], s: 3, r: "8s", rest: 120, tip: "Cara abajo paralelo al suelo. Hombros muy móviles necesarios." , bar: true },
+    { n: "Muscle-up estricto", t: "reps", f: ["tiron", "explosivo"], lv: [4, 5], s: 3, r: "3", rest: 180, tip: "Sin impulso. Jalón explosivo hasta que las muñecas superan la barra." , bar: true },
+    { n: "One arm push-up asistido", t: "reps", f: ["empuje"], lv: [4, 5], s: 3, r: "5 c/lado", rest: 120, tip: "Pie de apoyo lateral para equilibrio. Progresión al one arm completo." },
+    { n: "Pistol squat completo", t: "reps", f: ["piernas"], lv: [4, 5], s: 3, r: "5 c/pierna", rest: 120, tip: "Pierna libre extendida al frente. Cadera debajo de la rodilla en el fondo." },
+    { n: "Human flag asistido", t: "tiempo", f: ["core", "tiron"], lv: [4, 5], s: 3, r: "5s", rest: 120, tip: "Poste o barra vertical. Cuerpo horizontal. Uno de los más impresionantes visualmente." , bar: true },
   ],
   futbolGym: [
     { n: "Sentadilla con salto (carga ligera)", t: "peso", f: ["velocidad", "salto"], lv: [1, 4], s: 4, r: "5-6", rest: 120, tip: "Mancuernas ligeras, salta con máxima intención." },
@@ -1920,6 +1949,17 @@ function speak(text) {
 }
 
 /* ─── Categoría de movimiento según el nombre del ejercicio (para el SVG animado) ─── */
+function exerciseTypeIcon(name) {
+  const n = name.toLowerCase();
+  if (n.includes("flexion") || n.includes("press") || n.includes("fondo")) return "💪";
+  if (n.includes("domin") || n.includes("remo") || n.includes("jalón") || n.includes("jalon")) return "🏋️";
+  if (n.includes("sentadill") || n.includes("zancada") || n.includes("hip thrust")) return "🦵";
+  if (n.includes("plancha") || n.includes("abdomin") || n.includes("core")) return "🔥";
+  if (n.includes("sprint") || n.includes("corre")) return "⚡";
+  if (n.includes("salto") || n.includes("jump")) return "🦘";
+  return "•";
+}
+
 function movementCategory(name) {
   const n = name.toLowerCase();
   if (/tiro|remate|disparo|lanzamiento|encest|gol\b|chut/.test(n)) return "tiro";
@@ -3188,6 +3228,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
 
+  const weekMultiplier = discId === "gimnasio" ? getWeekMultiplier() : 1.0;
   const built = chosen.map((e, i) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
     const repBounds = repRangeRestBounds(e.r);
@@ -3199,9 +3240,12 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     } else if (phaseMods) {
       sets = Math.max(1, sets + phaseMods.setsModifier);
       rest = Math.max(0, rest + phaseMods.restModifier);
+    } else if (weekMultiplier !== 1.0) {
+      sets = Math.max(1, Math.round(sets * weekMultiplier));
     }
     const scheme = e.t === "peso" && sets >= 3 && !deloadActive ? schemeForExercise(effLvlIdx, i, chosen.length) : "standard";
-    return { name: e.n, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
+    const name = deloadActive ? (DELOAD_SUBSTITUTES[e.n] || e.n) : e.n;
+    return { name, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
   });
   const sorted = sortExercises(built);
   if (discId !== "gimnasio") return sorted;
@@ -3604,6 +3648,71 @@ const PROGRAMS = [
       null, null,
     ],
   },
+  {
+    id: "wendler_531", name: "Wendler 5/3/1", emoji: "📈", color: C.cyan,
+    durationWeeks: 12, daysPerWeek: 4, minLevelIdx: 3, goalTags: ["rendimiento", "musculo"],
+    desc: "El programa de fuerza más probado del mundo. Ciclos de 4 semanas con porcentajes exactos del Training Max. Requiere 1RM registrado.",
+    structure: [
+      { discId: "gimnasio", focusId: "piernas", label: "Sentadilla + accesorios de piernas" },
+      { discId: "gimnasio", focusId: "hombros", label: "Press militar + accesorios de hombros" },
+      null,
+      { discId: "gimnasio", focusId: "espalda", label: "Peso muerto + accesorios de espalda" },
+      { discId: "gimnasio", focusId: "pecho", label: "Press banca + accesorios de pecho" },
+      null, null,
+    ],
+  },
+  {
+    id: "recomp_8w", name: "Recomposición 8 semanas", emoji: "⚖️", color: C.cyan,
+    durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["recomposition"],
+    desc: "Perder grasa y ganar músculo simultáneamente con estructura Upper/Lower y cardio al final. Requiere disciplina nutricional además del entrenamiento.",
+    structure: [
+      { discId: "gimnasio", focusId: "sup", label: "Upper A (pecho, espalda, hombros)" },
+      { discId: "gimnasio", focusId: "piernas", label: "Lower A (piernas + cardio final)" },
+      null,
+      { discId: "gimnasio", focusId: "sup", label: "Upper B (variación)" },
+      { discId: "gimnasio", focusId: "gluteos", label: "Lower B (glúteos + cardio final)" },
+      null, null,
+    ],
+  },
+  {
+    id: "glutes_6w", name: "Glúteos y piernas", emoji: "🍑", color: "#FF9EC4",
+    durationWeeks: 6, daysPerWeek: 3, minLevelIdx: 0, goalTags: ["aesthetics"],
+    desc: "Programa dedicado al desarrollo de glúteos y forma de piernas: hip thrust, sentadilla búlgara, abducción y peso muerto rumano. Funciona para cualquier género.",
+    structure: [
+      { discId: "gimnasio", focusId: "gluteos", label: "Glúteos A: Hip thrust + búlgara" },
+      null,
+      { discId: "gimnasio", focusId: "piernas", label: "Piernas: cuádriceps + isquios" },
+      null,
+      { discId: "gimnasio", focusId: "gluteos", label: "Glúteos B: abducción + rumano" },
+      null, null,
+    ],
+  },
+  {
+    id: "football_athlete", name: "Atleta de fútbol", emoji: "⚽", color: C.orange,
+    durationWeeks: 12, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["athletic"],
+    desc: "Fuerza, velocidad y resistencia específicas para fútbol: 2 sesiones de gimnasio y 2 de parque por semana.",
+    structure: [
+      { discId: "futbolGym", focusId: "extremo", label: "Gym — Fuerza explosiva" },
+      { discId: "futbolParque", focusId: "extremo", label: "Parque — Velocidad" },
+      null,
+      { discId: "futbolGym", focusId: "mediocampista", label: "Gym — Resistencia de fuerza" },
+      { discId: "futbolParque", focusId: "delantero", label: "Parque — Técnica y remate" },
+      null, null,
+    ],
+  },
+  {
+    id: "v_shape_8w", name: "Forma en V", emoji: "🔺", color: C.cyan,
+    durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["aesthetics"],
+    desc: "Espalda ancha, hombros grandes, cintura marcada. El clásico físico de superhéroe: jalón agarre ancho, remo, press militar y elevaciones laterales.",
+    structure: [
+      { discId: "gimnasio", focusId: "espalda", label: "Espalda ancha: jalón + remo agarre ancho" },
+      { discId: "gimnasio", focusId: "hombros", label: "Hombros: press militar + elevaciones laterales" },
+      null,
+      { discId: "gimnasio", focusId: "espalda", label: "Espalda: dominadas + remo en T-bar" },
+      { discId: "gimnasio", focusId: "hombros", label: "Hombros + core: definición de cintura" },
+      null, null,
+    ],
+  },
 ];
 
 function getActiveProgram() {
@@ -3717,6 +3826,28 @@ function rotateDailyPlan(candidates, index) {
   store.set("daily_plan", { date: today, plan, index: nextIndex });
   return { plan, index: nextIndex };
 }
+
+/* Principio de especificidad acumulada: las primeras semanas de cualquier objetivo empiezan con volumen moderado */
+function getWeekMultiplier() {
+  const firstTs = store.get("first_session_date", null);
+  if (!firstTs) return 1.0;
+  const weeksActive = Math.floor((Date.now() - firstTs) / (7 * 86400000));
+  if (weeksActive <= 2) return 0.75;
+  if (weeksActive <= 4) return 0.90;
+  if (weeksActive <= 8) return 1.00;
+  if (weeksActive <= 12) return 1.15;
+  return 1.0;
+}
+
+/* Sustituciones más ligeras/técnicas durante la semana de deload */
+const DELOAD_SUBSTITUTES = {
+  "Sentadilla con barra": "Sentadilla goblet",
+  "Press banca con barra": "Flexiones",
+  "Peso muerto convencional": "Peso muerto con mancuernas",
+  "Dominadas": "Remo invertido",
+  "Press militar de pie con barra": "Elevaciones laterales",
+  "Fondos en paralelas": "Fondos entre bancos",
+};
 
 /* ─── Deload automático ─── */
 function shouldDeload(sessions) {
@@ -4871,6 +5002,82 @@ const PLAN_LOADING_MESSAGES = [
   "Configurando tus rutinas...",
   "¡Tu plan está listo!",
 ];
+
+/* Resumen personalizado reutilizable: recalcula macros con el peso más reciente registrado */
+function PersonalSummaryScreen({ name, onBack }) {
+  const weightLog = getWeightLog();
+  const weight = weightLog.length ? weightLog[weightLog.length - 1].weight : store.get("weight", 70);
+  const height = store.get("height", 170);
+  const age = store.get("age", 20);
+  const gender = store.get("gender", "m");
+  const goalId = store.get("training_goal", null);
+  const days = store.get("weekly_goal", 4);
+  const targetWeight = store.get("target_weight", weight);
+  const healthIssues = store.get("health_issues", []);
+  const goalObj = TRAINING_GOALS.find((g) => g.id === goalId) || TRAINING_GOALS[0];
+  const sex = gender === "f" ? "f" : "m";
+  const tmb = sex === "f" ? 10 * weight + 6.25 * height - 5 * age - 161 : 10 * weight + 6.25 * height - 5 * age + 5;
+  const activityMult = days >= 5 ? 1.55 : days >= 3 ? 1.375 : 1.2;
+  const tdee = tmb * activityMult;
+  const calGoal = goalId === "fat_loss" ? tdee - 400 : goalId === "muscle" ? tdee + 300 : goalId === "athletic" || goalId === "endurance" ? tdee + 200 : tdee;
+  const calories = Math.round(calGoal);
+  const protein = Math.round(weight * (goalId === "fat_loss" ? 2.2 : 2.0));
+  const waterVasos = Math.max(4, Math.round((weight * 0.035) / 0.25));
+  const hero0 = HEROES[0];
+  const hasIssues = healthIssues.length && !healthIssues.includes("ninguna");
+  const weightDiff = Math.round((targetWeight - weight) * 10) / 10;
+  const showProjection = Math.abs(weightDiff) >= 1;
+  const projectionWeeks = weightDiff < 0 ? Math.max(1, Math.round(Math.abs(weightDiff) / 0.5)) : Math.max(1, Math.round(weightDiff / 0.3));
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Configuración</button>
+      <div style={{ textAlign: "center", marginTop: 12 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 900 }}>📊 Tu resumen</h1>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>Basado en tu perfil actual, {name}</p>
+      </div>
+      {goalId && (
+        <div style={{ marginTop: 16, textAlign: "center" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: goalObj.color, background: `${goalObj.color}18`, padding: "8px 16px", borderRadius: 99 }}>
+            {goalObj.emoji} {goalObj.name}
+          </span>
+        </div>
+      )}
+      {showProjection && (
+        <div className="card" style={{ marginTop: 14, padding: "10px 8px" }}>
+          <WeightProjectionChart currentWeight={weight} targetWeight={targetWeight} weeks={projectionWeeks} />
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
+        <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: C.orange }}>{calories}</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🔥 kcal/día</div>
+        </div>
+        <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: C.red }}>{protein}g</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🥩 proteína</div>
+        </div>
+        <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: C.cyan }}>{waterVasos}</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>💧 vasos/día</div>
+        </div>
+        <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: C.green }}>{days}x</div>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>📅 sesiones/sem</div>
+        </div>
+      </div>
+      <div className="card" style={{ marginTop: 12, textAlign: "center", padding: 14 }}>
+        <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>TU HÉROE INICIAL</p>
+        <div style={{ fontSize: 36, marginTop: 6 }}>{hero0.emoji}</div>
+        <div style={{ fontSize: 14, fontWeight: 800, marginTop: 4 }}>{hero0.name}</div>
+      </div>
+      {hasIssues && (
+        <div className="card" style={{ marginTop: 10, padding: "10px 14px", borderColor: `${C.green}55` }}>
+          <p style={{ fontSize: 12, color: C.green, fontWeight: 700 }}>✓ Rutinas adaptadas a tu condición física</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PlanLoadingScreen({ onDone }) {
   const [msgIdx, setMsgIdx] = useState(0);
@@ -8625,6 +8832,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           >
             <div style={{ fontSize: 12, fontWeight: 800, color: lvlIdx === i ? l.color : C.text }}>{l.emoji} {l.name}</div>
             <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{l.desc}</div>
+            <PowerBar levelIdx={i} />
           </button>
         ))}
       </div>
@@ -9748,17 +9956,24 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         </div>
       )}
 
-      {/* Progreso de la sesión: segmentos por ejercicio */}
-      <div style={{ display: "flex", gap: 4, marginTop: 14 }}>
-        {plan.exercises.map((_, i) => (
+      {/* Progreso de la sesión: ícono por tipo de ejercicio */}
+      <div style={{ display: "flex", gap: 6, marginTop: 14, justifyContent: "space-between" }}>
+        {plan.exercises.map((e, i) => (
           <div
             key={i}
             style={{
-              flex: 1, height: 10, borderRadius: 3,
-              background: i < exIdx ? plan.discColor : i === exIdx ? `${plan.discColor}66` : C.border,
-              transition: "background .3s",
+              fontSize: i === exIdx ? 18 : 13,
+              opacity: i < exIdx ? 1 : i === exIdx ? 1 : 0.4,
+              filter: i < exIdx ? "grayscale(0)" : "grayscale(0.5)",
+              transition: "all 0.3s ease",
+              position: "relative",
             }}
-          />
+          >
+            {exerciseTypeIcon(e.name)}
+            {i < exIdx && (
+              <span style={{ position: "absolute", top: -4, right: -4, fontSize: 7, background: C.green, borderRadius: "50%", width: 10, height: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "#000" }}>✓</span>
+            )}
+          </div>
         ))}
       </div>
       <p style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
@@ -10240,7 +10455,7 @@ function SettingsScreen({
   noEquipment, onToggleEquipment,
   voiceOn, onToggleVoice, darkMode, onToggleDarkMode,
   installPrompt, appInstalled, onInstallApp,
-  sessions, onCleanOld, onWipeAll, onBack,
+  sessions, onCleanOld, onWipeAll, onBack, onShowSummary,
 }) {
   const [, setTick] = useState(0);
   const refresh = () => setTick((n) => n + 1);
@@ -10283,8 +10498,16 @@ function SettingsScreen({
       <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>⚙️ Configuración</h2>
 
       <div className="sec-title">🎯 Mi entrenamiento</div>
+      <button
+        onClick={onShowSummary}
+        style={{ width: "100%", padding: "14px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, color: C.text, fontSize: 14, fontWeight: 700, textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}
+      >
+        <span>📊 Ver mi resumen personalizado</span>
+        <span style={{ color: C.dim }}>›</span>
+      </button>
       <div className="card">
         <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>OBJETIVO DE ENTRENAMIENTO</p>
+        <p style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>Toca una opción para actualizarlo cuando quieras.</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
           {TRAINING_GOALS.map((g) => {
             const active = store.get("training_goal", null) === g.id;
@@ -12772,6 +12995,7 @@ export default function App() {
     return isDark;
   });
   const [showProfileCard, setShowProfileCard] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   const saveChallenge = (c) => {
@@ -13019,7 +13243,10 @@ export default function App() {
     }
     setSessions(next);
     store.set("sessions", next);
-    if (record.kind === "entreno") updateRecoveryState(record);
+    if (record.kind === "entreno") {
+      updateRecoveryState(record);
+      if (!store.get("first_session_date", null)) store.set("first_session_date", record.ts);
+    }
     const s = calcStreak(next, freezes);
     const earned = HEROES.filter((h) => s >= h.days).map((h) => h.id);
     const merged = [...new Set([...heroes, ...earned])];
@@ -13059,6 +13286,10 @@ export default function App() {
     );
   }
 
+  if (showSummary) {
+    return <PersonalSummaryScreen name={name} onBack={() => setShowSummary(false)} />;
+  }
+
   if (showSettings) {
     return (
       <SettingsScreen
@@ -13069,6 +13300,7 @@ export default function App() {
         darkMode={darkMode} onToggleDarkMode={toggleDarkMode}
         installPrompt={installPrompt} appInstalled={appInstalled} onInstallApp={installApp}
         sessions={sessions} onCleanOld={cleanOldSessions} onWipeAll={wipeAllData}
+        onShowSummary={() => setShowSummary(true)}
         onBack={() => setShowSettings(false)}
       />
     );
