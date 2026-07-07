@@ -411,6 +411,186 @@ function tapTestResult(score) {
   return { color: C.red, label: "🔴 SNC fatigado — evita velocidad y fuerza máxima hoy", note: "Hoy: movilidad o técnica, no fuerza pesada." };
 }
 
+/* ─── Combine mensual: batería de tests una vez al mes ─── */
+function daysSinceLastCombine() {
+  const last = store.get("last_combine", null);
+  if (!last) return null;
+  return Math.floor((Date.now() - last) / 86400000);
+}
+/* ─── Mapa corporal de dolor (versión de zonas por botones, sin SVG completo) ─── */
+const BODY_PAIN_ZONES = [
+  "Tobillo izq", "Tobillo der", "Rodilla izq", "Rodilla der",
+  "Isquios izq", "Isquios der", "Cadera izq", "Cadera der",
+  "Espalda baja", "Hombro izq", "Hombro der", "Otro",
+];
+function logBodyPain(zone, intensity) {
+  const map = store.get("body_pain_map", {});
+  const today = dayKey(Date.now());
+  const prev = map[zone];
+  const consecutiveDays = prev && dayKey(prev.lastDate) === dayKey(Date.now() - 86400000) ? prev.consecutiveDays + 1 : prev && dayKey(prev.lastDate) === today ? prev.consecutiveDays : 1;
+  map[zone] = { lastDate: Date.now(), consecutiveDays, intensity };
+  store.set("body_pain_map", map);
+}
+function persistentPainZones() {
+  const map = store.get("body_pain_map", {});
+  const today = dayKey(Date.now());
+  return Object.entries(map)
+    .filter(([, v]) => v.consecutiveDays >= 3 && (dayKey(v.lastDate) === today || dayKey(v.lastDate) === dayKey(Date.now() - 86400000)))
+    .map(([zone]) => zone);
+}
+
+function BodyPainScreen({ onClose }) {
+  const [zone, setZone] = useState(null);
+  const [intensity, setIntensity] = useState(3);
+  const [saved, setSaved] = useState(false);
+
+  const save = () => {
+    logBodyPain(zone, intensity);
+    setSaved(true);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, padding: 20, borderRadius: "20px 20px 0 0" }}>
+        {saved ? (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 14, fontWeight: 800, color: C.green }}>✓ Molestia registrada</p>
+            <button className="btn-xl" onClick={onClose} style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>Cerrar</button>
+          </div>
+        ) : (
+          <>
+            <p style={{ fontSize: 15, fontWeight: 800 }}>¿Dónde sientes molestia?</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+              {BODY_PAIN_ZONES.map((z) => (
+                <button
+                  key={z} onClick={() => setZone(z)}
+                  style={{ padding: "10px 8px", borderRadius: 10, fontSize: 12, fontWeight: 700, border: `1px solid ${zone === z ? C.red : C.border}`, background: zone === z ? `${C.red}18` : C.card, color: zone === z ? C.red : C.text }}
+                >
+                  {z}
+                </button>
+              ))}
+            </div>
+            {zone && (
+              <>
+                <p style={{ fontSize: 12, color: C.mut, marginTop: 14 }}>Intensidad</p>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button key={n} onClick={() => setIntensity(n)} style={{ flex: 1, minHeight: 44, borderRadius: 10, fontSize: 16, border: `1px solid ${intensity === n ? C.orange : C.border}`, background: intensity === n ? `${C.orange}18` : C.card }}>
+                      {["🙂", "😐", "😣", "😖", "😭"][n - 1]}
+                    </button>
+                  ))}
+                </div>
+                <button className="btn-xl btn-physics" onClick={save} style={{ marginTop: 14, background: C.red, color: "#fff" }}>Guardar molestia</button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CombineScreen({ onClose }) {
+  const [step, setStep] = useState(0); // 0 sprint, 1 jump, 2 1rm, 3 tap, 4 resistencia, 5 resultados
+  const [sprintTime, setSprintTime] = useState("");
+  const [jumpHeight, setJumpHeight] = useState("");
+  const [runMinutes, setRunMinutes] = useState("");
+  const [showTapTest, setShowTapTest] = useState(false);
+  const prevBest = store.get("sprint_tests", []).slice(-1)[0]?.time || null;
+  const prevJump = bestJump();
+
+  const finish = () => {
+    if (sprintTime) {
+      const next = [...store.get("sprint_tests", []), { date: Date.now(), time: parseFloat(sprintTime), distance: 30 }].slice(-12);
+      store.set("sprint_tests", next);
+    }
+    if (jumpHeight) {
+      const next = [...store.get("jump_history", []), { date: Date.now(), height: parseFloat(jumpHeight) }].slice(-30);
+      store.set("jump_history", next);
+    }
+    if (runMinutes) {
+      store.set("resistance_tests", [...store.get("resistance_tests", []), { date: Date.now(), minutes: parseFloat(runMinutes) }].slice(-12));
+    }
+    store.set("last_combine", Date.now());
+    setStep(5);
+  };
+
+  const squat1RM = store.get("1rm", {})["Sentadilla"]?.rm || null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto", padding: 24 }}>
+      {step < 5 && <button onClick={onClose} style={{ color: C.mut, fontSize: 14 }}>✕ Cerrar</button>}
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10, textAlign: "center" }}>🧪 Combine mensual</h2>
+
+      {step === 0 && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Test 1 — Sprint 30m</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Cronometra tu sprint de 30m. Necesitas un compañero o usa el timer manual.</p>
+          {prevBest && <p style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>Anterior: {prevBest}s</p>}
+          <input className="input" type="number" placeholder="Tiempo en segundos (ej. 4.2)" value={sprintTime} onChange={(e) => setSprintTime(e.target.value)} style={{ marginTop: 10, padding: 10 }} />
+          <button className="btn-xl" onClick={() => setStep(1)} style={{ marginTop: 12, background: C.cyan, color: "#07070C" }}>Siguiente</button>
+        </div>
+      )}
+      {step === 1 && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Test 2 — Salto vertical</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Párate junto a una pared. Marca hasta donde alcanzas parado, luego salta y marca el punto más alto.</p>
+          {prevJump && <p style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>Récord anterior: {prevJump}cm</p>}
+          <input className="input" type="number" placeholder="Altura en cm" value={jumpHeight} onChange={(e) => setJumpHeight(e.target.value)} style={{ marginTop: 10, padding: 10 }} />
+          <button className="btn-xl" onClick={() => setStep(2)} style={{ marginTop: 12, background: C.cyan, color: "#07070C" }}>Siguiente</button>
+        </div>
+      )}
+      {step === 2 && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Test 3 — 1RM estimado</p>
+          {squat1RM ? (
+            <p style={{ fontSize: 22, fontWeight: 900, color: C.cyan, marginTop: 8 }}>{squat1RM}kg</p>
+          ) : (
+            <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Sin 1RM registrado todavía. Regístralo en Progreso → Calculadora 1RM.</p>
+          )}
+          <button className="btn-xl" onClick={() => setStep(3)} style={{ marginTop: 12, background: C.cyan, color: "#07070C" }}>Siguiente</button>
+        </div>
+      )}
+      {step === 3 && (
+        <div className="card" style={{ marginTop: 20, textAlign: "center" }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Test 4 — Tap Test SNC</p>
+          <button className="btn-xl" onClick={() => setShowTapTest(true)} style={{ marginTop: 12, background: C.cyan, color: "#07070C" }}>Hacer test</button>
+          <button onClick={() => setStep(4)} style={{ marginTop: 10, color: C.mut, fontSize: 12 }}>Saltar este test →</button>
+        </div>
+      )}
+      {showTapTest && <TapTestScreen onClose={() => { setShowTapTest(false); setStep(4); }} />}
+      {step === 4 && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Test 5 — Resistencia (opcional)</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>¿Cuántos minutos puedes correr a ritmo moderado sin parar?</p>
+          <input className="input" type="number" placeholder="Minutos" value={runMinutes} onChange={(e) => setRunMinutes(e.target.value)} style={{ marginTop: 10, padding: 10 }} />
+          <button className="btn-xl" onClick={finish} style={{ marginTop: 12, background: C.green, color: "#07070C" }}>Terminar Combine</button>
+        </div>
+      )}
+      {step === 5 && (
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <div style={{ fontSize: 40 }}>📊</div>
+          <p style={{ fontSize: 16, fontWeight: 800, marginTop: 8 }}>Combine completado</p>
+          <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
+            {sprintTime && (
+              <p style={{ fontSize: 13, marginTop: 4 }}>
+                Velocidad: {prevBest ? `${prevBest}s → ${sprintTime}s ${parseFloat(sprintTime) < prevBest ? "↑" : "↓"}` : `${sprintTime}s`}
+              </p>
+            )}
+            {jumpHeight && (
+              <p style={{ fontSize: 13, marginTop: 4 }}>
+                Salto: {prevJump ? `${prevJump}cm → ${jumpHeight}cm ${parseFloat(jumpHeight) > prevJump ? "↑" : "↓"}` : `${jumpHeight}cm`}
+              </p>
+            )}
+            {runMinutes && <p style={{ fontSize: 13, marginTop: 4 }}>Resistencia: {runMinutes} min</p>}
+          </div>
+          <button className="btn-xl" onClick={onClose} style={{ marginTop: 20, background: C.cyan, color: "#07070C" }}>Ver mi radar actualizado</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TapTestScreen({ onClose }) {
   const [phase, setPhase] = useState("ready"); // ready | running | done
   const [taps, setTaps] = useState(0);
@@ -5071,14 +5251,44 @@ function Heatmap({ sessions, color, freezes = [] }) {
   );
 }
 
-function StatBox({ label, value, accent }) {
+/* Array de 0/1 de los últimos 30 días (1 = entrenó ese día), para sparklines de racha */
+function last30DaysTrainedArray(sessions) {
+  const daySet = new Set(sessions.filter((s) => s.kind === "entreno").map((s) => dayKey(s.ts)));
+  const out = [];
+  for (let i = 29; i >= 0; i--) {
+    out.push(daySet.has(dayKey(Date.now() - i * 86400000)) ? 1 : 0);
+  }
+  return out;
+}
+
+function Sparkline({ data, color, width = 60, height = 20 }) {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const points = data.map((val, i) => ({ x: (i / (data.length - 1)) * width, y: height - ((val - min) / range) * height }));
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" ");
+  const trend = data[data.length - 1] > data[0];
+  const trendColor = trend ? C.green : C.red;
+  return (
+    <svg width={width} height={height} style={{ opacity: 0.7, flexShrink: 0 }}>
+      <path d={pathD} fill="none" stroke={color || trendColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="2.5" fill={color || trendColor} />
+    </svg>
+  );
+}
+
+function StatBox({ label, value, accent, sparkData }) {
   const isNumeric = typeof value === "number" && Number.isFinite(value);
   const animated = useCountUp(isNumeric ? value : 0);
   const shown = isNumeric ? animated : value;
   return (
     <div className="card" style={{ flex: 1, textAlign: "center", padding: "14px 8px" }}>
-      <div style={{ ...TYPOGRAPHY.h1, fontSize: 24, fontVariantNumeric: "tabular-nums", color: accent || C.text }}>
-        {shown}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <div style={{ ...TYPOGRAPHY.h1, fontSize: 24, fontVariantNumeric: "tabular-nums", color: accent || C.text }}>
+          {shown}
+        </div>
+        {sparkData && <Sparkline data={sparkData} color={accent} />}
       </div>
       <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{label}</div>
     </div>
@@ -6180,6 +6390,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   const [showRegimenPreview, setShowRegimenPreview] = useState(false);
   const [showTapTest, setShowTapTest] = useState(false);
   const [showMatchDebrief, setShowMatchDebrief] = useState(false);
+  const [showCombine, setShowCombine] = useState(false);
+  const [showBodyPain, setShowBodyPain] = useState(false);
   const [previewTip, setPreviewTip] = useState(null);
   const freezesLeft = 1;
   useEffect(() => {
@@ -6526,6 +6738,34 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
             {showMatchDebrief && (
               <MatchDebriefScreen onSave={onSaveMatch} onClose={() => setShowMatchDebrief(false)} />
             )}
+            {(() => {
+              const daysSince = daysSinceLastCombine();
+              if (daysSince !== null && daysSince < 28) return null;
+              return (
+                <div className="card" style={{ marginTop: 8, padding: "10px 14px", textAlign: "center" }}>
+                  <p style={{ fontSize: 12, color: C.text, fontWeight: 700 }}>🧪 Es hora de tu Combine mensual</p>
+                  <button className="btn-xl btn-physics" onClick={() => setShowCombine(true)} style={{ marginTop: 8, minHeight: 44, background: C.cyan, color: "#07070C", fontSize: 13 }}>
+                    Hacer tests ahora
+                  </button>
+                </div>
+              );
+            })()}
+            {showCombine && <CombineScreen onClose={() => setShowCombine(false)} />}
+            <div style={{ textAlign: "center" }}>
+              <button onClick={() => setShowBodyPain(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
+                🩹 Reportar molestia
+              </button>
+            </div>
+            {showBodyPain && <BodyPainScreen onClose={() => setShowBodyPain(false)} />}
+            {(() => {
+              const zones = persistentPainZones();
+              if (!zones.length) return null;
+              return (
+                <div className="card" style={{ marginTop: 8, padding: "10px 14px", borderColor: `${C.yellow}55` }}>
+                  <p style={{ fontSize: 12, color: C.yellow, fontWeight: 700 }}>⚠️ Dolor persistente en {zones.join(", ")}. Considera descanso o evaluación médica.</p>
+                </div>
+              );
+            })()}
             {!pro && (() => {
               const status = getRecoveryStatus();
               const color = status.level === "green" ? C.green : status.level === "yellow" ? C.yellow : C.red;
@@ -11947,6 +12187,123 @@ function calcDNA(sessions, streak) {
   };
 }
 
+/* ─── Radar de jugador: 6 atributos de fútbol calculados del historial real ─── */
+const PLAYER_AXES = [
+  { id: "velocidad", label: "Velocidad" },
+  { id: "motor", label: "Motor" },
+  { id: "defensa", label: "Defensa" },
+  { id: "pase", label: "Pase" },
+  { id: "agilidad", label: "Agilidad" },
+  { id: "tiro", label: "Tiro" },
+];
+function calcPlayerRadar(sessions) {
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  const partidos = sessions.filter((s) => s.kind === "partido");
+  const bodyWeight = store.get("weight", 70);
+  const squat1RM = store.get("1rm", {})["Sentadilla"]?.rm || 0;
+
+  const rsaSessions = workouts.filter((s) => s.type === "RSA");
+  const bestWork = rsaSessions.length ? Math.min(...rsaSessions.map((s) => s.workTime || 99)) : null;
+  const velocidad = bestWork ? Math.min(100, Math.max(0, ((30 - bestWork) / (30 - 5)) * 100)) : Math.min(100, workouts.filter((s) => s.disc === "atletismo").length * 8);
+
+  const defensa = squat1RM > 0 ? Math.min(100, (squat1RM / (bodyWeight * 2)) * 100) : 0;
+
+  const avgDuelos = partidos.length ? partidos.reduce((a, s) => a + (s.duelos || 0), 0) / partidos.length : 0;
+  const pase = Math.min(100, avgDuelos * 10);
+
+  const agilidad = Math.min(100, workouts.filter((s) => s.disc === "atletismo" || s.disc === "futbolGym" || s.disc === "futbolParque").length * 5);
+
+  const avgPerdidas = partidos.length ? partidos.reduce((a, s) => a + (s.perdidasBalon || 0), 0) / partidos.length : null;
+  const tiro = avgPerdidas !== null ? Math.min(100, Math.max(0, (10 - avgPerdidas) * 10)) : 0;
+
+  const last28 = workouts.filter((s) => Date.now() - s.ts <= 28 * 86400000).length;
+  const motor = Math.min(100, workouts.filter((s) => s.disc === "atletismo").length * 4 + (last28 / 16) * 30);
+
+  return {
+    velocidad: Math.round(velocidad), motor: Math.round(motor), defensa: Math.round(defensa),
+    pase: Math.round(pase), agilidad: Math.round(agilidad), tiro: Math.round(tiro),
+  };
+}
+function getPlayerRank(radar) {
+  const avg = Object.values(radar).reduce((a, b) => a + b, 0) / 6;
+  if (avg >= 90) return { rank: "S", color: "#FFD700", avg: Math.round(avg) };
+  if (avg >= 80) return { rank: "A", color: C.cyan, avg: Math.round(avg) };
+  if (avg >= 70) return { rank: "B", color: C.green, avg: Math.round(avg) };
+  if (avg >= 60) return { rank: "C", color: C.yellow, avg: Math.round(avg) };
+  if (avg >= 50) return { rank: "D", color: C.orange, avg: Math.round(avg) };
+  return { rank: "E", color: C.red, avg: Math.round(avg) };
+}
+const PLAYER_WEAPONS = {
+  velocidad: { label: "⚡ MOTOR DE ARRANQUE", desc: (v) => `${v}% de velocidad. Tu primer paso es tu arma letal.` },
+  motor: { label: "🫁 MOTOR INAGOTABLE", desc: (v) => `${v}% de resistencia. Sigues corriendo cuando otros se detienen.` },
+  defensa: { label: "🛡️ MURO DEFENSIVO", desc: (v) => `${v}% de fuerza. En el choque, tú ganas.` },
+  pase: { label: "🎯 CEREBRO TÁCTICO", desc: (v) => `${v}% de precisión. Rompes líneas con el pase.` },
+  agilidad: { label: "🌀 IMPOSIBLE DE MARCAR", desc: (v) => `${v}% de agilidad. Los defensores no te pueden seguir.` },
+  tiro: { label: "💥 DEFINIDOR NATO", desc: (v) => `${v}% de tiro. Defines cuando importa.` },
+};
+function findPlayerWeapon(radar) {
+  const values = Object.entries(radar);
+  const avg = values.reduce((a, [, v]) => a + v, 0) / values.length;
+  const [topAttr, topVal] = values.sort((a, b) => b[1] - a[1])[0];
+  if (topVal < avg * 1.15 || topVal === 0) return null;
+  const w = PLAYER_WEAPONS[topAttr];
+  return { attr: topAttr, value: topVal, label: w.label, description: w.desc(topVal) };
+}
+
+function PlayerRadar({ sessions }) {
+  const radar = useMemo(() => calcPlayerRadar(sessions), [sessions]);
+  const rankInfo = getPlayerRank(radar);
+  const weapon = findPlayerWeapon(radar);
+  const size = 260;
+  const center = size / 2;
+  const radius = size * 0.34;
+  const axes = PLAYER_AXES.length;
+  const values = PLAYER_AXES.map((a) => radar[a.id]);
+  const points = values.map((v, i) => radarPoint(v, i, axes, center, radius));
+  const polygonPoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+  const refPoints = PLAYER_AXES.map((_, i) => radarPoint(85, i, axes, center, radius));
+  const refPolygon = refPoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const gridLevels = [20, 40, 60, 80, 100];
+
+  return (
+    <div className="card" style={{ marginTop: 10 }}>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>⚽ Mi perfil de jugador</p>
+      <svg viewBox={`0 0 ${size} ${size}`} width="100%" style={{ maxWidth: 280, display: "block", margin: "8px auto 0" }}>
+        {gridLevels.map((lvl) => {
+          const gridPts = Array.from({ length: axes }, (_, i) => radarPoint(lvl, i, axes, center, radius));
+          return <polygon key={lvl} points={gridPts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={C.border} strokeWidth="1" />;
+        })}
+        {PLAYER_AXES.map((a, i) => {
+          const edge = radarPoint(100, i, axes, center, radius);
+          const labelPt = radarPoint(118, i, axes, center, radius);
+          return (
+            <g key={a.id}>
+              <line x1={center} y1={center} x2={edge.x} y2={edge.y} stroke={C.border} strokeWidth="1" />
+              <text x={labelPt.x} y={labelPt.y - 4} fontSize="9" fill={C.mut} textAnchor="middle">{a.label}</text>
+              <text x={labelPt.x} y={labelPt.y + 8} fontSize="9" fontWeight="800" fill={C.cyan} textAnchor="middle">{radar[a.id]}%</text>
+            </g>
+          );
+        })}
+        <polygon points={refPolygon} fill="none" stroke="#444" strokeWidth="1.5" strokeDasharray="5,3" />
+        <polygon points={polygonPoints} fill={`${C.cyan}33`} stroke={C.cyan} strokeWidth="2" />
+      </svg>
+      <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 6 }}>
+        <span style={{ fontSize: 10, color: C.cyan }}>— Tu nivel</span>
+        <span style={{ fontSize: 10, color: C.mut }}>- - Referencia élite</span>
+      </div>
+      <p style={{ textAlign: "center", fontSize: 22, fontWeight: 900, color: rankInfo.color, marginTop: 8 }}>
+        {rankInfo.rank} ({rankInfo.avg})
+      </p>
+      {weapon ? (
+        <div style={{ marginTop: 10, textAlign: "center", background: "#000", border: `1px solid ${C.cyan}`, borderRadius: 10, padding: "8px 10px" }}>
+          <p style={{ fontSize: 12, fontWeight: 900, color: C.cyan, letterSpacing: 0.5 }}>[ARMA: {weapon.label.replace(/^\S+ /, "")}]</p>
+          <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{weapon.description}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function radarPoint(val, i, axes, center, radius) {
   const angle = (i * 2 * Math.PI) / axes - Math.PI / 2;
   const r = (Math.max(0, val) / 100) * radius;
@@ -12446,7 +12803,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <StatBox label="Días activos" value={s.activeDays} accent={C.orange} />
-          <StatBox label="Racha actual" value={streak} accent={C.red} />
+          <StatBox label="Racha actual" value={streak} accent={C.red} sparkData={last30DaysTrainedArray(sessions)} />
           <StatBox label="Mejor racha" value={bestStreak} accent={C.yellow} />
         </div>
 
@@ -12664,6 +13021,15 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           </button>
         </div>
 
+        {(() => {
+          const workouts = sessions.filter((s) => s.kind === "entreno");
+          const counts = {};
+          workouts.forEach((s) => { counts[s.disc] = (counts[s.disc] || 0) + 1; });
+          const favDisc = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+          const futbolCount = workouts.filter((s) => s.disc === "futbolGym" || s.disc === "futbolParque" || s.disc === "atletismo").length;
+          const showPlayerRadar = favDisc === "futbolGym" || favDisc === "futbolParque" || futbolCount > 3;
+          return showPlayerRadar ? <PlayerRadar sessions={sessions} /> : null;
+        })()}
         <JumpTestCard />
         <DNARadar sessions={sessions} streak={streak} />
         {(() => {
