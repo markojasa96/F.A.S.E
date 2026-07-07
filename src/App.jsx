@@ -740,9 +740,9 @@ function MyWeekScreen({ sessions, onBack }) {
           <button
             key={i}
             onClick={() => setDetailDay(d)}
-            className="card"
+            className="my-week-day card"
             style={{
-              flex: 1, padding: "8px 4px", textAlign: "center", minHeight: 90,
+              flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", minHeight: 90,
               border: `1px solid ${d.isToday ? C.cyan : C.border}`,
               background: d.isFuture ? C.surface : C.card,
             }}
@@ -751,9 +751,12 @@ function MyWeekScreen({ sessions, onBack }) {
             <div style={{ marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
               {d.isMatch && <span style={{ fontSize: 12 }}>⚽</span>}
               {d.sessions.length > 0 ? (
-                d.sessions.slice(0, 3).map((s, j) => (
-                  <span key={j} style={{ fontSize: 14 }}>{exerciseTypeIcon(s.exercises?.[0]?.name || "")}</span>
-                ))
+                <>
+                  {d.sessions.slice(0, 3).map((s, j) => (
+                    <span key={j} style={{ fontSize: 14 }}>{exerciseTypeIcon(s.exercises?.[0]?.name || "")}</span>
+                  ))}
+                  {d.sessions.length > 3 && <span style={{ fontSize: 10, color: C.mut, fontWeight: 700 }}>+{d.sessions.length - 3}</span>}
+                </>
               ) : (
                 <span style={{ color: C.dim, fontSize: 12 }}>—</span>
               )}
@@ -1314,7 +1317,13 @@ function BreathingScreen({ onDone, voiceOn }) {
 /* ─── Selector rápido de RPE tras cada serie exitosa ─── */
 const RPE_COLORS = { 6: C.green, 7: "#8BC34A", 8: C.yellow, 9: C.orange, 10: C.red };
 
-function RpeOverlay({ rpeFor, onPick }) {
+const TECHNIQUE_CHIPS = [
+  { id: 3, emoji: "✅", label: "Perfecta", color: C.green },
+  { id: 2, emoji: "⚡", label: "Bien", color: C.cyan },
+  { id: 1, emoji: "⚠️", label: "Fallo", color: C.yellow },
+];
+
+function RpeOverlay({ rpeFor, onPick, onPickTechnique, techniqueSelected }) {
   if (!rpeFor) return null;
   return (
     <div className="card fade-up" style={{ position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 150, maxWidth: 430, margin: "0 auto" }}>
@@ -1326,6 +1335,21 @@ function RpeOverlay({ rpeFor, onPick }) {
             style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontWeight: 800, fontSize: 13, background: RPE_COLORS[v], color: "#07070C" }}
           >
             {v}
+          </button>
+        ))}
+      </div>
+      <p style={{ fontSize: 11, fontWeight: 700, color: C.mut, textAlign: "center", marginTop: 8 }}>Técnica</p>
+      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+        {TECHNIQUE_CHIPS.map((t) => (
+          <button
+            key={t.id} onClick={() => onPickTechnique(rpeFor.exIdx, rpeFor.setIdx, t.id)}
+            style={{
+              flex: 1, padding: "6px 0", borderRadius: 10, fontWeight: 700, fontSize: 11,
+              background: techniqueSelected === t.id ? `${t.color}33` : C.surface,
+              border: `1px solid ${techniqueSelected === t.id ? t.color : C.border}`, color: C.text,
+            }}
+          >
+            {t.emoji} {t.label}
           </button>
         ))}
       </div>
@@ -3768,28 +3792,32 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   if (discId !== "gimnasio") return sorted;
   const withFocus = applyGymFocusToExercises(sorted, store.get("gym_focus", null));
   const withGoal = applyGoalToExercises(withFocus, store.get("training_goal", null));
-  return tagSupersets(withGoal, effLvlIdx);
+  const supersetsEnabled = store.get("supersets_enabled", effLvlIdx >= 3);
+  return supersetsEnabled ? tagSupersets(withGoal, effLvlIdx, deloadActive) : withGoal;
 }
 
-/* Marca parejas de ejercicios antagonistas/compuesto+aislamiento consecutivos como superset (Campeón+) */
-const ANTAGONIST_TAG_PAIRS = [["pecho", "espalda"], ["piernas", "gluteos"], ["hombros", "brazos"]];
-function tagSupersets(exercises, lvlIdx) {
-  if (lvlIdx < 2) return exercises;
-  const isLeyendaPlus = lvlIdx >= 4;
+/* Marca parejas de ejercicios claramente antagonistas como superset (Campeón+, conservador) */
+const CLEAR_ANTAGONIST_PAIRS = [
+  { a: ["press banca", "press inclinado", "flexion", "fondo"], b: ["jalón", "dominadas", "remo"] },
+  { a: ["curl biceps", "curl de biceps", "curl martillo"], b: ["press frances", "press francés", "extension triceps", "extensión triceps", "fondo"] },
+  { a: ["sentadilla", "prensa", "extension de cuadriceps", "extensión de cuádriceps", "zancada"], b: ["peso muerto", "curl femoral", "hip thrust", "puente de gluteos", "puente de glúteos"] },
+];
+function isClearAntagonist(nameA, nameB) {
+  const na = nameA.toLowerCase(), nb = nameB.toLowerCase();
+  return CLEAR_ANTAGONIST_PAIRS.some(({ a, b }) => {
+    const aInA = a.some((k) => na.includes(k)), aInB = b.some((k) => na.includes(k));
+    const bInA = a.some((k) => nb.includes(k)), bInB = b.some((k) => nb.includes(k));
+    return (aInA && bInB) || (aInB && bInA);
+  });
+}
+function tagSupersets(exercises, lvlIdx, deloadActive = false) {
+  if (lvlIdx < 2 || deloadActive) return exercises;
   const out = exercises.map((e) => ({ ...e }));
   let i = 0;
   while (i < out.length - 1) {
     const a = out[i], b = out[i + 1];
     if (a.superset || b.superset) { i++; continue; }
-    const isAntagonist = ANTAGONIST_TAG_PAIRS.some(([x, y]) => (a.tag === x && b.tag === y) || (a.tag === y && b.tag === x));
-    const isCompoundIsolation = a.tag === b.tag && classifyExerciseOrder(a.name).startsWith("compound") && classifyExerciseOrder(b.name) === "assistance";
-    if (isLeyendaPlus && a.tag === b.tag && out[i + 2] && out[i + 2].tag === a.tag && !out[i + 2].superset) {
-      const id = `giant-${i}`;
-      out[i] = { ...a, superset: "giant", supersetId: id, restOriginal: a.rest, rest: 0 };
-      out[i + 1] = { ...b, superset: "giant", supersetId: id, restOriginal: b.rest, rest: 0 };
-      out[i + 2] = { ...out[i + 2], superset: "giant", supersetId: id, restOriginal: out[i + 2].rest, rest: 90 };
-      i += 3;
-    } else if (isAntagonist || isCompoundIsolation) {
+    if (isClearAntagonist(a.name, b.name)) {
       const id = `superset-${i}`;
       out[i] = { ...a, superset: "A", supersetId: id, restOriginal: a.rest, rest: 0 };
       out[i + 1] = { ...b, superset: "B", supersetId: id, restOriginal: b.rest };
@@ -6616,6 +6644,17 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                 <p style={{ fontSize: 12, fontWeight: 700, marginTop: 2, color: LEVELS[dp.lvlIdx]?.color }}>
                   {LEVELS[dp.lvlIdx]?.emoji} {LEVELS[dp.lvlIdx]?.name} · ~{duration} min
                 </p>
+                {(() => {
+                  const macros = store.get('macros', null);
+                  if (!macros) return null;
+                  const todayMacros = getTodayMacros(macros, dp.discId, store.get('match_day', null));
+                  if (!todayMacros) return null;
+                  return (
+                    <p style={{ fontSize: 11, fontWeight: 700, marginTop: 3, color: todayMacros.color }}>
+                      {todayMacros.label} · P: {todayMacros.protein}g · C: {todayMacros.carbs}g
+                    </p>
+                  );
+                })()}
                 <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>{dp.reason}</p>
                 {dailyLevelUp && (
                   <p style={{ fontSize: 11, color: C.yellow, marginTop: 6, fontWeight: 700 }}>
@@ -6739,6 +6778,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
               <MatchDebriefScreen onSave={onSaveMatch} onClose={() => setShowMatchDebrief(false)} />
             )}
             {(() => {
+              if (sessions.filter((s) => s.kind === "entreno").length < 10) return null;
               const daysSince = daysSinceLastCombine();
               if (daysSince !== null && daysSince < 28) return null;
               return (
@@ -9694,6 +9734,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [rpeFor, setRpeFor] = useState(null);
   const rpeTimeoutRef = useRef(null);
+  const [techniqueSelected, setTechniqueSelected] = useState(null);
+  const techniqueTimeoutRef = useRef(null);
   const [setBadge, setSetBadge] = useState(null);
   const setBadgeTimeoutRef = useRef(null);
   useEffect(() => () => clearTimeout(setBadgeTimeoutRef.current), []);
@@ -9703,12 +9745,29 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [quickNote, setQuickNote] = useState("");
   const [activationDone, setActivationDone] = useState({});
 
-  useEffect(() => () => clearTimeout(rpeTimeoutRef.current), []);
+  useEffect(() => () => { clearTimeout(rpeTimeoutRef.current); clearTimeout(techniqueTimeoutRef.current); }, []);
 
   const applyRpe = (exI, setI, value) => {
     clearTimeout(rpeTimeoutRef.current);
     setLogs((prev) => prev.map((arr, i) => (i === exI ? arr.map((s, j) => (j === setI ? { ...s, rpe: value } : s)) : arr)));
     setRpeFor(null);
+    setTechniqueSelected(null);
+  };
+
+  const applyTechnique = (exI, setI, value) => {
+    clearTimeout(techniqueTimeoutRef.current);
+    setTechniqueSelected(value);
+    setLogs((prev) => prev.map((arr, i) => (i === exI ? arr.map((s, j) => (j === setI ? { ...s, technique: value } : s)) : arr)));
+    if (value === 1) {
+      const count = store.get(`technique_bad_streak_${ex.name}`, 0) + 1;
+      store.set(`technique_bad_streak_${ex.name}`, count);
+      if (count >= 3) {
+        onMentor?.("maestro", `Llevas 3 series con fallo técnico en ${ex.name}. ¿Lo bajamos un nivel?`);
+        store.set(`technique_bad_streak_${ex.name}`, 0);
+      }
+    } else {
+      store.set(`technique_bad_streak_${ex.name}`, 0);
+    }
   };
 
   const [techniqueRatings, setTechniqueRatings] = useState({});
@@ -10063,8 +10122,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       const thisExIdx = exIdx;
       const thisSetIdx = updatedLogs[exIdx].length - 1;
       setRpeFor({ exIdx: thisExIdx, setIdx: thisSetIdx });
+      setTechniqueSelected(null);
       clearTimeout(rpeTimeoutRef.current);
       rpeTimeoutRef.current = setTimeout(() => applyRpe(thisExIdx, thisSetIdx, 7), 3000);
+      clearTimeout(techniqueTimeoutRef.current);
+      techniqueTimeoutRef.current = setTimeout(() => applyTechnique(thisExIdx, thisSetIdx, 2), 2000);
 
       /* Feedback inmediato: compara con el récord y la sesión anterior */
       if (ex.type === "peso" && entry.weight > 0) {
@@ -10535,7 +10597,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           padding: "0 20px calc(20px + env(safe-area-inset-bottom))",
         }}
       >
-        <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
+        <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} onPickTechnique={applyTechnique} techniqueSelected={techniqueSelected} />
         <div
           style={{
             minHeight: "60vh", width: "100%", maxWidth: 430,
@@ -10589,7 +10651,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const doneSets = logs[exIdx];
   return (
     <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30 }}>
-      <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
+      <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} onPickTechnique={applyTechnique} techniqueSelected={techniqueSelected} />
       {showExitConfirm && (
         <div
           onClick={() => setShowExitConfirm(false)}
@@ -11527,6 +11589,20 @@ function SettingsScreen({
         <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
           Ajusta automáticamente series y descansos en 4 fases (base, acumulación, intensificación, deload) durante 12 semanas.
         </p>
+        <SettingsRow label="Superseries automáticas">
+          <SettingsToggle
+            on={store.get("supersets_enabled", mostFrequentLevel(sessions.filter((s) => s.kind === "entreno")) >= 3)}
+            aria-label="Alternar superseries automáticas"
+            onClick={() => {
+              const current = store.get("supersets_enabled", mostFrequentLevel(sessions.filter((s) => s.kind === "entreno")) >= 3);
+              store.set("supersets_enabled", !current);
+              refresh();
+            }}
+          />
+        </SettingsRow>
+        <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
+          Agrupa ejercicios antagonistas claros (ej. press/jalón) sin descanso entre ellos. Solo aplica desde nivel Campeón.
+        </p>
       </div>
 
       <div className="sec-title">Datos</div>
@@ -11993,6 +12069,28 @@ function WeightSection() {
   );
 }
 
+/* ─── Periodización nutricional dinámica ─── */
+const NUTRITION_PROFILES = {
+  rsa_partido: { carbMult: 1.4, protMult: 1.0, label: "⚽ Alta carga de carbos", color: "#FFD600" },
+  gimnasio_fuerza: { carbMult: 1.0, protMult: 1.2, label: "💪 Proteína elevada", color: "#22FF88" },
+  descanso: { carbMult: 0.8, protMult: 1.0, label: "🔄 Día de recuperación", color: "#60A5FA" },
+  normal: { carbMult: 1.0, protMult: 1.0, label: "📊 Macros estándar", color: C.mut },
+};
+function getTodayMacros(macros, sessionType, matchDay) {
+  if (!macros) return null;
+  const today = new Date().getDay();
+  let profileKey = "normal";
+  if (matchDay !== null && matchDay === today) profileKey = "rsa_partido";
+  else if (sessionType === "gimnasio") profileKey = "gimnasio_fuerza";
+  else if (sessionType === "descanso" || sessionType === "cuerpo") profileKey = "descanso";
+  const profile = NUTRITION_PROFILES[profileKey];
+  return {
+    ...profile,
+    protein: Math.round(macros.protein * profile.protMult),
+    carbs: Math.round(macros.carbs * profile.carbMult),
+  };
+}
+
 /* ─── Calculadora de macros ─── */
 const MACRO_GOALS = [
   { id: "muscle", label: "Ganar músculo (superávit)", emoji: "💪" },
@@ -12189,35 +12287,54 @@ function calcDNA(sessions, streak) {
 
 /* ─── Radar de jugador: 6 atributos de fútbol calculados del historial real ─── */
 const PLAYER_AXES = [
-  { id: "velocidad", label: "Velocidad" },
-  { id: "motor", label: "Motor" },
-  { id: "defensa", label: "Defensa" },
-  { id: "pase", label: "Pase" },
-  { id: "agilidad", label: "Agilidad" },
-  { id: "tiro", label: "Tiro" },
+  { id: "velocidad", label: "Velocidad", genericLabel: "Velocidad" },
+  { id: "motor", label: "Motor", genericLabel: "Motor" },
+  { id: "defensa", label: "Defensa", genericLabel: "Fuerza" },
+  { id: "pase", label: "Pase", genericLabel: "Técnica" },
+  { id: "agilidad", label: "Agilidad", genericLabel: "Agilidad" },
+  { id: "tiro", label: "Tiro", genericLabel: "Potencia" },
 ];
+const PLAYER_LEVEL_BONUS = { iniciado: 0, guerrero: 8, campeon: 16, elite: 24, leyenda: 32, the_one: 40 };
 function calcPlayerRadar(sessions) {
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const partidos = sessions.filter((s) => s.kind === "partido");
   const bodyWeight = store.get("weight", 70);
   const squat1RM = store.get("1rm", {})["Sentadilla"]?.rm || 0;
+  const userLevel = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"][mostFrequentLevel(workouts)] || "iniciado";
 
   const rsaSessions = workouts.filter((s) => s.type === "RSA");
-  const bestWork = rsaSessions.length ? Math.min(...rsaSessions.map((s) => s.workTime || 99)) : null;
-  const velocidad = bestWork ? Math.min(100, Math.max(0, ((30 - bestWork) / (30 - 5)) * 100)) : Math.min(100, workouts.filter((s) => s.disc === "atletismo").length * 8);
+  const velocidadBase = rsaSessions.length > 0
+    ? Math.min(85, 20 + rsaSessions.length * 5)
+    : Math.min(85, 20 + workouts.filter((s) => s.disc === "atletismo").length * 5);
+  const velocidad = Math.min(100, velocidadBase + (PLAYER_LEVEL_BONUS[userLevel] || 0) * 0.5);
 
-  const defensa = squat1RM > 0 ? Math.min(100, (squat1RM / (bodyWeight * 2)) * 100) : 0;
+  const eliteSquat = bodyWeight * 2;
+  let defensa;
+  if (squat1RM > 0) {
+    defensa = Math.min(100, (squat1RM / eliteSquat) * 100);
+  } else {
+    const legSessions = workouts.filter((s) => (s.focusLabel || "").toLowerCase().includes("pierna")).length;
+    defensa = Math.min(70, 15 + legSessions * 3);
+  }
 
-  const avgDuelos = partidos.length ? partidos.reduce((a, s) => a + (s.duelos || 0), 0) / partidos.length : 0;
-  const pase = Math.min(100, avgDuelos * 10);
+  let pase = 10;
+  if (partidos.length > 0) {
+    const avgDuelos = partidos.reduce((a, s) => a + (s.duelos ?? 5), 0) / partidos.length;
+    pase = Math.min(100, avgDuelos * 8);
+  }
 
-  const agilidad = Math.min(100, workouts.filter((s) => s.disc === "atletismo" || s.disc === "futbolGym" || s.disc === "futbolParque").length * 5);
+  const agilitySessions = workouts.filter((s) => s.disc === "futbolGym" || s.disc === "futbolParque" || s.disc === "atletismo" || s.disc === "basquetCancha" || s.disc === "basquetSinCancha").length;
+  const agilidad = Math.min(100, 10 + agilitySessions * 4);
 
-  const avgPerdidas = partidos.length ? partidos.reduce((a, s) => a + (s.perdidasBalon || 0), 0) / partidos.length : null;
-  const tiro = avgPerdidas !== null ? Math.min(100, Math.max(0, (10 - avgPerdidas) * 10)) : 0;
+  let tiro = 10;
+  if (partidos.length > 0) {
+    const avgRpe = partidos.reduce((a, s) => a + (10 - (s.rpe ?? 7)), 0) / partidos.length;
+    tiro = Math.min(100, 10 + avgRpe * 8 + partidos.length * 5);
+  }
 
-  const last28 = workouts.filter((s) => Date.now() - s.ts <= 28 * 86400000).length;
-  const motor = Math.min(100, workouts.filter((s) => s.disc === "atletismo").length * 4 + (last28 / 16) * 30);
+  const totalSessions = workouts.length;
+  const recentSessions = workouts.filter((s) => Date.now() - s.ts <= 28 * 86400000).length;
+  const motor = Math.min(100, 10 + totalSessions * 1.5 + recentSessions * 3);
 
   return {
     velocidad: Math.round(velocidad), motor: Math.round(motor), defensa: Math.round(defensa),
@@ -12250,7 +12367,7 @@ function findPlayerWeapon(radar) {
   return { attr: topAttr, value: topVal, label: w.label, description: w.desc(topVal) };
 }
 
-function PlayerRadar({ sessions }) {
+function PlayerRadar({ sessions, isFootball }) {
   const radar = useMemo(() => calcPlayerRadar(sessions), [sessions]);
   const rankInfo = getPlayerRank(radar);
   const weapon = findPlayerWeapon(radar);
@@ -12267,7 +12384,7 @@ function PlayerRadar({ sessions }) {
 
   return (
     <div className="card" style={{ marginTop: 10 }}>
-      <p style={{ fontSize: 13, fontWeight: 800 }}>⚽ Mi perfil de jugador</p>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>{isFootball ? "⚽ Mi perfil de jugador" : "📊 Mi perfil atlético"}</p>
       <svg viewBox={`0 0 ${size} ${size}`} width="100%" style={{ maxWidth: 280, display: "block", margin: "8px auto 0" }}>
         {gridLevels.map((lvl) => {
           const gridPts = Array.from({ length: axes }, (_, i) => radarPoint(lvl, i, axes, center, radius));
@@ -12279,7 +12396,7 @@ function PlayerRadar({ sessions }) {
           return (
             <g key={a.id}>
               <line x1={center} y1={center} x2={edge.x} y2={edge.y} stroke={C.border} strokeWidth="1" />
-              <text x={labelPt.x} y={labelPt.y - 4} fontSize="9" fill={C.mut} textAnchor="middle">{a.label}</text>
+              <text x={labelPt.x} y={labelPt.y - 4} fontSize="9" fill={C.mut} textAnchor="middle">{(isFootball ? a.label : a.genericLabel).toUpperCase()}</text>
               <text x={labelPt.x} y={labelPt.y + 8} fontSize="9" fontWeight="800" fill={C.cyan} textAnchor="middle">{radar[a.id]}%</text>
             </g>
           );
@@ -13026,9 +13143,8 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           const counts = {};
           workouts.forEach((s) => { counts[s.disc] = (counts[s.disc] || 0) + 1; });
           const favDisc = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
-          const futbolCount = workouts.filter((s) => s.disc === "futbolGym" || s.disc === "futbolParque" || s.disc === "atletismo").length;
-          const showPlayerRadar = favDisc === "futbolGym" || favDisc === "futbolParque" || futbolCount > 3;
-          return showPlayerRadar ? <PlayerRadar sessions={sessions} /> : null;
+          const isFootball = favDisc === "futbolGym" || favDisc === "futbolParque";
+          return <PlayerRadar sessions={sessions} isFootball={isFootball} />;
         })()}
         <JumpTestCard />
         <DNARadar sessions={sessions} streak={streak} />

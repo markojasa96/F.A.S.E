@@ -683,6 +683,9 @@ input[type='number'] {
   .particle { animation: none !important; }
   .splash-f, .splash-fade, .splash-bar-fill { animation-duration: 1ms !important; }
 }
+@media (max-width: 360px) {
+  .my-week-day { padding: 4px !important; }
+}
 
 /* ─── Celebraciones por disciplina ─── */
 @keyframes barbellLift {
