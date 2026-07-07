@@ -395,6 +395,168 @@ function getPlanPhase(weekNumber) {
 
 const PERIODIZATION_LABELS = { foundation: "Base", accumulation: "Acumulación", intensification: "Intensificación", deload: "Deload" };
 
+/* ─── Test de activación del SNC (tap test) ─── */
+function tapTestAverage() {
+  const history = store.get("tap_test_history", []);
+  const last5 = history.slice(-5);
+  if (!last5.length) return null;
+  return last5.reduce((a, t) => a + t.score, 0) / last5.length;
+}
+function tapTestResult(score) {
+  const avg = tapTestAverage();
+  if (avg === null) return { color: C.cyan, label: "🎯 Primer registro guardado", note: "A partir de la próxima prueba veremos tu tendencia." };
+  const pct = (score / avg) * 100;
+  if (pct >= 90) return { color: C.green, label: "🟢 SNC fresco — da todo", note: null };
+  if (pct >= 75) return { color: C.yellow, label: "🟡 SNC normal — sesión estándar", note: null };
+  return { color: C.red, label: "🔴 SNC fatigado — evita velocidad y fuerza máxima hoy", note: "Hoy: movilidad o técnica, no fuerza pesada." };
+}
+
+function TapTestScreen({ onClose }) {
+  const [phase, setPhase] = useState("ready"); // ready | running | done
+  const [taps, setTaps] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(10);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    if (phase !== "running") return undefined;
+    const t = setTimeout(() => {
+      if (secondsLeft <= 1) {
+        setTaps((score) => {
+          const history = store.get("tap_test_history", []);
+          const next = [...history, { date: Date.now(), score }].slice(-30);
+          store.set("tap_test_history", next);
+          setResult(tapTestResult(score));
+          return score;
+        });
+        setPhase("done");
+      } else {
+        setSecondsLeft((s) => s - 1);
+      }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [phase, secondsLeft]);
+
+  const start = () => { setTaps(0); setSecondsLeft(10); setPhase("running"); };
+  const tap = () => { if (phase === "running") { setTaps((t) => t + 1); if (navigator.vibrate) navigator.vibrate(10); } };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <button onClick={onClose} style={{ position: "absolute", top: 20, left: 20, color: C.mut, fontSize: 14 }}>✕ Cerrar</button>
+      {phase === "ready" && (
+        <>
+          <p style={{ color: "#fff", fontSize: 16, fontWeight: 700, textAlign: "center" }}>Test de activación</p>
+          <p style={{ color: C.mut, fontSize: 13, textAlign: "center", marginTop: 8 }}>Toca el botón el máximo de veces en 10 segundos</p>
+          <button className="btn-xl btn-physics" onClick={start} style={{ marginTop: 24, background: C.cyan, color: "#07070C" }}>Empezar</button>
+        </>
+      )}
+      {phase === "running" && (
+        <>
+          <p style={{ color: "#fff", fontSize: 32, fontWeight: 900 }}>{secondsLeft}s</p>
+          <button
+            onTouchStart={tap} onMouseDown={tap}
+            style={{ width: 140, height: 140, borderRadius: "50%", background: C.cyan, marginTop: 20, border: "none" }}
+          />
+          <p style={{ color: C.mut, fontSize: 20, fontWeight: 900, marginTop: 20 }}>{taps}</p>
+        </>
+      )}
+      {phase === "done" && result && (
+        <>
+          <p style={{ color: result.color, fontSize: 18, fontWeight: 900, textAlign: "center" }}>{result.label}</p>
+          <p style={{ color: "#fff", fontSize: 32, fontWeight: 900, marginTop: 10 }}>{taps} toques</p>
+          {result.note && <p style={{ color: C.mut, fontSize: 13, marginTop: 10, textAlign: "center" }}>{result.note}</p>}
+          <button className="btn-xl" onClick={onClose} style={{ marginTop: 24, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>Cerrar</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─── Debriefing post-partido: registro rápido de 4 datos ─── */
+function MatchDebriefScreen({ onSave, onClose }) {
+  const [duelos, setDuelos] = useState(5);
+  const [perdidas, setPerdidas] = useState(3);
+  const [rpe, setRpe] = useState(6);
+  const [minutos, setMinutos] = useState(90);
+  const rpeColor = (v) => (v <= 3 ? C.green : v <= 6 ? C.yellow : C.red);
+
+  const save = () => {
+    onSave({
+      id: Date.now(), ts: Date.now(), kind: "partido",
+      duelos, perdidasBalon: perdidas, rpe, minutosJugados: minutos,
+      load: minutos * rpe,
+    });
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto", padding: 24 }}>
+      <button onClick={onClose} style={{ color: C.mut, fontSize: 14 }}>✕ Cerrar</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10, textAlign: "center" }}>Post-partido</h2>
+      <p style={{ fontSize: 12, color: C.mut, textAlign: "center" }}>30 segundos · Datos puros</p>
+
+      <div className="card" style={{ marginTop: 20 }}>
+        <p style={{ fontSize: 13, fontWeight: 700 }}>¿Cuántos duelos físicos ganaste?</p>
+        <input type="range" min="0" max="10" value={duelos} onChange={(e) => setDuelos(Number(e.target.value))} style={{ width: "100%", marginTop: 10 }} />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.dim }}><span>Ninguno</span><b style={{ color: C.text }}>{duelos}</b><span>Todos</span></div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <p style={{ fontSize: 13, fontWeight: 700 }}>¿Cuántos balones perdiste bajo presión?</p>
+        <input type="range" min="0" max="10" value={perdidas} onChange={(e) => setPerdidas(Number(e.target.value))} style={{ width: "100%", marginTop: 10 }} />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.dim }}><span>Ninguno</span><b style={{ color: C.text }}>{perdidas}</b><span>Muchos</span></div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <p style={{ fontSize: 13, fontWeight: 700 }}>¿Qué tan duro fue físicamente?</p>
+        <input type="range" min="1" max="10" value={rpe} onChange={(e) => setRpe(Number(e.target.value))} style={{ width: "100%", marginTop: 10 }} />
+        <div style={{ textAlign: "center", fontSize: 22, fontWeight: 900, color: rpeColor(rpe) }}>{rpe}/10</div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12, textAlign: "center" }}>
+        <p style={{ fontSize: 13, fontWeight: 700 }}>Minutos jugados</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 10 }}>
+          <button onClick={() => setMinutos((m) => Math.max(0, m - 5))} style={{ width: 40, height: 40, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, fontSize: 18, color: C.text }}>−</button>
+          <span style={{ fontSize: 32, fontWeight: 900 }}>{minutos}</span>
+          <button onClick={() => setMinutos((m) => Math.min(120, m + 5))} style={{ width: 40, height: 40, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, fontSize: 18, color: C.text }}>+</button>
+        </div>
+      </div>
+
+      <button className="btn-xl btn-physics" onClick={save} style={{ marginTop: 20, background: C.cyan, color: "#07070C" }}>Guardar partido</button>
+    </div>
+  );
+}
+
+function AcwrCard({ sessions }) {
+  const [expanded, setExpanded] = useState(false);
+  const ratio = useMemo(() => calcACWR(sessions), [sessions]);
+  if (ratio === null) return null;
+  const info = acwrInfo(ratio);
+  return (
+    <button
+      onClick={() => setExpanded((v) => !v)}
+      className="card"
+      style={{
+        marginTop: 12, width: "100%", textAlign: "left", padding: "12px 14px",
+        border: `1px solid ${info.color}55`,
+        animation: info.level === "danger" ? "flame 1.6s ease-in-out infinite" : "none",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>📊 Carga de entrenamiento (ACWR)</span>
+        <span style={{ fontSize: 16, fontWeight: 900, color: info.color }}>{ratio.toFixed(2)}</span>
+      </div>
+      <p style={{ fontSize: 12, color: info.color, fontWeight: 700, marginTop: 4 }}>{info.label}</p>
+      {expanded && (
+        <p style={{ fontSize: 11, color: C.dim, marginTop: 8, lineHeight: 1.5 }}>
+          El ACWR compara tu carga de los últimos 7 días (aguda) contra el promedio de las últimas 4 semanas (crónica).
+          Valores entre 0.8 y 1.3 se asocian con menor riesgo de lesión. Ratios sobre 1.5 indican un aumento brusco
+          de carga que tu cuerpo puede no estar listo para absorber.
+        </p>
+      )}
+    </button>
+  );
+}
+
 function PlanPeriodizationCard({ sessions }) {
   const [, setTick] = useState(0);
   const refresh = () => setTick((n) => n + 1);
@@ -3229,6 +3391,8 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
 
   const weekMultiplier = discId === "gimnasio" ? getWeekMultiplier() : 1.0;
+  const taperingPhase = getTaperingFactor();
+  const taperingMultiplier = taperingPhase ? TAPERING_INFO[taperingPhase].setsMultiplier : 1.0;
   const built = chosen.map((e, i) => {
     let sets = e.s === 1 ? 1 : Math.min(6, e.s + scaling.setsAdd);
     const repBounds = repRangeRestBounds(e.r);
@@ -3242,6 +3406,9 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
       rest = Math.max(0, rest + phaseMods.restModifier);
     } else if (weekMultiplier !== 1.0) {
       sets = Math.max(1, Math.round(sets * weekMultiplier));
+    }
+    if (taperingMultiplier !== 1.0) {
+      sets = Math.max(1, Math.round(sets * taperingMultiplier));
     }
     const scheme = e.t === "peso" && sets >= 3 && !deloadActive ? schemeForExercise(effLvlIdx, i, chosen.length) : "standard";
     const name = deloadActive ? (DELOAD_SUBSTITUTES[e.n] || e.n) : e.n;
@@ -3438,6 +3605,33 @@ function getSupercompensationPhase(lastSessionTs, muscleGroup, intensityKey) {
     return { phase: "supercompensation", color: "#22FF88", label: "⚡ PICO DE ADAPTACIÓN", trainNow: true };
   }
   return { phase: "detraining", color: "#6B7280", label: "Ventana pasando", trainNow: true };
+}
+
+/* ─── ACWR: ratio de carga aguda/crónica (ciencia de gestión de carga) ─── */
+function sessionAvgRpe(session) {
+  const rpes = (session.exercises || []).flatMap((e) => e.sets || []).map((s) => s.rpe).filter((r) => typeof r === "number");
+  if (!rpes.length) return 6;
+  return rpes.reduce((a, r) => a + r, 0) / rpes.length;
+}
+function sessionLoad(session) {
+  if (session.load) return session.load;
+  return (session.durationMin || 45) * sessionAvgRpe(session);
+}
+function calcACWR(sessions) {
+  const now = Date.now();
+  const day = 86400000;
+  const workouts = sessions.filter((s) => s.kind === "entreno" || s.kind === "partido");
+  const acute = workouts.filter((s) => now - s.ts <= 7 * day).reduce((sum, s) => sum + sessionLoad(s), 0);
+  const chronic4w = workouts.filter((s) => now - s.ts <= 28 * day).reduce((sum, s) => sum + sessionLoad(s), 0) / 4;
+  if (chronic4w === 0) return null;
+  return acute / chronic4w;
+}
+function acwrInfo(ratio) {
+  if (ratio === null) return null;
+  if (ratio < 0.8) return { color: C.blue, label: "Subcargado — puedes aumentar intensidad", level: "low" };
+  if (ratio <= 1.3) return { color: C.green, label: "Zona óptima ✓ — progresando de forma segura", level: "ok" };
+  if (ratio <= 1.5) return { color: C.yellow, label: "⚠️ Carga alta — monitorea la fatiga", level: "high" };
+  return { color: C.red, label: "🚨 Zona de riesgo — reduce volumen hoy", level: "danger" };
 }
 
 /* Estado agregado de recuperación para mostrar en Inicio */
@@ -3793,6 +3987,11 @@ function deprioritizeUnrecovered(candidates) {
 
 function getDailyPlan(sessions) {
   const today = todayKey();
+  const acwr = calcACWR(sessions);
+  if (acwr !== null && acwr > 1.5) {
+    const plan = { discId: "cuerpo", focusId: null, lvlIdx: mostFrequentLevel(sessions), reason: "Tu carga de entrenamiento está en zona de riesgo (ACWR alto). Hoy: movilidad y descanso activo." };
+    return { plan, index: 0, candidates: [plan] };
+  }
   const programCandidate = programDailyCandidate(sessions);
   const rawCandidates = programCandidate ? [programCandidate, ...dailyPlanCandidates(sessions)] : dailyPlanCandidates(sessions);
   const candidates = deprioritizeUnrecovered(rawCandidates);
@@ -3837,6 +4036,34 @@ function getWeekMultiplier() {
   if (weeksActive <= 8) return 1.00;
   if (weeksActive <= 12) return 1.15;
   return 1.0;
+}
+
+/* ─── Tapering: ajusta la carga según cercanía al día de partido configurado ─── */
+function getTaperingFactor() {
+  const matchDay = store.get("match_day", null);
+  if (matchDay === null) return null;
+  const today = new Date().getDay();
+  const daysUntilMatch = ((matchDay - today) + 7) % 7;
+  if (daysUntilMatch === 0) return "match_day";
+  if (daysUntilMatch === 1) return "recovery";
+  if (daysUntilMatch === 2) return "activation";
+  if (daysUntilMatch === 3) return "tapering";
+  if (daysUntilMatch <= 5) return "normal";
+  return "build";
+}
+const TAPERING_INFO = {
+  match_day: { label: "⚽ Día de partido — activación ligera", color: C.red, setsMultiplier: 0.4 },
+  recovery: { label: "🧘 Recuperación — movilidad suave", color: C.orange, setsMultiplier: 0.5 },
+  activation: { label: "⚡ Activación — sin fuerza máxima", color: C.yellow, setsMultiplier: 0.7 },
+  tapering: { label: "📉 Tapering — bajando volumen", color: C.yellow, setsMultiplier: 0.6 },
+  normal: { label: null, color: C.mut, setsMultiplier: 1.0 },
+  build: { label: "📈 Semana de carga", color: C.green, setsMultiplier: 1.1 },
+};
+function taperingDaysUntilMatch() {
+  const matchDay = store.get("match_day", null);
+  if (matchDay === null) return null;
+  const today = new Date().getDay();
+  return ((matchDay - today) + 7) % 7;
 }
 
 /* Sustituciones más ligeras/técnicas durante la semana de deload */
@@ -5711,7 +5938,7 @@ function FullHistory({ sessions, onDelete, onBack }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [] }) {
+function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [], onSaveMatch }) {
   const [menuId, setMenuId] = useState(null);
   const [tappedHero, setTappedHero] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
@@ -5723,6 +5950,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   const [streakBounce, setStreakBounce] = useState(false);
   const [showFreezeConfirm, setShowFreezeConfirm] = useState(false);
   const [showRegimenPreview, setShowRegimenPreview] = useState(false);
+  const [showTapTest, setShowTapTest] = useState(false);
+  const [showMatchDebrief, setShowMatchDebrief] = useState(false);
   const [previewTip, setPreviewTip] = useState(null);
   const freezesLeft = 1;
   useEffect(() => {
@@ -5967,11 +6196,15 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                 Ver otro plan 🔄
               </button>
             )}
-            <div style={{ textAlign: "center" }}>
+            <div style={{ textAlign: "center", display: "flex", justifyContent: "center", gap: 14 }}>
               <button onClick={() => setShowRegimenPreview(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
                 Ver ejercicios de hoy →
               </button>
+              <button onClick={() => setShowTapTest(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
+                🧠 Test SNC
+              </button>
             </div>
+            {showTapTest && <TapTestScreen onClose={() => setShowTapTest(false)} />}
             {showRegimenPreview && (() => {
               let previewExercises = [];
               try { previewExercises = genRoutine(dp.discId, dp.focusId, dp.lvlIdx) || []; } catch { previewExercises = []; }
@@ -6033,6 +6266,30 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
                 </div>
               ) : null;
             })()}
+            {(() => {
+              const phase = getTaperingFactor();
+              const daysUntil = taperingDaysUntilMatch();
+              if (!phase || phase === "normal") return null;
+              const info = TAPERING_INFO[phase];
+              if (!info.label) return null;
+              return (
+                <div style={{ marginTop: 8, textAlign: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: info.color, background: `${info.color}18`, padding: "4px 10px", borderRadius: 99 }}>
+                    {daysUntil === 0 ? info.label : `Partido en ${daysUntil} ${daysUntil === 1 ? "día" : "días"} — ${info.label}`}
+                  </span>
+                </div>
+              );
+            })()}
+            {store.get("match_day", null) !== null && (
+              <div style={{ textAlign: "center" }}>
+                <button onClick={() => setShowMatchDebrief(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
+                  📋 Registrar partido
+                </button>
+              </div>
+            )}
+            {showMatchDebrief && (
+              <MatchDebriefScreen onSave={onSaveMatch} onClose={() => setShowMatchDebrief(false)} />
+            )}
             {!pro && (() => {
               const status = getRecoveryStatus();
               const color = status.level === "green" ? C.green : status.level === "yellow" ? C.yellow : C.red;
@@ -6071,6 +6328,7 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         );
       })()}
 
+      <AcwrCard sessions={sessions} />
       <PlanPeriodizationCard sessions={sessions} />
       <DeloadBanner sessions={sessions} />
 
@@ -10579,6 +10837,26 @@ function SettingsScreen({
         })()}
       </div>
 
+      <div className="card" style={{ marginTop: 10 }}>
+        <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>⚽ DÍA DE PARTIDO SEMANAL</p>
+        <p style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>La app ajusta tu carga automáticamente (tapering) según cuánto falte.</p>
+        <div className="chip-wrap" style={{ marginTop: 8 }}>
+          {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((d, i) => {
+            const active = store.get("match_day", null) === i;
+            return (
+              <button
+                key={d}
+                className={`chip ${active ? "on" : ""}`}
+                style={active ? { background: C.cyan } : {}}
+                onClick={() => { store.set("match_day", active ? null : i); refresh(); }}
+              >
+                {d}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="sec-title">Perfil</div>
       <div className="card">
         <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>NOMBRE</label>
@@ -13440,6 +13718,7 @@ export default function App() {
                     }}
                     broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
                     challenge={challenge} onDeleteSession={deleteSession} freezes={freezes}
+                    onSaveMatch={saveSession}
                   />
                 </div>
               </div>
