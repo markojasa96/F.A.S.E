@@ -1447,17 +1447,34 @@ const TRAINING_GOALS = [
 ];
 
 /* ─── Enfoques estéticos de Gimnasio (prioridades de rutina) ─── */
-const GYM_FOCUSES = [
-  { id: "gains", emoji: "💪", name: "Ganancias generales", desc: "Más músculo en todo el cuerpo", color: "#22FF88" },
-  { id: "strength_focus", emoji: "🏋️", name: "Fuerza pura", desc: "Los 4 básicos al máximo peso", color: "#FF6B2B" },
-  { id: "v_shape", emoji: "🔺", name: "Forma en V", desc: "Espalda ancha, hombros grandes", color: "#00E5FF" },
-  { id: "glutes", emoji: "🍑", name: "Glúteos y piernas", desc: "Para desarrollar glúteos y forma", color: "#FF9EC4" },
-  { id: "upper_body", emoji: "👆", name: "Tren superior", desc: "Pecho, espalda, hombros, brazos", color: "#A855F7" },
-  { id: "definition", emoji: "✂️", name: "Definición", desc: "Circuitos, más quema, menos descanso", color: "#FFD600" },
-  { id: "full_body", emoji: "🔄", name: "Full body", desc: "Todo el cuerpo en cada sesión", color: "#4ADE80" },
+const GYM_WORKOUT_TYPES = [
+  { id: "push", name: "Push", emoji: "💪", desc: "Pecho, hombros y tríceps", muscles: ["Pecho", "Hombros", "Tríceps"] },
+  { id: "pull", name: "Pull", emoji: "🏋️", desc: "Espalda y bíceps", muscles: ["Espalda", "Bíceps"] },
+  { id: "legs", name: "Legs", emoji: "🦵", desc: "Piernas y glúteos", muscles: ["Cuádriceps", "Isquiotibiales", "Glúteos", "Gemelos"] },
+  { id: "upper", name: "Upper Body", emoji: "🔝", desc: "Todo el tren superior", muscles: ["Pecho", "Espalda", "Hombros", "Brazos"] },
+  { id: "lower", name: "Lower Body", emoji: "⬇️", desc: "Todo el tren inferior", muscles: ["Piernas", "Glúteos", "Core"] },
+  { id: "full_body", name: "Full Body", emoji: "🔄", desc: "Todo el cuerpo en una sesión", muscles: ["Pecho", "Espalda", "Piernas", "Hombros", "Core"] },
+  { id: "glutes_focus", name: "Glúteos y forma", emoji: "🍑", desc: "Hip thrust, sentadilla búlgara, abducción", muscles: ["Glúteos", "Isquiotibiales", "Aductores"] },
+  { id: "v_shape", name: "Forma en V", emoji: "🔺", desc: "Espalda ancha y hombros", muscles: ["Espalda", "Hombros", "Core"] },
+  { id: "arms", name: "Brazos", emoji: "💪", desc: "Bíceps y tríceps (sesión dedicada)", muscles: ["Bíceps", "Tríceps", "Antebrazos"], minLevel: "campeon" },
+  { id: "core", name: "Core y abdomen", emoji: "🔥", desc: "Abdomen, oblicuos y estabilidad", muscles: ["Core", "Oblicuos", "Lumbar"] },
 ];
 
-/* Reordena/ajusta la rutina de gimnasio según el enfoque estético elegido */
+/* Chips de trabajo extra disponibles según el tipo de rutina elegido (músculos no cubiertos) */
+const EXTRA_MUSCLE_OPTIONS = {
+  push: [{ id: "core", label: "Core" }, { id: "brazos", label: "Bíceps" }, { id: "espalda", label: "Trapecio" }],
+  pull: [{ id: "core", label: "Core" }, { id: "pecho", label: "Pecho" }],
+  legs: [{ id: "core", label: "Core" }, { id: "espalda", label: "Espalda baja" }],
+  upper: [{ id: "core", label: "Core" }],
+  lower: [{ id: "espalda", label: "Espalda baja" }],
+  full_body: [],
+  glutes_focus: [{ id: "core", label: "Core" }],
+  v_shape: [{ id: "brazos", label: "Brazos" }],
+  arms: [{ id: "core", label: "Core" }],
+  core: [{ id: "espalda", label: "Espalda baja" }],
+};
+
+/* Reordena/ajusta la rutina de gimnasio según el enfoque estético elegido (ya no configurable desde la UI; queda inactivo mientras "gym_focus" no se setee) */
 function applyGymFocusToExercises(exercises, focusId) {
   if (!focusId) return exercises;
   let out = [...exercises];
@@ -1596,6 +1613,16 @@ const DISCIPLINES = {
       { id: "gluteos", label: "Glúteos", tags: ["gluteos"] },
       { id: "sup", label: "Parte superior", tags: ["pecho", "espalda", "hombros", "brazos"] },
       { id: "inf", label: "Parte inferior", tags: ["piernas", "gluteos"] },
+      { id: "push", label: "Push", tags: ["pecho", "hombros", "brazos"] },
+      { id: "pull", label: "Pull", tags: ["espalda", "brazos"] },
+      { id: "legs", label: "Legs", tags: ["piernas", "gluteos"] },
+      { id: "upper", label: "Upper Body", tags: ["pecho", "espalda", "hombros", "brazos"] },
+      { id: "lower", label: "Lower Body", tags: ["piernas", "gluteos", "core"] },
+      { id: "full_body", label: "Full Body", tags: null },
+      { id: "glutes_focus", label: "Glúteos y forma", tags: ["gluteos", "piernas"] },
+      { id: "v_shape", label: "Forma en V", tags: ["espalda", "hombros"] },
+      { id: "arms", label: "Brazos", tags: ["brazos"] },
+      { id: "core", label: "Core y abdomen", tags: ["core"] },
     ],
   },
   futbolGym: {
@@ -2416,6 +2443,13 @@ function movementCategory(name) {
   if (/salto|jump|pliom|cajón|cajon/.test(n)) return "salto";
   return "generic";
 }
+
+const MUSCLE_GROUP_LABELS = {
+  empuje: "Pecho/Hombros", tiron: "Espalda", sentadilla: "Piernas", pesomuerto: "Piernas",
+  curl: "Brazos", core: "Core", sprint: "Velocidad", salto: "Explosividad", tiro: "Tiro",
+  hipthrust: "Glúteos", pecho: "Pecho", espalda: "Espalda", hombros: "Hombros", brazos: "Brazos",
+  piernas: "Piernas", gluteos: "Glúteos", velocidad: "Velocidad",
+};
 
 const MOVEMENT_COLORS = {
   empuje: "#22FF88", tiron: "#00E5FF", sentadilla: "#FF7A2F", pesomuerto: "#00E5FF", curl: "#22FF88",
@@ -3597,6 +3631,22 @@ function genFutbolPositionRoutine(positionId, lvlIdx, deloadActive) {
 }
 
 /* ─── Generador de rutinas (5-8 ejercicios, con variación por semilla) ─── */
+/* Añade 2-3 ejercicios de trabajo extra para músculos no cubiertos por el tipo de rutina elegido */
+function appendExtraMuscleExercises(routine, extraFocusIds, lvlIdx) {
+  const pool = EXDB.gimnasio || [];
+  const existingNames = new Set(routine.map((e) => e.name));
+  const scaling = LEVEL_SCALING[lvlIdx] || LEVEL_SCALING[0];
+  let out = routine;
+  extraFocusIds.forEach((tag) => {
+    const candidates = pool.filter((e) => e.f?.includes(tag) && !existingNames.has(e.n));
+    candidates.slice(0, 3).forEach((e) => {
+      existingNames.add(e.n);
+      out = [...out, { name: e.n, type: e.t, sets: Math.min(4, e.s + scaling.setsAdd), reps: e.r, rest: e.rest, tip: e.tip, tag }];
+    });
+  });
+  return out;
+}
+
 function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   if (discId === "basquetCancha" || discId === "basquetSinCancha") {
     return genBasquetRoutine(discId, lvlIdx, !!store.get("deload_active", null));
@@ -4508,254 +4558,6 @@ function DeloadBanner({ sessions }) {
         >
           Saltar esta vez
         </button>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Biblioteca de ejercicios ─── */
-const LIBRARY_FILTERS = [
-  { id: "todos", label: "Todos" },
-  { id: "empuje", label: "Empuje" },
-  { id: "tiron", label: "Tirón" },
-  { id: "piernas", label: "Piernas" },
-  { id: "core", label: "Core" },
-  { id: "atletismo", label: "Atletismo" },
-  { id: "futbol", label: "Fútbol" },
-  { id: "basquet", label: "Básquetbol" },
-  { id: "movilidad", label: "Movilidad" },
-];
-
-const LIBRARY_FILTER_COLORS = {
-  empuje: "#FFFFFF", tiron: C.cyan, piernas: C.green, core: C.yellow,
-  atletismo: C.purple, futbol: C.orange, basquet: "#A855F7", movilidad: C.blue, todos: C.mut,
-};
-
-function buildExerciseLibrary() {
-  const list = [];
-  const seen = new Set();
-  const push = (n, tip, lv, setsReps, filterCat, type) => {
-    if (seen.has(n)) return;
-    seen.add(n);
-    list.push({ name: n, tip: tip || "", lv: lv || null, setsReps: setsReps || "", filterCat, demoCat: movementCategory(n), type: type || "reps" });
-  };
-  ["gimnasio", "calistenia", "futbolGym", "futbolParque", "basquetCancha", "basquetSinCancha"].forEach((discId) => {
-    (EXDB[discId] || []).forEach((e) => {
-      let filterCat;
-      if (discId.startsWith("futbol")) filterCat = "futbol";
-      else if (discId.startsWith("basquet")) filterCat = "basquet";
-      else if (e.f?.includes("piernas") || e.f?.includes("gluteos")) filterCat = "piernas";
-      else if (e.f?.includes("core")) filterCat = "core";
-      else if (e.f?.includes("tiron") || e.f?.includes("espalda")) filterCat = "tiron";
-      else if (e.f?.includes("empuje") || e.f?.includes("pecho") || e.f?.includes("hombros") || e.f?.includes("brazos")) filterCat = "empuje";
-      else {
-        const mc = movementCategory(e.n);
-        filterCat = mc === "sentadilla" ? "piernas" : mc;
-      }
-      push(e.n, e.tip, e.lv, `${e.s} x ${e.r}`, filterCat, e.t);
-    });
-  });
-  Object.values(ATLETISMO_EXDB).forEach((arr) => arr.forEach((e) => push(e.n, e.tip, null, `${e.s} x ${e.r}`, "atletismo", e.t)));
-  BODY_SECTIONS.forEach((sec) => sec.items.forEach((it) => push(it.n, "", null, it.d, "movilidad", "tiempo")));
-  return list;
-}
-
-function LibraryExerciseCard({ ex, onOpen }) {
-  const color = LIBRARY_FILTER_COLORS[ex.filterCat] || C.mut;
-  const diffEmoji = ex.lv ? LEVELS[Math.min(5, Math.round((ex.lv[0] + ex.lv[1]) / 2))]?.emoji : "⚡";
-  return (
-    <button className="card" onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left" }}>
-      <div style={{ flexShrink: 0, width: 60, height: 40, background: `${color}08`, borderRadius: 8, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ transform: "scale(0.32)" }}>
-          <ExerciseIllustration category={ex.demoCat} color={color} />
-        </div>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.name}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color, background: `${color}22`, padding: "2px 6px", borderRadius: 99 }}>
-            {LIBRARY_FILTERS.find((f) => f.id === ex.filterCat)?.label || ex.filterCat}
-          </span>
-          <span style={{ fontSize: 11 }}>{diffEmoji}</span>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function ProgramsScreen({ onBack }) {
-  const [detail, setDetail] = useState(null);
-  const [, setTick] = useState(0);
-  const profile = store.get("profile", {});
-  const active = getActiveProgram();
-
-  if (detail) {
-    const isActive = active?.programId === detail.id;
-    return (
-      <div className="screen">
-        <button onClick={() => setDetail(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Programas</button>
-        <div style={{ fontSize: 40, marginTop: 8 }}>{detail.emoji}</div>
-        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 6, color: detail.color }}>{detail.name}</h2>
-        <p style={{ fontSize: 13, color: C.mut, marginTop: 8, lineHeight: 1.5 }}>{detail.desc}</p>
-        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-          <StatBox label="Duración" value={`${detail.durationWeeks} sem`} accent={detail.color} />
-          <StatBox label="Días/semana" value={detail.daysPerWeek} accent={detail.color} />
-          <StatBox label="Nivel mín." value={LEVELS[detail.minLevelIdx]?.name} accent={detail.color} />
-        </div>
-        <div className="sec-title">Estructura semanal</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((day, i) => (
-            <div key={day} className="card" style={{ display: "flex", justifyContent: "space-between", padding: "9px 12px" }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>{day}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, textAlign: "right" }}>{detail.structure[i]?.label || "Descanso"}</span>
-            </div>
-          ))}
-        </div>
-        {isActive ? (
-          <>
-            <div className="card" style={{ marginTop: 14, textAlign: "center", padding: "14px", borderColor: `${detail.color}55` }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: detail.color }}>Semana {active.week} de {detail.durationWeeks} en curso</span>
-            </div>
-            <button
-              className="btn-xl"
-              onClick={() => { stopProgram(); setTick((n) => n + 1); }}
-              style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}
-            >
-              Detener programa
-            </button>
-          </>
-        ) : (
-          <button
-            className="btn-xl"
-            onClick={() => { startProgram(detail.id); setTick((n) => n + 1); }}
-            style={{ marginTop: 14, background: detail.color, color: "#07070C" }}
-          >
-            ▶ Iniciar programa
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Entrenar</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📋 Programas</h2>
-      <p className="muted" style={{ marginTop: 2 }}>Planes de varias semanas con estructura fija</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-        {PROGRAMS.map((p) => {
-          const recommended = profile.goal && p.goalTags.includes(profile.goal);
-          const isActive = active?.programId === p.id;
-          return (
-            <button
-              key={p.id} className="card" onClick={() => setDetail(p)}
-              style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${p.color}` }}
-            >
-              <span style={{ fontSize: 26 }}>{p.emoji}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800 }}>{p.name}</span>
-                  {recommended && !isActive && (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: C.green, padding: "2px 6px", borderRadius: 99 }}>RECOMENDADO</span>
-                  )}
-                  {isActive && (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: p.color, padding: "2px 6px", borderRadius: 99 }}>ACTIVO</span>
-                  )}
-                </div>
-                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{p.durationWeeks} sem · {p.daysPerWeek} días/sem · Nivel mín. {LEVELS[p.minLevelIdx]?.name}</div>
-              </div>
-              <span style={{ color: C.dim }}>›</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ExerciseLibrary({ sessions, onAddToRoutine, onBack }) {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("todos");
-  const [detail, setDetail] = useState(null);
-  const all = useMemo(() => buildExerciseLibrary(), []);
-
-  const filtered = all.filter((ex) => {
-    if (filter !== "todos" && ex.filterCat !== filter) return false;
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return ex.name.toLowerCase().includes(q) || ex.tip.toLowerCase().includes(q);
-  });
-
-  if (detail) {
-    const history = exerciseHistory(sessions, detail.name);
-    const color = LIBRARY_FILTER_COLORS[detail.filterCat] || C.cyan;
-    return (
-      <div className="screen">
-        <button onClick={() => setDetail(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Biblioteca</button>
-        <div className="card" style={{ marginTop: 10, display: "flex", justifyContent: "center", padding: 16 }}>
-          <ExerciseIllustration category={detail.demoCat} color={color} />
-        </div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>{detail.name}</h2>
-        <span style={{ fontSize: 11, fontWeight: 800, color, background: `${color}22`, padding: "3px 8px", borderRadius: 99 }}>
-          {LIBRARY_FILTERS.find((f) => f.id === detail.filterCat)?.label}
-        </span>
-        {detail.tip && (
-          <div className="card" style={{ marginTop: 12 }}>
-            <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>TÉCNICA</p>
-            <p style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>{detail.tip}</p>
-          </div>
-        )}
-        {detail.setsReps && (
-          <div className="card" style={{ marginTop: 10 }}>
-            <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>SETS Y REPS SUGERIDOS</p>
-            <p style={{ fontSize: 13, marginTop: 4 }}>{detail.setsReps}</p>
-          </div>
-        )}
-        <button
-          className="btn-xl" onClick={() => onAddToRoutine(detail)}
-          style={{ marginTop: 14, background: color, color: "#07070C", fontSize: 13 }}
-        >
-          Añadir a mi rutina →
-        </button>
-        {history.rows.length > 0 && (
-          <div className="card" style={{ marginTop: 10 }}>
-            <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>TU HISTORIAL</p>
-            <p style={{ fontSize: 13, marginTop: 4 }}>
-              {history.rows.length} {history.rows.length === 1 ? "registro" : "registros"} · última vez {timeAgo(history.rows[history.rows.length - 1].ts)}
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Entrenar</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📚 Biblioteca</h2>
-      <input
-        className="input" placeholder="Buscar ejercicio..." value={query}
-        onChange={(e) => setQuery(e.target.value)} style={{ marginTop: 10, position: "sticky", top: 0, zIndex: 10 }}
-      />
-      <div className="chip-wrap" style={{ marginTop: 10 }}>
-        {LIBRARY_FILTERS.map((f) => (
-          <button
-            key={f.id} className={`chip ${filter === f.id ? "on" : ""}`}
-            style={filter === f.id ? { background: LIBRARY_FILTER_COLORS[f.id] } : {}}
-            onClick={() => setFilter(f.id)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-        {filtered.length === 0 ? (
-          <p style={{ fontSize: 13, color: C.mut, textAlign: "center", marginTop: 20 }}>
-            No encontramos &quot;{query}&quot;. ¿Quieres sugerirlo? (próximamente)
-          </p>
-        ) : (
-          filtered.map((ex) => <LibraryExerciseCard key={ex.name} ex={ex} onOpen={() => setDetail(ex)} />)
-        )}
       </div>
     </div>
   );
@@ -8577,7 +8379,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [seed, setSeed] = useState(0);
   const [calLocation, setCalLocation] = useState(null);
   const [gymMethod, setGymMethod] = useState(null);
-  const [gymFocus, setGymFocus] = useState(() => store.get("gym_focus", null));
+  const [gymTypeChosen, setGymTypeChosen] = useState(false);
+  const [extraFocusIds, setExtraFocusIds] = useState([]);
+  const [extraStepDone, setExtraStepDone] = useState(false);
   const [distance, setDistance] = useState(null);
   const [customRoutines, setCustomRoutines] = useState(() => store.get("custom_routines", []));
   const [trainCards] = useState(() => orderedTrainCards());
@@ -8593,6 +8397,16 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     const saved = store.get("energy", null);
     return saved && saved.day === todayKey() ? saved.value : null;
   });
+
+  const GYM_LEVEL_IDS = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
+  const isCampeonPlusGym = ["campeon", "elite", "leyenda", "the_one"].includes(GYM_LEVEL_IDS[mostFrequentLevel(sessions)]);
+  useEffect(() => {
+    if (discId === "gimnasio" && gymTypeChosen && extraStepDone && !gymMethod && !isCampeonPlusGym) {
+      const t = setTimeout(() => setGymMethod("standard"), 0);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [discId, gymTypeChosen, extraStepDone, gymMethod, isCampeonPlusGym]);
 
   const startAndFinishTutorial = (planToStart) => {
     if (showTutorial) store.set("tutorial_done", true);
@@ -8613,6 +8427,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     setLvlIdx(null);
     setCalLocation(finalId === "calistenia" && noEquipment ? "casa" : null);
     setDistance(null);
+    setGymTypeChosen(false);
+    setExtraFocusIds([]);
+    setExtraStepDone(false);
+    setGymMethod(null);
     if (finalId === "futbol") onAccent(C.orange);
     else if (finalId === "basquetbol") onAccent("#A855F7");
     else if (finalId === "atletismo") onAccent(C.purple);
@@ -8621,7 +8439,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const backToDiscs = () => {
     setDiscId(null);
     setGymMethod(null);
-    setGymFocus(null);
+    setGymTypeChosen(false);
+    setExtraFocusIds([]);
+    setExtraStepDone(false);
     onAccent(null);
   };
 
@@ -8691,8 +8511,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
       const dup = DUP_SCHEMES[dupType];
       r = r.map((e) => (e.type !== "peso" ? e : { ...e, sets: dup.sets, reps: dup.reps, rest: dup.restMin + (dup.restMax - dup.restMin) / 2, dupType }));
     }
+    if (discId === "gimnasio" && extraFocusIds.length > 0) {
+      r = appendExtraMuscleExercises(r, extraFocusIds, effLvl);
+    }
     return r;
-  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment, dupType]);
+  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment, dupType, extraFocusIds]);
 
   const atletRoutine = useMemo(() => {
     if (discId !== "atletismo" || !distance || lvlIdx === null) return null;
@@ -8722,24 +8545,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   if (special === "emom") return <EmomMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "intervalos") return <IntervalMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
   if (special === "viaje") return <TravelMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} />;
-  if (special === "programas") {
-    return <ProgramsScreen onBack={() => setSpecial(null)} />;
-  }
-  if (special === "biblioteca") {
-    return (
-      <ExerciseLibrary
-        sessions={sessions}
-        onBack={() => setSpecial(null)}
-        onAddToRoutine={(ex) => {
-          setSpecial(null);
-          setBuilderMode({
-            name: "",
-            exercises: [{ name: ex.name, type: ex.type, tip: ex.tip, sets: 3, reps: ex.type === "tiempo" ? "30s" : "10", rest: 60 }],
-          });
-        }}
-      />
-    );
-  }
   if (special === "partido") {
     return <MatchMode onFinish={() => { setSpecial(null); setDiscId(null); }} onSave={onSaveSpecial} />;
   }
@@ -8828,21 +8633,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
           </div>
         </button>
-        <button className="card" onClick={() => setSpecial("biblioteca")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
-          <span style={{ fontSize: 24 }}>📚</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>Biblioteca</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Explora todos los ejercicios disponibles</div>
-          </div>
-        </button>
-        <button className="card" onClick={() => setSpecial("programas")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
-          <span style={{ fontSize: 24 }}>📋</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>Programas</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Planes de varias semanas prediseñados</div>
-          </div>
-        </button>
-
         <div className="sec-title">Mi rutina</div>
         <button
           className="card fade-up"
@@ -9086,8 +8876,73 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     );
   }
 
-  /* ── Gimnasio: preguntar metodología antes del enfoque ── */
-  if (discId === "gimnasio" && !gymMethod) {
+  /* ── Gimnasio Paso 1: ¿Cómo quieres entrenar hoy? (tipo de rutina) ── */
+  if (discId === "gimnasio" && !gymTypeChosen) {
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Disciplinas
+        </button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Cómo quieres entrenar hoy?</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
+          {GYM_WORKOUT_TYPES.filter((t) => !t.minLevel || isCampeonPlusGym).map((t) => (
+            <button
+              key={t.id} className="card" onClick={() => { setFocusId(t.id); setGymTypeChosen(true); }}
+              style={{ textAlign: "left", padding: "12px 10px" }}
+            >
+              <div style={{ fontSize: 24 }}>{t.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4 }}>{t.name}</div>
+              <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{t.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Gimnasio Paso 1B: trabajo extra opcional ── */
+  if (discId === "gimnasio" && gymTypeChosen && !extraStepDone) {
+    const options = EXTRA_MUSCLE_OPTIONS[focusId] || [];
+    if (options.length > 0) {
+      return (
+        <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+          <button onClick={() => setGymTypeChosen(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+            ‹ Tipo de rutina
+          </button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Agregar trabajo extra? (opcional)</h2>
+          <p className="muted" style={{ marginTop: 6 }}>Máximo 2 músculos adicionales</p>
+          <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            {options.map((o) => (
+              <button
+                key={o.id}
+                className={`chip ${extraFocusIds.includes(o.id) ? "on" : ""}`}
+                style={extraFocusIds.includes(o.id) ? { background: C.cyan } : {}}
+                onClick={() => setExtraFocusIds((prev) => {
+                  if (prev.includes(o.id)) return prev.filter((x) => x !== o.id);
+                  if (prev.length >= 2) return prev;
+                  return [...prev, o.id];
+                })}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <button
+            className="btn-xl" onClick={() => setExtraStepDone(true)}
+            style={{ marginTop: 20, background: C.cyan, color: "#07070C" }}
+          >
+            {extraFocusIds.length > 0 ? "Continuar" : `No, solo ${GYM_WORKOUT_TYPES.find((t) => t.id === focusId)?.name || ""}`}
+          </button>
+        </div>
+      );
+    }
+  }
+
+  /* ── Gimnasio Paso 2: metodología (solo Campeón+; los demás usan Estándar directo) ── */
+  if (discId === "gimnasio" && !gymMethod && !isCampeonPlusGym) {
+    return null;
+  }
+  if (discId === "gimnasio" && !gymMethod && isCampeonPlusGym) {
     const userLvl = mostFrequentLevel(sessions);
     const LEVEL_IDS = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
     const levelId = LEVEL_IDS[userLvl];
@@ -9127,12 +8982,12 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     ];
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
-        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
-          ‹ Disciplinas
+        <button onClick={() => { setGymTypeChosen(false); setExtraStepDone(false); }} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
+          ‹ Tipo de rutina
         </button>
         <div style={{ fontSize: 40, marginTop: 12 }}>🏋️</div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Cómo quieres entrenar hoy?</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Con qué metodología?</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16, overflowX: "auto" }}>
           {METHODOLOGIES.map((m) => {
             const av = access[m.id];
             const available = av.ok;
@@ -9203,32 +9058,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     );
   }
 
-  /* ── Gimnasio: enfoque estético antes del nivel (solo estándar/DUP) ── */
-  if (discId === "gimnasio" && (gymMethod === "standard" || gymMethod === "dup") && !gymFocus) {
-    return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
-        <button onClick={() => setGymMethod(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
-          ‹ Metodología
-        </button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Qué quieres priorizar?</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
-          {GYM_FOCUSES.map((f) => (
-            <button
-              key={f.id}
-              className="card"
-              onClick={() => { setGymFocus(f.id); store.set("gym_focus", f.id); }}
-              style={{ textAlign: "left", padding: "12px 10px", border: `1px solid ${C.border}` }}
-            >
-              <div style={{ fontSize: 28 }}>{f.emoji}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4 }}>{f.name}</div>
-              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{f.desc}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="screen" key={discId}>
       <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
@@ -9266,7 +9095,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         </div>
       )}
 
-      {!discId?.startsWith("basquet") && (
+      {!discId?.startsWith("basquet") && discId !== "gimnasio" && (
         <>
           <div className="sec-title">A · Enfoque</div>
           {showTutorial && (
@@ -9313,6 +9142,18 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             </div>
           )}
         </>
+      )}
+
+      {discId === "gimnasio" && (
+        <div className="card" style={{ marginTop: 4, padding: "10px 12px", textAlign: "center" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>
+            {GYM_WORKOUT_TYPES.find((t) => t.id === focusId)?.emoji} {GYM_WORKOUT_TYPES.find((t) => t.id === focusId)?.name || "Rutina"}
+            {extraFocusIds.length > 0 && ` + ${extraFocusIds.map((id) => EXTRA_MUSCLE_OPTIONS[focusId]?.find((o) => o.id === id)?.label).filter(Boolean).join(", ")}`}
+          </span>
+          <button onClick={() => { setGymTypeChosen(false); setExtraStepDone(false); }} style={{ display: "block", margin: "4px auto 0", fontSize: 11, color: C.dim, fontWeight: 700 }}>
+            Cambiar
+          </button>
+        </div>
       )}
 
       <div className="sec-title">B · Nivel</div>
@@ -9436,6 +9277,26 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [setBadge, setSetBadge] = useState(null);
   const setBadgeTimeoutRef = useRef(null);
   useEffect(() => () => clearTimeout(setBadgeTimeoutRef.current), []);
+  const [autoDefaultBadge, setAutoDefaultBadge] = useState(null);
+  const autoDefaultTimeoutRef = useRef(null);
+  useEffect(() => () => clearTimeout(autoDefaultTimeoutRef.current), []);
+  const [idleWarning, setIdleWarning] = useState(false);
+  const lastActionRef = useRef(null);
+  useEffect(() => {
+    lastActionRef.current = Date.now();
+    const t = setTimeout(() => setIdleWarning(false), 0);
+    return () => clearTimeout(t);
+  }, [exIdx, setNum]);
+  useEffect(() => {
+    if (phase !== "work") {
+      const t0 = setTimeout(() => setIdleWarning(false), 0);
+      return () => clearTimeout(t0);
+    }
+    const t = setInterval(() => {
+      if (lastActionRef.current !== null && Date.now() - lastActionRef.current > 5 * 60 * 1000) setIdleWarning(true);
+    }, 15000);
+    return () => clearInterval(t);
+  }, [phase, exIdx, setNum]);
   const [showQuickNote, setShowQuickNote] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
@@ -9444,17 +9305,25 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
 
   useEffect(() => () => { clearTimeout(rpeTimeoutRef.current); clearTimeout(techniqueTimeoutRef.current); }, []);
 
-  const applyRpe = (exI, setI, value) => {
+  const showAutoBadge = (text) => {
+    clearTimeout(autoDefaultTimeoutRef.current);
+    setAutoDefaultBadge(text);
+    autoDefaultTimeoutRef.current = setTimeout(() => setAutoDefaultBadge(null), 1500);
+  };
+
+  const applyRpe = (exI, setI, value, isAuto = false) => {
     clearTimeout(rpeTimeoutRef.current);
     setLogs((prev) => prev.map((arr, i) => (i === exI ? arr.map((s, j) => (j === setI ? { ...s, rpe: value } : s)) : arr)));
     setRpeFor(null);
     setTechniqueSelected(null);
+    if (isAuto) showAutoBadge(`Auto: RPE ${value}`);
   };
 
-  const applyTechnique = (exI, setI, value) => {
+  const applyTechnique = (exI, setI, value, isAuto = false) => {
     clearTimeout(techniqueTimeoutRef.current);
     setTechniqueSelected(value);
     setLogs((prev) => prev.map((arr, i) => (i === exI ? arr.map((s, j) => (j === setI ? { ...s, technique: value } : s)) : arr)));
+    if (isAuto) showAutoBadge("Auto: Técnica: Bien");
     if (value === 1) {
       const count = store.get(`technique_bad_streak_${ex.name}`, 0) + 1;
       store.set(`technique_bad_streak_${ex.name}`, count);
@@ -9808,9 +9677,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       setRpeFor({ exIdx: thisExIdx, setIdx: thisSetIdx });
       setTechniqueSelected(null);
       clearTimeout(rpeTimeoutRef.current);
-      rpeTimeoutRef.current = setTimeout(() => applyRpe(thisExIdx, thisSetIdx, 7), 3000);
+      rpeTimeoutRef.current = setTimeout(() => applyRpe(thisExIdx, thisSetIdx, 7, true), 5000);
       clearTimeout(techniqueTimeoutRef.current);
-      techniqueTimeoutRef.current = setTimeout(() => applyTechnique(thisExIdx, thisSetIdx, 2), 2000);
+      techniqueTimeoutRef.current = setTimeout(() => applyTechnique(thisExIdx, thisSetIdx, 2, true), 4000);
 
       /* Feedback inmediato: compara con el récord y la sesión anterior */
       if (ex.type === "peso" && entry.weight > 0) {
@@ -10285,6 +10154,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         }}
       >
         <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} onPickTechnique={applyTechnique} techniqueSelected={techniqueSelected} />
+        {autoDefaultBadge && (
+          <div className="pop" style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 300, background: C.card, border: `1px solid ${C.cyan}`, borderRadius: 99, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: C.cyan }}>
+            {autoDefaultBadge}
+          </div>
+        )}
         <div
           style={{
             minHeight: "60vh", width: "100%", maxWidth: 430,
@@ -10315,6 +10189,25 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <p style={{ color: C.dim, fontSize: 12, marginTop: 8 }}>segundos</p>
         </div>
         <div style={{ width: "100%", maxWidth: 430 }}>
+          {(() => {
+            const lastSet = logs[exIdx]?.[logs[exIdx].length - 1];
+            const lastRpe = lastSet?.rpe;
+            let tip = null;
+            if (lastRpe != null && lastRpe >= 9) tip = "Descansa bien, fue duro 💪";
+            else if (lastRpe != null && lastRpe <= 6) tip = "¿Peso muy ligero hoy? Considera subirlo";
+            else {
+              const cat = movementCategory(ex.name);
+              if (cat === "empuje" || cat === "pecho") tip = "💡 Mantén los hombros hacia atrás y abajo en el press.";
+              else if (cat === "tiron" || cat === "espalda") tip = "💡 Aprieta los omóplatos antes de jalar el peso.";
+              else if (cat === "sentadilla" || cat === "piernas") tip = "💡 Rodillas alineadas con los pies, pecho arriba.";
+              else if (ex.tag === "velocidad" || plan.discId === "atletismo") tip = "💡 Recupera con respiración profunda, no te sientes de golpe.";
+            }
+            return tip ? (
+              <div className="card" style={{ padding: "8px 12px", marginBottom: 8, textAlign: "center" }}>
+                <p style={{ fontSize: 12, color: C.mut }}>{tip}</p>
+              </div>
+            ) : null;
+          })()}
           <div className="card" style={{ textAlign: "left" }}>
             <p style={{ fontSize: 12, color: C.dim, fontWeight: 700 }}>SIGUIENTE SERIE</p>
             <p style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{ex.name}</p>
@@ -10339,6 +10232,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   return (
     <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30 }}>
       <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} onPickTechnique={applyTechnique} techniqueSelected={techniqueSelected} />
+        {autoDefaultBadge && (
+          <div className="pop" style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 300, background: C.card, border: `1px solid ${C.cyan}`, borderRadius: 99, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: C.cyan }}>
+            {autoDefaultBadge}
+          </div>
+        )}
       {showExitConfirm && (
         <div
           onClick={() => setShowExitConfirm(false)}
@@ -10499,6 +10397,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       </div>
       <p style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
         {estMinutesLeft !== null ? `~${estMinutesLeft} min restantes` : `Ejercicio ${exIdx + 1} de ${plan.exercises.length}`}
+        {(() => {
+          const nextEx = plan.exercises[exIdx + 1];
+          if (!nextEx) return null;
+          const label = MUSCLE_GROUP_LABELS[nextEx.tag] || MUSCLE_GROUP_LABELS[movementCategory(nextEx.name)];
+          return label ? ` · Siguiente: ${label}` : null;
+        })()}
       </p>
 
       <div
@@ -10751,9 +10655,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             <button
               className="btn-xl btn-physics"
               onClick={attemptComplete}
-              style={{ marginTop: 14, background: plan.discColor, color: "#07070C", minHeight: 64, fontSize: 18 }}
+              style={{ marginTop: 14, background: idleWarning ? C.red : plan.discColor, color: idleWarning ? "#fff" : "#07070C", minHeight: 64, fontSize: 18 }}
             >
-              ✓ SERIE COMPLETADA
+              {idleWarning ? "⏰ ¿Sigues ahí? Completa la serie" : "✓ SERIE COMPLETADA"}
             </button>
           </div>
           <button
@@ -13385,36 +13289,112 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart,
   );
 }
 
-/* ─── EXPLORAR: biblioteca de ejercicios, programas y tips ─── */
-const EXPLORAR_SECTIONS = [
-  { id: "biblioteca", label: "📚 Biblioteca" },
-  { id: "programas", label: "📋 Programas" },
-  { id: "tips", label: "💡 Tips" },
-];
+function ProgramsScreen() {
+  const [detail, setDetail] = useState(null);
+  const [, setTick] = useState(0);
+  const profile = store.get("profile", {});
+  const active = getActiveProgram();
 
-function ExplorarScreen({ section, onSection, sessions, onAddToRoutine }) {
-  return (
-    <div className="screen">
-      <div className="chip-wrap">
-        {EXPLORAR_SECTIONS.map((s) => (
-          <button
-            key={s.id} className={`chip ${section === s.id ? "on" : ""}`}
-            style={section === s.id ? { background: C.orange } : {}}
-            onClick={() => onSection(s.id)}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-      {section === "biblioteca" && <ExerciseLibrary sessions={sessions} onAddToRoutine={onAddToRoutine} onBack={() => {}} />}
-      {section === "programas" && <ProgramsScreen onBack={() => {}} />}
-      {section === "tips" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-          {DAILY_TIPS.map((t, i) => (
-            <div key={i} className="card" style={{ padding: "11px 14px", fontSize: 13, lineHeight: 1.4 }}>💡 {t}</div>
+  if (detail) {
+    const isActive = active?.programId === detail.id;
+    return (
+      <div className="screen">
+        <button onClick={() => setDetail(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Programas</button>
+        <div style={{ fontSize: 40, marginTop: 8 }}>{detail.emoji}</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 6, color: detail.color }}>{detail.name}</h2>
+        <p style={{ fontSize: 13, color: C.mut, marginTop: 8, lineHeight: 1.5 }}>{detail.desc}</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <StatBox label="Duración" value={`${detail.durationWeeks} sem`} accent={detail.color} />
+          <StatBox label="Días/semana" value={detail.daysPerWeek} accent={detail.color} />
+          <StatBox label="Nivel mín." value={LEVELS[detail.minLevelIdx]?.name} accent={detail.color} />
+        </div>
+        <div className="sec-title">Estructura semanal</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((day, i) => (
+            <div key={day} className="card" style={{ display: "flex", justifyContent: "space-between", padding: "9px 12px" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>{day}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, textAlign: "right" }}>{detail.structure[i]?.label || "Descanso"}</span>
+            </div>
           ))}
         </div>
+        {isActive ? (
+          <>
+            <div className="card" style={{ marginTop: 14, textAlign: "center", padding: "14px", borderColor: `${detail.color}55` }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: detail.color }}>Semana {active.week} de {detail.durationWeeks} en curso</span>
+            </div>
+            <button
+              className="btn-xl"
+              onClick={() => { stopProgram(); setTick((n) => n + 1); }}
+              style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}
+            >
+              Detener programa
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn-xl"
+            onClick={() => { startProgram(detail.id); setTick((n) => n + 1); }}
+            style={{ marginTop: 14, background: detail.color, color: "#07070C" }}
+          >
+            ▶ Iniciar programa
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  return (
+    <div className="screen">
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📚 Programas de entrenamiento</h2>
+      <p className="muted" style={{ marginTop: 2 }}>Planes de 4-12 semanas con estructura semanal completa</p>
+      {active && (
+        <div className="card" style={{ marginTop: 12, padding: "14px 16px", borderLeft: `4px solid ${active.program.color}` }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: active.program.color }}>▶ Programa en curso: {active.program.name}</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>
+            Semana {active.week}/{active.program.durationWeeks} · Día {dayNames[new Date().getDay()]}
+          </p>
+          <button onClick={() => setDetail(active.program)} style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: active.program.color }}>
+            Ver mi progreso →
+          </button>
+        </div>
       )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+        {PROGRAMS.map((p) => {
+          const recommended = profile.goal && p.goalTags.includes(profile.goal);
+          const isActive = active?.programId === p.id;
+          return (
+            <button
+              key={p.id} className="card" onClick={() => setDetail(p)}
+              style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${p.color}` }}
+            >
+              <span style={{ fontSize: 26 }}>{p.emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>{p.name}</span>
+                  {recommended && !isActive && (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: C.green, padding: "2px 6px", borderRadius: 99 }}>RECOMENDADO</span>
+                  )}
+                  {isActive && (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: p.color, padding: "2px 6px", borderRadius: 99 }}>ACTIVO</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{p.durationWeeks} sem · {p.daysPerWeek} días/sem · Nivel mín. {LEVELS[p.minLevelIdx]?.name}</div>
+              </div>
+              <span style={{ color: C.dim }}>›</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── EXPLORAR: programas de entrenamiento ─── */
+function ExplorarScreen() {
+  return (
+    <div className="screen">
+      <ProgramsScreen />
     </div>
   );
 }
@@ -13434,7 +13414,6 @@ export default function App() {
   const [heroes, setHeroes] = useState(() => store.get("heroes_unlocked", store.get("heroes", [])));
   const [tab, setTab] = useState("inicio");
   const [yoSection, setYoSection] = useState("progreso");
-  const [explorarSection, setExplorarSection] = useState("biblioteca");
   const [live, setLive] = useState(null);
   const [accent, setAccent] = useState(() => getTabAccent("inicio"));
   const [online, setOnline] = useState(() => navigator.onLine);
@@ -13954,12 +13933,7 @@ export default function App() {
                 onCompleteBody={completeBody} onOpenSettings={() => setShowSettings(true)}
               />
             )}
-            {tab === "explorar" && (
-              <ExplorarScreen
-                section={explorarSection} onSection={setExplorarSection}
-                sessions={sessions} onAddToRoutine={() => {}}
-              />
-            )}
+            {tab === "explorar" && <ExplorarScreen />}
           </>
         )}
       </div>
