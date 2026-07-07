@@ -526,6 +526,145 @@ function MatchDebriefScreen({ onSave, onClose }) {
   );
 }
 
+/* ─── Mi semana: vista de calendario de la semana actual ─── */
+function MyWeekScreen({ sessions, onBack }) {
+  const [detailDay, setDetailDay] = useState(null);
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7; // 0 = lunes
+  const monday = new Date(today);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(today.getDate() - dow);
+  const matchDay = store.get("match_day", null);
+  const structure = getWeeklyStructure();
+  const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const key = dayKey(d.getTime());
+    const daySessions = sessions.filter((s) => s.kind === "entreno" && dayKey(s.ts) === key);
+    const nowTs = today.getTime();
+    const isFuture = d.getTime() > nowTs && dayKey(d.getTime()) !== dayKey(nowTs);
+    const isToday = dayKey(d.getTime()) === dayKey(nowTs);
+    const isMatch = matchDay !== null && d.getDay() === matchDay;
+    const structIdx = structure.days.indexOf(dayNames[d.getDay()]);
+    return { date: d, sessions: daySessions, isFuture, isToday, isMatch, plannedLabel: structIdx >= 0 ? structure.sessions[structIdx] : null };
+  });
+
+  return (
+    <div className="screen">
+      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 Mi semana</h2>
+      <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
+        {days.map((d, i) => (
+          <button
+            key={i}
+            onClick={() => setDetailDay(d)}
+            className="card"
+            style={{
+              flex: 1, padding: "8px 4px", textAlign: "center", minHeight: 90,
+              border: `1px solid ${d.isToday ? C.cyan : C.border}`,
+              background: d.isFuture ? C.surface : C.card,
+            }}
+          >
+            <div style={{ fontSize: 10, color: C.mut, fontWeight: 700 }}>{["L", "M", "X", "J", "V", "S", "D"][i]}</div>
+            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              {d.isMatch && <span style={{ fontSize: 12 }}>⚽</span>}
+              {d.sessions.length > 0 ? (
+                d.sessions.slice(0, 3).map((s, j) => (
+                  <span key={j} style={{ fontSize: 14 }}>{exerciseTypeIcon(s.exercises?.[0]?.name || "")}</span>
+                ))
+              ) : (
+                <span style={{ color: C.dim, fontSize: 12 }}>—</span>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+      {detailDay && (
+        <div
+          onClick={() => setDetailDay(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 430, padding: 20, borderRadius: "20px 20px 0 0" }}>
+            <p style={{ fontSize: 15, fontWeight: 800 }}>{detailDay.date.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}</p>
+            {detailDay.sessions.length > 0 ? (
+              detailDay.sessions.map((s, i) => {
+                const okSets = (s.exercises || []).flatMap((e) => e.sets || []).filter((st) => st.ok);
+                const vol = Math.round(okSets.reduce((a, st) => a + st.weight * st.reps, 0));
+                return (
+                  <div key={i} style={{ marginTop: 10, fontSize: 13 }}>
+                    <b>{DISCIPLINES[s.disc]?.label || s.disc}</b>
+                    <p style={{ color: C.mut, fontSize: 12, marginTop: 2 }}>{(s.exercises || []).length} ejercicios · {vol}kg volumen · {s.durationMin || 0} min</p>
+                  </div>
+                );
+              })
+            ) : detailDay.isFuture ? (
+              <p style={{ fontSize: 13, color: C.mut, marginTop: 8 }}>
+                Plan sugerido: {detailDay.plannedLabel || "Descanso"}
+              </p>
+            ) : (
+              <p style={{ fontSize: 13, color: C.mut, marginTop: 8 }}>Sin sesión ese día.</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Test de salto vertical semanal ─── */
+function jumpBaseline() {
+  const history = store.get("jump_history", []);
+  const last3 = history.slice(-3);
+  if (!last3.length) return null;
+  return last3.reduce((a, j) => a + j.height, 0) / last3.length;
+}
+function bestJump() {
+  const history = store.get("jump_history", []);
+  return history.length ? Math.max(...history.map((j) => j.height)) : null;
+}
+
+function JumpTestCard() {
+  const [showInput, setShowInput] = useState(false);
+  const [value, setValue] = useState("");
+  const [justRecord, setJustRecord] = useState(false);
+  const [, setTick] = useState(0);
+  const history = store.get("jump_history", []);
+  const baseline = jumpBaseline();
+  const best = bestJump();
+
+  const save = () => {
+    const height = parseFloat(value);
+    if (!(height > 0)) return;
+    const isRecord = best !== null && height > best;
+    const next = [...history, { date: Date.now(), height }].slice(-30);
+    store.set("jump_history", next);
+    setValue("");
+    setShowInput(false);
+    setTick((n) => n + 1);
+    setJustRecord(isRecord);
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 10 }}>
+      <p style={{ fontSize: 13, fontWeight: 800 }}>🦘 Test de salto vertical</p>
+      {best !== null && <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Récord: {best}cm{baseline ? ` · Promedio reciente: ${Math.round(baseline)}cm` : ""}</p>}
+      {justRecord && <p className="pop" style={{ fontSize: 13, fontWeight: 800, color: C.yellow, marginTop: 6 }}>🏆 ¡Nuevo récord de salto!</p>}
+      {showInput ? (
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <input className="input" type="number" placeholder="cm" value={value} onChange={(e) => setValue(e.target.value)} style={{ padding: 10, fontSize: 16 }} />
+          <button className="btn-xl" onClick={save} style={{ width: 100, minHeight: 44, background: C.cyan, color: "#07070C" }}>Guardar</button>
+        </div>
+      ) : (
+        <button className="btn-xl btn-physics" onClick={() => setShowInput(true)} style={{ marginTop: 8, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
+          Registrar salto de hoy
+        </button>
+      )}
+    </div>
+  );
+}
+
 function AcwrCard({ sessions }) {
   const [expanded, setExpanded] = useState(false);
   const ratio = useMemo(() => calcACWR(sessions), [sessions]);
@@ -2093,14 +2232,14 @@ function generateAmbientSound(mode) {
 }
 
 /* ─── Voz sintetizada (Web Speech API, gratis, sin API key) ─── */
-function speak(text) {
+function speak(text, opts = {}) {
   try {
     if (!window.speechSynthesis) return;
     const voices = window.speechSynthesis.getVoices();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "es-MX";
-    u.rate = 0.9;
-    u.pitch = 1.1;
+    u.rate = opts.rate ?? 0.9;
+    u.pitch = opts.pitch ?? 1.1;
     const voice = voices.find((v) => v.lang === "es-MX") || voices.find((v) => v.lang === "es-ES") || voices.find((v) => v.lang?.startsWith("es"));
     if (voice) u.voice = voice;
     window.speechSynthesis.cancel();
@@ -2120,6 +2259,37 @@ function exerciseTypeIcon(name) {
   if (n.includes("sprint") || n.includes("corre")) return "⚡";
   if (n.includes("salto") || n.includes("jump")) return "🦘";
   return "•";
+}
+
+/* ─── Asimetría izquierda/derecha en ejercicios unilaterales ─── */
+function isUnilateral(name) {
+  const n = name.toLowerCase();
+  return ["c/pierna", "c/lado", "búlgara", "pistol", "unilateral", "alterno", "a una pierna", "kickback"].some((k) => n.includes(k));
+}
+function asymmetryPct(left, right) {
+  const max = Math.max(left, right);
+  return max > 0 ? Number((((Math.abs(left - right)) / max) * 100).toFixed(1)) : 0;
+}
+function calcAsymmetryByExercise(sessions) {
+  const byExercise = {};
+  sessions.filter((s) => s.kind === "entreno").forEach((s) => {
+    (s.exercises || []).forEach((e) => {
+      (e.sets || []).forEach((set) => {
+        if (typeof set.leftWeight === "number" && typeof set.rightWeight === "number" && (set.leftWeight > 0 || set.rightWeight > 0)) {
+          if (!byExercise[e.name]) byExercise[e.name] = [];
+          byExercise[e.name].push(set);
+        }
+      });
+    });
+  });
+  return Object.entries(byExercise).map(([name, sets]) => {
+    if (sets.length < 3) return null;
+    const avgLeft = sets.reduce((a, s) => a + s.leftWeight, 0) / sets.length;
+    const avgRight = sets.reduce((a, s) => a + s.rightWeight, 0) / sets.length;
+    const pct = asymmetryPct(avgLeft, avgRight);
+    const dominant = avgRight >= avgLeft ? "derecha" : "izquierda";
+    return { name, avgLeft: Math.round(avgLeft), avgRight: Math.round(avgRight), pct, dominant };
+  }).filter((r) => r && r.pct > 10);
 }
 
 function movementCategory(name) {
@@ -3417,7 +3587,38 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   const sorted = sortExercises(built);
   if (discId !== "gimnasio") return sorted;
   const withFocus = applyGymFocusToExercises(sorted, store.get("gym_focus", null));
-  return applyGoalToExercises(withFocus, store.get("training_goal", null));
+  const withGoal = applyGoalToExercises(withFocus, store.get("training_goal", null));
+  return tagSupersets(withGoal, effLvlIdx);
+}
+
+/* Marca parejas de ejercicios antagonistas/compuesto+aislamiento consecutivos como superset (Campeón+) */
+const ANTAGONIST_TAG_PAIRS = [["pecho", "espalda"], ["piernas", "gluteos"], ["hombros", "brazos"]];
+function tagSupersets(exercises, lvlIdx) {
+  if (lvlIdx < 2) return exercises;
+  const isLeyendaPlus = lvlIdx >= 4;
+  const out = exercises.map((e) => ({ ...e }));
+  let i = 0;
+  while (i < out.length - 1) {
+    const a = out[i], b = out[i + 1];
+    if (a.superset || b.superset) { i++; continue; }
+    const isAntagonist = ANTAGONIST_TAG_PAIRS.some(([x, y]) => (a.tag === x && b.tag === y) || (a.tag === y && b.tag === x));
+    const isCompoundIsolation = a.tag === b.tag && classifyExerciseOrder(a.name).startsWith("compound") && classifyExerciseOrder(b.name) === "assistance";
+    if (isLeyendaPlus && a.tag === b.tag && out[i + 2] && out[i + 2].tag === a.tag && !out[i + 2].superset) {
+      const id = `giant-${i}`;
+      out[i] = { ...a, superset: "giant", supersetId: id, restOriginal: a.rest, rest: 0 };
+      out[i + 1] = { ...b, superset: "giant", supersetId: id, restOriginal: b.rest, rest: 0 };
+      out[i + 2] = { ...out[i + 2], superset: "giant", supersetId: id, restOriginal: out[i + 2].rest, rest: 90 };
+      i += 3;
+    } else if (isAntagonist || isCompoundIsolation) {
+      const id = `superset-${i}`;
+      out[i] = { ...a, superset: "A", supersetId: id, restOriginal: a.rest, rest: 0 };
+      out[i + 1] = { ...b, superset: "B", supersetId: id, restOriginal: b.rest };
+      i += 2;
+    } else {
+      i++;
+    }
+  }
+  return out;
 }
 
 /* Orden real de atletismo: técnica/pliometría primero, sprints/tempo después, recuperación al final */
@@ -4027,6 +4228,33 @@ function rotateDailyPlan(candidates, index) {
 }
 
 /* Principio de especificidad acumulada: las primeras semanas de cualquier objetivo empiezan con volumen moderado */
+/* ─── Estructura semanal coherente según días disponibles ─── */
+const WEEKLY_STRUCTURES = {
+  3: { days: ["Lunes", "Miércoles", "Viernes"], sessions: ["Full body A", "Full body B", "Full body C"] },
+  4: { days: ["Lunes", "Martes", "Jueves", "Viernes"], sessions: ["Pecho + hombros + tríceps", "Atletismo o fútbol", "Espalda + bíceps", "Piernas + glúteos"] },
+  5: { days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"], sessions: ["Pecho", "Espalda + velocidad", "Piernas", "Hombros + brazos", "Fútbol o atletismo"] },
+  6: { days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"], sessions: ["Push", "Pull", "Legs", "Push", "Pull", "Legs"] },
+  2: { days: ["Lunes", "Jueves"], sessions: ["Full body A", "Full body B"] },
+};
+function generateWeeklyStructure() {
+  const daysAvailable = store.get("weekly_goal", 4);
+  const structure = WEEKLY_STRUCTURES[daysAvailable] || WEEKLY_STRUCTURES[4];
+  store.set("weekly_structure", structure);
+  return structure;
+}
+function getWeeklyStructure() {
+  return store.get("weekly_structure", null) || generateWeeklyStructure();
+}
+/* Índice (día/nombre de sesión) que le toca hoy según la estructura semanal, o null si hoy no es día de entrenamiento */
+function todayInWeeklyStructure() {
+  const structure = getWeeklyStructure();
+  const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const todayName = dayNames[new Date().getDay()];
+  const idx = structure.days.indexOf(todayName);
+  if (idx === -1) return null;
+  return { dayNumber: idx + 1, total: structure.days.length, sessionLabel: structure.sessions[idx] };
+}
+
 function getWeekMultiplier() {
   const firstTs = store.get("first_session_date", null);
   if (!firstTs) return 1.0;
@@ -6267,6 +6495,14 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
               ) : null;
             })()}
             {(() => {
+              const today = todayInWeeklyStructure();
+              return today ? (
+                <p style={{ fontSize: 11, color: C.dim, textAlign: "center", marginTop: 6 }}>
+                  Día {today.dayNumber} de {today.total} de tu plan — {today.sessionLabel}
+                </p>
+              ) : null;
+            })()}
+            {(() => {
               const phase = getTaperingFactor();
               const daysUntil = taperingDaysUntilMatch();
               if (!phase || phase === "normal") return null;
@@ -6328,6 +6564,18 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         );
       })()}
 
+      {(() => {
+        const history = store.get("jump_history", []);
+        const todayJump = history.find((j) => dayKey(j.date) === todayKey());
+        const baseline = jumpBaseline();
+        if (!todayJump || !baseline) return null;
+        if (todayJump.height >= baseline * 0.9) return null;
+        return (
+          <div className="card" style={{ marginTop: 12, padding: "10px 14px", borderColor: `${C.orange}55` }}>
+            <p style={{ fontSize: 12, color: C.orange, fontWeight: 700 }}>📉 Salto bajo tu promedio — posible fatiga neuromuscular. Evita sprints máximos hoy.</p>
+          </div>
+        );
+      })()}
       <AcwrCard sessions={sessions} />
       <PlanPeriodizationCard sessions={sessions} />
       <DeloadBanner sessions={sessions} />
@@ -7664,12 +7912,14 @@ function IntervalMode({ onFinish, onSave }) {
             setDone(true);
             return;
           }
-          speak("Descansa");
+          speak("Descansa", { rate: 0.9, pitch: 0.8 });
+          if (navigator.vibrate) navigator.vibrate(100);
           setPhase("rest");
           secRef.current = cfg.rest;
           setSecLeft(cfg.rest);
         } else {
-          speak("Trabaja");
+          speak("¡Trabaja!", { rate: 1.2, pitch: 1.3 });
+          if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
           setPhase("work");
           setRound((r) => r + 1);
           secRef.current = cfg.work;
@@ -7683,11 +7933,21 @@ function IntervalMode({ onFinish, onSave }) {
   }, [running, cfg, phase, round]);
 
   const finish = () => {
-    onSave({
-      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "especial",
-      focusLabel: `Intervalos ${cfg.work}/${cfg.rest}×${cfg.rounds}`, levelIdx: 2,
-      exercises: [{ name: "Intervalos", sets: [{ weight: 0, reps: cfg.rounds, ok: true }] }],
-    });
+    if (cfg.isRSA) {
+      onSave({
+        id: Date.now(), ts: Date.now(), kind: "entreno", disc: "atletismo", type: "RSA",
+        focusLabel: `RSA ${cfg.work}s/${cfg.rest}s×${cfg.rounds}`, levelIdx: 2,
+        totalIntervals: cfg.rounds, workTime: cfg.work, restTime: cfg.rest,
+        durationMin: Math.round((cfg.work + cfg.rest) * cfg.rounds / 60),
+        exercises: [{ name: "RSA — Sprint repetido", sets: [{ weight: 0, reps: cfg.rounds, ok: true }] }],
+      });
+    } else {
+      onSave({
+        id: Date.now(), ts: Date.now(), kind: "entreno", disc: "especial",
+        focusLabel: `Intervalos ${cfg.work}/${cfg.rest}×${cfg.rounds}`, levelIdx: 2,
+        exercises: [{ name: "Intervalos", sets: [{ weight: 0, reps: cfg.rounds, ok: true }] }],
+      });
+    }
     onFinish();
   };
 
@@ -7699,8 +7959,15 @@ function IntervalMode({ onFinish, onSave }) {
         <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Intervalos</h2>
         <button
           className="btn-xl"
+          onClick={() => start({ work: 10, rest: 30, rounds: 8, isRSA: true })}
+          style={{ marginTop: 20, background: C.cyan, color: "#07070C" }}
+        >
+          ⚡ RSA — SPRINT REPETIDO (10s/30s×8)
+        </button>
+        <button
+          className="btn-xl"
           onClick={() => start({ work: 20, rest: 10, rounds: 8 })}
-          style={{ marginTop: 20, background: C.orange, color: "#07070C" }}
+          style={{ marginTop: 10, background: C.orange, color: "#07070C" }}
         >
           🔥 TABATA CLÁSICO (20s/10s×8)
         </button>
@@ -9166,6 +9433,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
+  const [leftW, setLeftW] = useState("");
+  const [rightW, setRightW] = useState("");
   const [field, setField] = useState(() => (plan.exercises[0].type === "peso" ? "weight" : "reps"));
   const [repsError, setRepsError] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -9532,10 +9801,18 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     ensureAudio(); // el AudioContext debe nacer en un gesto del usuario (móvil)
     if (ok && navigator.vibrate) navigator.vibrate(50);
     const repsVal = repsOverride !== null ? repsOverride : parseInt(reps, 10) || 0;
-    const entry = { reps: repsVal, weight: parseFloat(weight) || 0, ok };
+    const unilateral = isUnilateral(ex.name);
+    const lw = parseFloat(leftW) || 0;
+    const rw = parseFloat(rightW) || 0;
+    const entry = {
+      reps: repsVal, weight: unilateral ? Math.max(lw, rw) : (parseFloat(weight) || 0), ok,
+      ...(unilateral && (lw > 0 || rw > 0) ? { leftWeight: lw, rightWeight: rw } : {}),
+    };
     const updatedLogs = logs.map((arr, i) => (i === exIdx ? [...arr, entry] : arr));
     setLogs(updatedLogs);
     setReps("");
+    setLeftW("");
+    setRightW("");
     if (ok) {
       setJustCompletedSet(setNum);
       setTimeout(() => setJustCompletedSet(null), 300);
@@ -10255,6 +10532,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           else if (dy > 120) logSet(false);
         }}
       >
+        {ex.superset && (
+          <span style={{ display: "inline-block", marginTop: 10, fontSize: 10, fontWeight: 800, color: "#07070C", background: ex.superset === "giant" ? C.purple : C.cyan, padding: "3px 10px", borderRadius: 99 }}>
+            {ex.superset === "giant" ? "⚡ GIANT SET" : `🔄 SUPERSET ${ex.superset}`}
+          </span>
+        )}
         <ExerciseDemo exerciseName={ex.name} />
         <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25, marginTop: 12 }}>{ex.name}</h2>
         <p style={{ marginTop: 8, fontSize: 14 }}>
@@ -10454,6 +10736,18 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
                   : `Último peso: ${sug.weight} kg — mantén o baja un poco`
                 : "Primera vez — empieza ligero"}
             </p>
+          )}
+          {ex.type === "peso" && isUnilateral(ex.name) && (
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: C.blue, fontWeight: 700 }}>IZQ (KG)</label>
+                <input className="input" type="number" value={leftW} onChange={(e) => setLeftW(e.target.value)} style={{ borderColor: C.blue, padding: 10, fontSize: 16, textAlign: "center" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: C.orange, fontWeight: 700 }}>DER (KG)</label>
+                <input className="input" type="number" value={rightW} onChange={(e) => setRightW(e.target.value)} style={{ borderColor: C.orange, padding: 10, fontSize: 16, textAlign: "center" }} />
+              </div>
+            </div>
           )}
           <NumPad onKey={pressKey} />
           <div style={{ position: "relative" }}>
@@ -11947,6 +12241,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const [showStats, setShowStats] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
   const [showMacros, setShowMacros] = useState(false);
+  const [showMyWeek, setShowMyWeek] = useState(false);
   const [weeklyPlan, setWeeklyPlan] = useState(() => store.get("weekly_plan", null));
 
   const [newAchievement, setNewAchievement] = useState(null);
@@ -12035,6 +12330,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
 
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
   if (showMacros) return <MacrosCalculator sessions={sessions} onBack={() => setShowMacros(false)} />;
+  if (showMyWeek) return <MyWeekScreen sessions={sessions} onBack={() => setShowMyWeek(false)} />;
 
   if (showPlan) {
     const globalIdx0 = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
@@ -12362,8 +12658,13 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
             <div style={{ fontSize: 20 }}>🧮</div>
             <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mis macros</div>
           </button>
+          <button className="card" onClick={() => setShowMyWeek(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+            <div style={{ fontSize: 20 }}>📅</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mi semana</div>
+          </button>
         </div>
 
+        <JumpTestCard />
         <DNARadar sessions={sessions} streak={streak} />
         {(() => {
           const pct = techniqueQualityPct(sessions);
@@ -12433,6 +12734,34 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
             </div>
           </>
         )}
+
+        {(() => {
+          const asymmetries = calcAsymmetryByExercise(sessions);
+          if (!asymmetries.length) return null;
+          return (
+            <>
+              <div className="sec-title">⚖️ Índice de asimetría</div>
+              <div className="card">
+                {asymmetries.map((a) => (
+                  <div key={a.name} style={{ padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700 }}>{a.name}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: a.pct > 15 ? C.red : C.yellow }}>
+                        {a.pct > 15 ? "🚨" : "⚠️"} {a.pct}%
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>
+                      <span style={{ color: C.blue }}>IZQ {a.avgLeft}kg</span> · <span style={{ color: C.orange }}>DER {a.avgRight}kg</span> · lado {a.dominant} domina
+                    </div>
+                  </div>
+                ))}
+                <p style={{ fontSize: 11, color: C.dim, marginTop: 8 }}>
+                  Recomendación: 1 serie extra del lado débil al inicio de cada sesión. Sobre 15% de asimetría, pausa la carga pesada hasta nivelar ambos lados.
+                </p>
+              </div>
+            </>
+          );
+        })()}
 
         <div className="sec-title">🏆 Mis récords</div>
         {records.length === 0 ? (
