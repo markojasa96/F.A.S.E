@@ -303,49 +303,10 @@ function markMentorShown() {
   store.set("mentor_shown_today", todayKey());
 }
 
-function MentorFigure({ id, color }) {
-  const strokeProps = { stroke: color, strokeWidth: 3, strokeLinecap: "round", fill: "none" };
-  return (
-    <svg viewBox="0 0 100 130" width="120" height="150">
-      <circle cx="50" cy="24" r="14" {...strokeProps} />
-      <path d="M50 38 L50 85" {...strokeProps} />
-      <path d="M50 50 L30 70" {...strokeProps} />
-      <path d="M50 50 L70 70" {...strokeProps} />
-      <path d="M50 85 L35 125" {...strokeProps} />
-      <path d="M50 85 L65 125" {...strokeProps} />
-      {id === "maestro" && (
-        <>
-          <path d="M40 28 Q50 42 60 28" {...strokeProps} />
-          <path d="M70 70 L70 120" stroke={color} strokeWidth="3" strokeLinecap="round" />
-          <circle cx="70" cy="120" r="4" fill={color} />
-        </>
-      )}
-      {id === "guerrero" && (
-        <>
-          <path d="M30 70 L15 50" {...strokeProps} />
-          <rect x="60" y="55" width="14" height="22" rx="2" fill={color} opacity="0.8" />
-        </>
-      )}
-      {id === "medico" && (
-        <>
-          <rect x="42" y="55" width="16" height="16" fill="none" stroke={color} strokeWidth="3" />
-          <path d="M50 58 L50 68 M45 63 L55 63" stroke={color} strokeWidth="2.5" />
-        </>
-      )}
-      {id === "coach" && (
-        <>
-          <rect x="58" y="58" width="18" height="24" rx="2" fill="none" stroke={color} strokeWidth="3" />
-          <path d="M62 64 L72 64 M62 70 L72 70 M62 76 L68 76" stroke={color} strokeWidth="2" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-function MentorModal({ mentorId, message, onClose }) {
+function MentorToast({ mentorId, message, onClose }) {
   const mentor = MENTORS[mentorId];
   useEffect(() => {
-    const t = setTimeout(onClose, 8000);
+    const t = setTimeout(onClose, 6000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -353,19 +314,14 @@ function MentorModal({ mentorId, message, onClose }) {
   return (
     <div
       role="button" tabIndex={0} onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "flex-end", background: "rgba(0,0,0,0.6)" }}
+      className="card fade-up"
+      style={{
+        position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 400, maxWidth: 430, margin: "0 auto",
+        padding: "14px 16px", borderLeft: `3px solid ${mentor.color}`,
+      }}
     >
-      <div
-        className="card session-rise" onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", padding: "24px 20px", textAlign: "center", borderTop: `3px solid ${mentor.color}`, borderRadius: "20px 20px 0 0" }}
-      >
-        <MentorFigure id={mentorId} color={mentor.color} />
-        <h3 style={{ fontSize: 16, fontWeight: 900, color: mentor.color, marginTop: 6 }}>{mentor.name}</h3>
-        <p style={{ fontSize: 14, marginTop: 8, lineHeight: 1.5 }}>{message}</p>
-        <button className="btn-xl" onClick={onClose} style={{ marginTop: 16, background: mentor.color, color: "#07070C" }}>
-          Entendido, {mentor.name}
-        </button>
-      </div>
+      <p style={{ fontSize: 12, fontWeight: 900, color: mentor.color }}>{mentor.name}</p>
+      <p style={{ fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>{message}</p>
     </div>
   );
 }
@@ -1031,17 +987,6 @@ function EmptyProgressIllustration() {
       <line x1="70" y1="10" x2="70" y2="30" stroke="#00E5FF" strokeWidth="2" />
       <polygon points="70,10 90,18 70,26" fill="#00E5FF" />
       <text x="70" y="72" fontSize="20" textAnchor="middle" opacity="0.4">⭐</text>
-    </svg>
-  );
-}
-
-function EmptyCommunityIllustration() {
-  return (
-    <svg width="100" height="80" viewBox="0 0 100 80">
-      <circle cx="35" cy="25" r="10" fill="none" stroke="#4E4E70" strokeWidth="2" />
-      <path d="M15,65 a20,20 0 0,1 40,0" fill="none" stroke="#4E4E70" strokeWidth="2" />
-      <line x1="70" y1="25" x2="90" y2="25" stroke="#00E5FF" strokeWidth="2.5" />
-      <line x1="80" y1="15" x2="80" y2="35" stroke="#00E5FF" strokeWidth="2.5" />
     </svg>
   );
 }
@@ -2396,45 +2341,6 @@ const tripleBeep = () => {
 /* Aviso suave a 3 segundos del final */
 const softBeep = () => beep(440, 0.1, 0.15, 0);
 
-/* ─── Sonido ambiental de fondo (Web Audio, sin archivos externos) ─── */
-function generateAmbientSound(mode) {
-  if (!audioCtx) return { stop() {} };
-  try {
-    if (mode === "atletismo") {
-      /* Pulso rítmico simulando cadencia de 120 pasos/min (cada 500ms) */
-      const id = setInterval(() => beep(300, 0.04, 0.06, 0), 500);
-      return { stop() { clearInterval(id); } };
-    }
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "sine";
-    if (mode === "gym") {
-      osc.frequency.value = 60;
-      gain.gain.value = 0.05;
-    } else {
-      osc.frequency.value = 432;
-      gain.gain.value = 0.03;
-      const lfo = audioCtx.createOscillator();
-      const lfoGain = audioCtx.createGain();
-      lfo.frequency.value = 0.1;
-      lfoGain.gain.value = 0.015;
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      lfo.start();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      return { stop() { try { osc.stop(); lfo.stop(); } catch { /* ya detenido */ } } };
-    }
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    return { stop() { try { osc.stop(); } catch { /* ya detenido */ } } };
-  } catch {
-    return { stop() {} };
-  }
-}
-
 /* ─── Voz sintetizada (Web Speech API, gratis, sin API key) ─── */
 function speak(text, opts = {}) {
   try {
@@ -3067,10 +2973,7 @@ function computeAchievements(sessions, freezes) {
   return { list, justUnlocked: changed ? list.filter((a) => a.ts === now) : [] };
 }
 
-/* ─── Sistema de XP y rangos ─── */
-const XP_RANKS = ["Recluta", "Soldado", "Guerrero", "Élite", "Maestro", "Gran Maestro", "Leyenda", "THE ONE"];
-const XP_ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-
+/* ─── Puntos de esfuerzo (XP total, sin rangos paralelos) ─── */
 function computeXP(sessions, achievementsUnlockedCount, bestStreak) {
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const totalSets = workouts.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.filter((st) => st.ok).length, 0), 0);
@@ -3086,9 +2989,7 @@ function computeXP(sessions, achievementsUnlockedCount, bestStreak) {
     + recordsBonus
     + cooldownBonus
     + otherBonus;
-  const rankIdx = Math.min(XP_RANKS.length - 1, Math.floor(xp / 1000));
-  const intoRank = xp - rankIdx * 1000;
-  return { xp, rankIdx, rankName: XP_RANKS[rankIdx], roman: XP_ROMAN[rankIdx], progress: rankIdx === XP_RANKS.length - 1 ? 1 : intoRank / 1000 };
+  return { xp };
 }
 
 /* ─── Estadísticas globales épicas ─── */
@@ -8437,12 +8338,6 @@ function travelTierForLevel(lvlIdx) {
   return "high";
 }
 
-/* ─── Modo dueto: sesión alternada entre dos personas con un solo celular ─── */
-const DUET_DISCIPLINES = [
-  { id: "calistenia", label: "Calistenia", icon: "🤸", color: C.green },
-  { id: "gimnasio", label: "Gimnasio", icon: "🏋️", color: C.cyan },
-];
-
 /* ─── Modo partido: registro de acciones en tiempo real durante un partido de fútbol ─── */
 const MATCH_ACTIONS = [
   { id: "sprint", label: "🏃 SPRINT", color: C.orange },
@@ -8555,193 +8450,6 @@ function MatchMode({ onFinish, onSave }) {
   );
 }
 
-function DuetMode({ onFinish, onSave, name }) {
-  const [step, setStep] = useState("name"); // name | discipline | level | session | results
-  const [partnerName, setPartnerName] = useState("");
-  const [discId, setDiscId] = useState(null);
-  const [plan, setPlan] = useState(null);
-  const [exIdx, setExIdx] = useState(0);
-  const [setInEx, setSetInEx] = useState(0);
-  const [globalSetCount, setGlobalSetCount] = useState(0);
-  const [logsA, setLogsA] = useState([]);
-  const [logsB, setLogsB] = useState([]);
-  const [reps, setReps] = useState("");
-  const [weight, setWeight] = useState("");
-
-  const turn = globalSetCount % 2 === 0 ? "A" : "B";
-  const turnName = turn === "A" ? sanitize(name) || "Jugador 1" : partnerName;
-  const turnColor = turn === "A" ? C.cyan : C.green;
-  const turnEmoji = turn === "A" ? "🔵" : "🟢";
-
-  const pickLevel = (i) => {
-    const seed = seedNow();
-    const disc = DISCIPLINES[discId];
-    const exercises = genRoutine(discId, "todo", i, seed);
-    const newPlan = { discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, lvlIdx: i, exercises };
-    setPlan(newPlan);
-    setLogsA(exercises.map(() => []));
-    setLogsB(exercises.map(() => []));
-    setStep("session");
-  };
-
-  const logSet = () => {
-    const entry = { reps: parseInt(reps, 10) || 0, weight: parseFloat(weight) || 0, ok: true };
-    if (turn === "A") setLogsA((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
-    else setLogsB((prev) => prev.map((arr, i) => (i === exIdx ? [...arr, entry] : arr)));
-    setReps(""); setWeight("");
-    const ex = plan.exercises[exIdx];
-    const isLastEx = exIdx === plan.exercises.length - 1;
-    const isLastSetOfEx = setInEx + 1 >= ex.sets;
-    setGlobalSetCount((c) => c + 1);
-    if (isLastSetOfEx) {
-      if (isLastEx) { setStep("results"); return; }
-      setExIdx((i) => i + 1);
-      setSetInEx(0);
-    } else {
-      setSetInEx((s) => s + 1);
-    }
-  };
-
-  const statsFor = (logs) => {
-    const flat = logs.flat();
-    const volume = Math.round(flat.reduce((a, s) => a + s.weight * s.reps, 0));
-    const bestSet = flat.length ? Math.max(...flat.map((s) => s.weight)) : 0;
-    return { series: flat.length, volume, bestSet };
-  };
-
-  const finishDuet = () => {
-    const statsA = statsFor(logsA);
-    const statsB = statsFor(logsB);
-    onSave({
-      id: Date.now(), ts: Date.now(), kind: "entreno", disc: plan.discId,
-      focusLabel: `Dueto con ${partnerName}`, levelIdx: plan.lvlIdx,
-      exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: logsA[i] })),
-    });
-    const duetHistory = store.get("duet_history", []);
-    duetHistory.push({
-      ts: Date.now(), partner: partnerName, disc: plan.discId,
-      statsA, statsB, winner: statsA.volume === statsB.volume ? null : (statsA.volume > statsB.volume ? "A" : "B"),
-    });
-    store.set("duet_history", duetHistory.slice(-52));
-    onFinish();
-  };
-
-  if (step === "name") {
-    return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
-        <button onClick={onFinish} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Entrenar</button>
-        <div style={{ fontSize: 40, marginTop: 16 }}>👥</div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Modo dueto</h2>
-        <p className="muted" style={{ marginTop: 6 }}>¿Cómo se llama tu compañero/a?</p>
-        <input
-          className="input" placeholder="Nombre del compañero" value={partnerName}
-          onChange={(e) => setPartnerName(e.target.value)} style={{ marginTop: 14 }} maxLength={24}
-        />
-        <button
-          className="btn-xl" disabled={!partnerName.trim()} onClick={() => setStep("discipline")}
-          style={{ marginTop: 14, background: C.cyan, color: "#07070C" }}
-        >
-          Empezar dueto
-        </button>
-      </div>
-    );
-  }
-
-  if (step === "discipline") {
-    return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
-        <button onClick={() => setStep("name")} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Atrás</button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>{sanitize(name) || "Jugador 1"} + {partnerName}</h2>
-        <p className="muted" style={{ marginTop: 6 }}>Elige la disciplina</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
-          {DUET_DISCIPLINES.map((d) => (
-            <button key={d.id} className="card" onClick={() => { setDiscId(d.id); setStep("level"); }} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "14px" }}>
-              <span style={{ fontSize: 24 }}>{d.icon}</span>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>{d.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "level") {
-    return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
-        <button onClick={() => setStep("discipline")} style={{ color: C.mut, fontSize: 12, fontWeight: 600, display: "block", textAlign: "left" }}>‹ Atrás</button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>Nivel de la sesión</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
-          {LEVELS.map((l, i) => (
-            <button key={l.name} className="card" onClick={() => pickLevel(i)} style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px 14px" }}>
-              <span style={{ fontSize: 20 }}>{l.emoji}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: l.color }}>{l.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "results") {
-    const statsA = statsFor(logsA);
-    const statsB = statsFor(logsB);
-    const winnerName = statsA.volume === statsB.volume ? null : (statsA.volume > statsB.volume ? (sanitize(name) || "Jugador 1") : partnerName);
-    return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
-        <div className="pop" style={{ fontSize: 50 }}>🏁</div>
-        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 10 }}>{sanitize(name) || "Jugador 1"} vs {partnerName}</h2>
-        <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.dim, fontWeight: 700 }}>
-            <span>{sanitize(name) || "Jugador 1"} 🔵</span><span>{partnerName} 🟢</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 13 }}>
-            <span>Series: {statsA.series}</span><span>{statsB.series}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13 }}>
-            <span>Volumen: {statsA.volume}kg</span><span>{statsB.volume}kg</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13 }}>
-            <span>Mejor serie: {statsA.bestSet}kg</span><span>{statsB.bestSet}kg</span>
-          </div>
-        </div>
-        {winnerName ? (
-          <p style={{ fontSize: 16, fontWeight: 900, color: C.yellow, marginTop: 16 }}>GANADOR: {winnerName} 🏆</p>
-        ) : (
-          <p style={{ fontSize: 14, fontWeight: 800, color: C.mut, marginTop: 16 }}>¡Empate! 🤝</p>
-        )}
-        <button className="btn-xl" onClick={finishDuet} style={{ marginTop: 20, background: C.green, color: "#07070C" }}>
-          VOLVER AL INICIO
-        </button>
-      </div>
-    );
-  }
-
-  const ex = plan.exercises[exIdx];
-  return (
-    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
-      <div style={{ padding: "10px 16px", borderRadius: 14, background: `${turnColor}18`, border: `1px solid ${turnColor}55` }}>
-        <p style={{ fontSize: 13, fontWeight: 900, color: turnColor }}>TURNO DE: {turnName.toUpperCase()} {turnEmoji}</p>
-      </div>
-      <p style={{ fontSize: 12, color: C.mut, marginTop: 14 }}>Ejercicio {exIdx + 1} de {plan.exercises.length}</p>
-      <h2 style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>{ex.name}</h2>
-      <p style={{ fontSize: 12, color: C.dim, marginTop: 2 }}>Set {setInEx + 1} de {ex.sets} — sugerido: {ex.reps}</p>
-      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>PESO (KG)</label>
-          <input className="input" type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 4 }} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>REPS</label>
-          <input className="input" type="number" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} style={{ marginTop: 4 }} />
-        </div>
-      </div>
-      <button className="btn-xl" onClick={logSet} disabled={!reps} style={{ marginTop: 16, background: turnColor, color: "#07070C" }}>
-        ✓ Set completado — pasa el celular
-      </button>
-      <button onClick={onFinish} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 600 }}>Terminar dueto</button>
-    </div>
-  );
-}
 
 function TravelMode({ onFinish, onSave }) {
   const [lvlIdx, setLvlIdx] = useState(null);
@@ -8862,7 +8570,7 @@ function TravelMode({ onFinish, onSave }) {
   );
 }
 
-function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge, name }) {
+function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge }) {
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
@@ -8879,7 +8587,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [showHdUnlock, setShowHdUnlock] = useState(false);
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
-  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "dueto" | "partido"
+  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "partido"
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -9032,9 +8740,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
       />
     );
   }
-  if (special === "dueto") {
-    return <DuetMode onFinish={() => setSpecial(null)} onSave={onSaveSpecial} name={name || "Tú"} />;
-  }
   if (special === "partido") {
     return <MatchMode onFinish={() => { setSpecial(null); setDiscId(null); }} onSave={onSaveSpecial} />;
   }
@@ -9121,13 +8826,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           <div>
             <div style={{ fontSize: 13, fontWeight: 800 }}>Modo viaje</div>
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
-          </div>
-        </button>
-        <button className="card" onClick={() => setSpecial("dueto")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
-          <span style={{ fontSize: 24 }}>👥</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>Modo dueto</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Entrena en pareja con un solo celular</div>
           </div>
         </button>
         <button className="card" onClick={() => setSpecial("biblioteca")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
@@ -9725,7 +9423,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [photoFinish, setPhotoFinish] = useState(false);
   const recordCelebratedRef = useRef(false);
   const [liveMode, setLiveMode] = useState(false);
-  const [ambientOn, setAmbientOn] = useState(() => store.get("ambient", false));
   const [justWarmedUp, setJustWarmedUp] = useState(false);
   const [pendingLogs, setPendingLogs] = useState(null);
   const [lastRecord, setLastRecord] = useState(null);
@@ -9787,7 +9484,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     }
   };
   const wakeLockRef = useRef(null);
-  const ambientRef = useRef(null);
 
   const toggleLiveMode = async () => {
     const next = !liveMode;
@@ -9814,18 +9510,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     return () => clearTimeout(t);
   }, [justWarmedUp]);
 
-  /* Sonido ambiental de fondo, mezclado con los beeps existentes */
-  useEffect(() => {
-    if (!ambientOn) {
-      if (ambientRef.current) { ambientRef.current.stop(); ambientRef.current = null; }
-      return undefined;
-    }
-    ensureAudio();
-    const ambientMode = plan.discId === "gimnasio" ? "gym" : plan.discId === "atletismo" ? "atletismo" : "parque";
-    ambientRef.current = generateAmbientSound(ambientMode);
-    return () => { if (ambientRef.current) { ambientRef.current.stop(); ambientRef.current = null; } };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ambientOn]);
   const [showSwipeHint] = useState(() => store.get("session_count", 0) < 3);
   const [showGestureOverlay, setShowGestureOverlay] = useState(() => store.get("session_count", 0) === 0);
   const [showStep4, setShowStep4] = useState(() => store.get("session_count", 0) === 0 && !store.get("tutorial_done", false));
@@ -10176,6 +9860,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         setExIdx((i) => i + 1);
         setSetNum(0);
         setWeight("");
+        setReps("");
+        setLeftW("");
+        setRightW("");
         setField(nextEx.type === "peso" ? "weight" : "reps");
         setPhase("work");
         setSlideState("enter-right");
@@ -10756,9 +10443,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           })()}
           <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center" }}>
             <button onClick={() => setShowQuickNote((v) => !v)} aria-label="Nota rápida" style={{ fontSize: 18, padding: 4 }}>📝</button>
-            <button onClick={() => setAmbientOn((v) => { const nv = !v; store.set("ambient", nv); return nv; })} aria-label="Sonido ambiental" style={{ fontSize: 18, padding: 4 }}>
-              {ambientOn ? "🎵" : "🔇"}
-            </button>
             <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 18, padding: 4 }}>
               {voiceOn ? "🔊" : "🔈"}
             </button>
@@ -11315,7 +10999,6 @@ function SettingsScreen({
   const refresh = () => setTick((n) => n + 1);
   const [profile, setProfile] = useState(() => store.get("profile", {}));
   const [height, setHeight] = useState(() => store.get("height", ""));
-  const [ambientOn, setAmbientOn] = useState(() => store.get("ambient", false));
   const [vibrationOn, setVibrationOn] = useState(() => store.get("vibration_on", true));
   const [reminderOn, setReminderOn] = useState(() => store.get("reminder_enabled", false));
   const [reminderHour, setReminderHour] = useState(() => store.get("reminder_hour", 17));
@@ -11497,12 +11180,6 @@ function SettingsScreen({
         </SettingsRow>
         <SettingsRow label="Voz en sesiones 🔊">
           <SettingsToggle on={voiceOn} onClick={onToggleVoice} aria-label="Alternar voz en sesiones" />
-        </SettingsRow>
-        <SettingsRow label="Sonido ambiental 🎵">
-          <SettingsToggle
-            on={ambientOn} aria-label="Alternar sonido ambiental"
-            onClick={() => { const n = !ambientOn; setAmbientOn(n); store.set("ambient", n); }}
-          />
         </SettingsRow>
         <SettingsRow label="Vibración 📳">
           <SettingsToggle
@@ -11807,7 +11484,7 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
           <p style={{ fontSize: 13 }}>🔥 Racha: {formatStreak(streak)}</p>
           <p style={{ fontSize: 13 }}>💪 Sesiones: {sessions.length}</p>
           <p style={{ fontSize: 13 }}>🏆 Nivel: {globalLvl.name}</p>
-          <p style={{ fontSize: 13 }}>⭐ XP: {xpShown} (Rango {xpInfo.roman})</p>
+          <p style={{ fontSize: 13 }}>⭐ Puntos de esfuerzo: {xpShown}</p>
         </div>
         <hr className="divider-gradient" style={{ margin: "14px 0" }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
@@ -13105,14 +12782,9 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           </div>
         )}
 
-        <div className="card" style={{ marginTop: 10, padding: "12px 14px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>Rango {xpInfo.roman} · {xpInfo.rankName}</span>
-            <span style={{ fontSize: 11, color: C.dim }}>{xpInfo.xp} XP</span>
-          </div>
-          <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 6 }}>
-            <div style={{ height: "100%", width: `${xpInfo.progress * 100}%`, background: `linear-gradient(90deg, ${C.purple}, ${C.cyan})`, borderRadius: 99 }} />
-          </div>
+        <div className="card" style={{ marginTop: 10, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>⭐ Puntos de esfuerzo</span>
+          <span style={{ fontSize: 15, fontWeight: 900, color: C.cyan }}>{xpInfo.xp}</span>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -13467,270 +13139,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   );
 }
 
-/* ─── COMUNIDAD ─── */
-function getISOWeek(d) {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
-}
-
-const MONTHLY_CHALLENGES = [
-  "Reto Año Nuevo: 20 sesiones este mes",
-  "Reto Fuerza: Bate tu récord de press banca",
-  "Reto Velocidad: 10 sesiones de atletismo",
-  "Reto Primavera: 15 sesiones este mes",
-  "Reto Resistencia: 5 sesiones de cardio o fútbol parque",
-  "Reto Verano: Mantén tu racha 20 días",
-  "Reto Mitad de Año: 25 sesiones este mes",
-  "Reto Fuerza Bruta: Bate tu récord de sentadilla",
-  "Reto Constancia: 18 sesiones este mes",
-  "Reto Otoño: Prueba las 4 disciplinas",
-  "Reto Volumen: 40,000 kg este mes",
-  "Reto Cierre de Año: 22 sesiones este mes",
-];
-
-function exportStatsCode(name, sessions, streak) {
-  const workouts = sessions.filter((s) => s.kind === "entreno");
-  const volume = Math.round(workouts.reduce((a, s) => a + sessionVolume(s), 0));
-  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
-  const payload = {
-    code: getFaseCode(name), name, streak, sessions: sessions.length, volume,
-    level: LEVELS[globalIdx].name, ts: Date.now(),
-  };
-  try {
-    return btoa(encodeURIComponent(JSON.stringify(payload)));
-  } catch {
-    return "";
-  }
-}
-
-/* Valida estrictamente el código de amigo importado antes de guardarlo */
-function validateFriendCode(data) {
-  if (!data || typeof data !== "object") return false;
-  const allowedKeys = ["code", "name", "streak", "sessions", "volume", "level", "ts"];
-  if (Object.keys(data).some((k) => !allowedKeys.includes(k))) return false;
-  if (typeof data.code !== "string" || !/^FASE-[A-Z]{2}\d{4}$/.test(data.code)) return false;
-  if (typeof data.name !== "string" || !data.name.trim() || data.name.length > 100) return false;
-  if (typeof data.streak !== "number" || !Number.isFinite(data.streak) || data.streak < 0 || data.streak > 100000) return false;
-  if (typeof data.sessions !== "number" || !Number.isFinite(data.sessions) || data.sessions < 0 || data.sessions > 100000) return false;
-  if (typeof data.volume !== "number" || !Number.isFinite(data.volume) || data.volume < 0) return false;
-  if (typeof data.level !== "string" || !LEVELS.some((l) => l.name === data.level)) return false;
-  if (typeof data.ts !== "number" || !Number.isFinite(data.ts) || data.ts > Date.now() + 86400000) return false;
-  return true;
-}
-
-function Community({ name, sessions, streak, freezes }) {
-  const [tab, setTab] = useState("clasificacion");
-  const [importValue, setImportValue] = useState("");
-  const [exportStr, setExportStr] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [friends, setFriends] = useState(() => store.get("friends", []));
-
-  const myCode = useMemo(() => getFaseCode(name), [name]);
-  const workouts = sessions.filter((s) => s.kind === "entreno");
-  const myVolume = Math.round(workouts.reduce((a, s) => a + sessionVolume(s), 0));
-  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
-
-  const doExport = () => setExportStr(exportStatsCode(name, sessions, streak));
-  const copyExport = async () => {
-    try {
-      await navigator.clipboard.writeText(exportStr);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* sin portapapeles */ }
-  };
-  const doImport = () => {
-    try {
-      const data = JSON.parse(decodeURIComponent(atob(importValue.trim())));
-      if (!validateFriendCode(data)) throw new Error("formato inválido");
-      const clean = {
-        code: data.code, name: sanitize(data.name), streak: data.streak,
-        sessions: data.sessions, volume: data.volume, level: data.level, ts: data.ts,
-      };
-      const next = [...friends.filter((f) => f.code !== clean.code), clean];
-      setFriends(next);
-      store.set("friends", next);
-      setImportValue("");
-    } catch {
-      alert("Código inválido o corrupto. Pide a tu amigo que exporte de nuevo.");
-    }
-  };
-
-  const board = [
-    { code: myCode, name: `${name} (tú)`, streak, sessions: sessions.length, volume: myVolume, level: LEVELS[globalIdx].name, isMe: true },
-    ...friends,
-  ].sort((a, b) => b.streak - a.streak);
-
-  /* Retos globales simulados por semana/mes */
-  const now = new Date();
-  const week = getISOWeek(now);
-  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1); weekStart.setHours(0, 0, 0, 0);
-  const weekSessions = sessions.filter((s) => s.ts >= weekStart.getTime());
-  const weekVolume = Math.round(weekSessions.filter((s) => s.kind === "entreno").reduce((a, s) => a + sessionVolume(s), 0));
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const monthSessions = sessions.filter((s) => s.ts >= monthStart);
-  const monthlyText = MONTHLY_CHALLENGES[now.getMonth()];
-  const monthlyTarget = parseInt(monthlyText.match(/\d[\d,]*/)?.[0]?.replace(/,/g, "") || "20", 10);
-  const monthlyIsVolume = /kg/i.test(monthlyText);
-  const monthlyIsDiscip = /prueba las 4/i.test(monthlyText);
-  const monthlyProgress = monthlyIsDiscip
-    ? new Set(monthSessions.filter((s) => s.kind === "entreno").map((s) => (s.disc?.startsWith("futbol") ? "futbol" : s.disc))).size
-    : monthlyIsVolume
-    ? Math.round(monthSessions.filter((s) => s.kind === "entreno").reduce((a, s) => a + sessionVolume(s), 0))
-    : monthSessions.length;
-  const monthlyMax = monthlyIsDiscip ? 4 : monthlyTarget;
-
-  const challenges = [
-    { icon: "🏋️", label: `Esta semana: ${5000} kg de volumen`, current: weekVolume, target: 5000 },
-    { icon: "📅", label: "Esta semana: 5 sesiones", current: weekSessions.length, target: 5 },
-    { icon: "🌟", label: monthlyText, current: Math.min(monthlyProgress, monthlyMax), target: monthlyMax },
-  ];
-
-  /* Feed de actividad personal */
-  const feed = useMemo(() => {
-    return sessions.filter((s) => s.kind === "entreno").reverse().slice(0, 15).map((s) => {
-      const priorSessions = sessions.filter((x) => x.ts <= s.ts);
-      const streakAtTime = calcStreak(priorSessions, freezes);
-      const hero = heroForStreak(streakAtTime);
-      const okSets = s.exercises.flatMap((e) => e.sets).filter((st) => st.ok).length;
-      const durMin = s.durationMin || Math.round(okSets * 2.5);
-      const discLabel = DISCIPLINES[s.disc]?.label || s.focusLabel || "Entreno";
-      const lvlName = LEVELS[s.levelIdx]?.name || "";
-      return {
-        id: s.id, hero, text: `${name} completó ${okSets} series de ${discLabel} nivel ${lvlName} en ${formatDuration(durMin)} 💪`,
-        ts: s.ts,
-      };
-    });
-  }, [sessions, freezes, name]);
-
-  const shareFeed = async (text) => {
-    try { await navigator.clipboard.writeText(`${text} — F.A.S.E. f-a-s-e.vercel.app`); } catch { /* sin portapapeles */ }
-  };
-
-  return (
-    <div className="screen">
-      <h2 style={{ fontSize: 18, fontWeight: 800 }}>👥 Comunidad</h2>
-      <p className="muted" style={{ marginTop: 2 }}>Comparte tu código F.A.S.E. y compara con amigos</p>
-
-      <div className="chip-wrap" style={{ marginTop: 12 }}>
-        {[{ id: "clasificacion", label: "Clasificación" }, { id: "retos", label: "Retos" }, { id: "feed", label: "Feed" }].map((t) => (
-          <button key={t.id} className={`chip ${tab === t.id ? "on" : ""}`} style={tab === t.id ? { background: C.cyan } : {}} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "clasificacion" && (
-        <>
-          <div className="card" style={{ marginTop: 12, padding: "12px 14px" }}>
-            <p style={{ fontSize: 12, color: C.mut }}>Tu código F.A.S.E.</p>
-            <p style={{ fontSize: 16, fontWeight: 900, color: C.cyan, marginTop: 2 }}>{myCode}</p>
-          </div>
-
-          <div className="sec-title">Importar amigo</div>
-          <textarea
-            className="input" placeholder="Pega aquí el código exportado de tu amigo" value={importValue}
-            onChange={(e) => setImportValue(e.target.value)} rows={2} style={{ resize: "none", fontSize: 12 }}
-          />
-          <button className="btn-xl" onClick={doImport} disabled={!importValue.trim()} style={{ marginTop: 8, background: C.cyan, color: "#07070C", fontSize: 13 }}>
-            Importar
-          </button>
-
-          <div className="sec-title">Exportar mis stats</div>
-          <button className="btn-xl" onClick={doExport} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 13 }}>
-            Generar código para compartir
-          </button>
-          {exportStr && (
-            <div className="card" style={{ marginTop: 8, padding: "10px 12px" }}>
-              <p style={{ fontSize: 10, color: C.mut, wordBreak: "break-all" }}>{exportStr}</p>
-              <button onClick={copyExport} style={{ fontSize: 11, color: C.cyan, fontWeight: 700, marginTop: 6 }}>
-                {copied ? "¡Copiado!" : "📋 Copiar"}
-              </button>
-            </div>
-          )}
-
-          <div className="sec-title">Tabla de clasificación</div>
-          {friends.length === 0 && (
-            <div className="card" style={{ marginBottom: 8 }}>
-              <EmptyState
-                icon={<EmptyCommunityIllustration />}
-                title="Aún no tienes amigos importados"
-                subtitle="Pide su código y pégalo arriba para comparar tu progreso."
-              />
-            </div>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {board.map((f, i) => (
-              <div key={f.code} className="card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
-                <span style={{ fontSize: 16 }}>{i === 0 ? "👑" : `#${i + 1}`}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: f.isMe ? 900 : 700, color: f.isMe ? C.cyan : C.text }}>{f.name}</div>
-                  <div style={{ fontSize: 10, color: C.mut }}>{f.sessions} sesiones · {f.volume} kg · {f.level}</div>
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 800, color: C.orange }}>🔥{f.streak}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {tab === "retos" && (
-        <>
-          <p className="muted" style={{ marginTop: 10 }}>Semana ISO #{week} · {now.toLocaleDateString("es", { month: "long" })}</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
-            {challenges.map((c) => {
-              const pct = Math.min(1, c.current / c.target);
-              const done = c.current >= c.target;
-              return (
-                <div key={c.label} className="card" style={{ padding: "12px 14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>{c.icon} {c.label}</span>
-                    {done && <span style={{ fontSize: 11, color: C.green, fontWeight: 800 }}>✅</span>}
-                  </div>
-                  <div style={{ height: 7, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 8 }}>
-                    <div style={{ height: "100%", width: `${pct * 100}%`, background: done ? C.green : C.cyan, borderRadius: 99, transition: "width .5s ease" }} />
-                  </div>
-                  <p style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>{c.current} / {c.target}</p>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {tab === "feed" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-          {feed.length === 0 ? (
-            <div className="card">
-              <EmptyState
-                icon={<EmptyCommunityIllustration />}
-                title="Sin actividad todavía"
-                subtitle="Completa sesiones para ver tu feed de actividad."
-              />
-            </div>
-          ) : feed.map((post) => (
-            <div key={post.id} className="card" style={{ padding: "12px 14px" }}>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <span style={{ fontSize: 26 }}>{post.hero.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 12, lineHeight: 1.4 }}>{post.text}</p>
-                  <p style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{timeAgo(post.ts)}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => shareFeed(post.text)}
-                style={{ fontSize: 11, color: C.cyan, fontWeight: 700, marginTop: 8 }}
-              >
-                📤 Compartir este logro
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ─── CUERPO (Acondicionamiento) ─── */
 const PAIN_FACES = [
@@ -13950,14 +13358,13 @@ function getTabAccent(tabId) {
   return { inicio: C.cyan, entrenar: C.green, yo: C.purple, explorar: C.orange }[tabId];
 }
 
-/* ─── YO: perfil, progreso, cuerpo, comunidad y configuración en un solo lugar ─── */
+/* ─── YO: perfil, progreso, cuerpo y configuración en un solo lugar ─── */
 const YO_SECTIONS = [
   { id: "progreso", label: "📊 Progreso" },
   { id: "cuerpo", label: "🧘 Cuerpo" },
-  { id: "comunidad", label: "👥 Comunidad" },
 ];
 
-function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart, onCompleteBody, name, onOpenSettings }) {
+function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart, onCompleteBody, onOpenSettings }) {
   return (
     <div className="screen">
       <div className="chip-wrap">
@@ -13974,7 +13381,6 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart,
       </div>
       {section === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} />}
       {section === "cuerpo" && <Body onComplete={onCompleteBody} />}
-      {section === "comunidad" && <Community name={name} sessions={sessions} streak={streak} freezes={freezes} />}
     </div>
   );
 }
@@ -14482,7 +13888,7 @@ export default function App() {
           </button>
         </div>
       )}
-      {mentor && <MentorModal mentorId={mentor.id} message={mentor.message} onClose={() => setMentor(null)} />}
+      {mentor && <MentorToast mentorId={mentor.id} message={mentor.message} onClose={() => setMentor(null)} />}
       <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           {/* Izquierda: logo */}
@@ -14545,7 +13951,7 @@ export default function App() {
               <YoScreen
                 section={yoSection} onSection={setYoSection}
                 sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive}
-                onCompleteBody={completeBody} name={name} onOpenSettings={() => setShowSettings(true)}
+                onCompleteBody={completeBody} onOpenSettings={() => setShowSettings(true)}
               />
             )}
             {tab === "explorar" && (
