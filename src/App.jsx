@@ -559,9 +559,14 @@ function TapTestScreen({ onClose }) {
       if (secondsLeft <= 1) {
         setTaps((score) => {
           const history = store.get("tap_test_history", []);
+          const tapAvg = tapTestAverage();
           const next = [...history, { date: Date.now(), score }].slice(-30);
           store.set("tap_test_history", next);
           setResult(tapTestResult(score));
+          const tapRatio = tapAvg > 0 ? score / tapAvg : 1;
+          if (tapRatio < 0.75) {
+            store.set("snc_fatigued_today", { date: new Date().toDateString(), ratio: tapRatio });
+          }
           return score;
         });
         setPhase("done");
@@ -2351,6 +2356,13 @@ function mulberry32(a) {
 
 const todayKey = () => dayKey(Date.now());
 const seedNow = () => Date.now();
+/* Semilla de variación de rutina: incorpora el tipo de rutina elegido para no repetir
+   siempre los mismos ejercicios cuando el usuario repite el mismo focusId */
+function routineSeed(discId, focusId) {
+  const base = Math.floor(store.get("sessions", []).filter((s) => s.kind === "entreno").length / 3);
+  const focusHash = `${discId || ""}${focusId || ""}`.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return (base * 31 + focusHash) % 10000;
+}
 
 /* ─── Audio (Web Audio API, sin librerías) ───
    El contexto se crea dentro de un gesto del usuario para funcionar en móvil */
@@ -3881,7 +3893,7 @@ function planFromSession(session) {
 
 /* Construye un plan de sesión a partir de disciplina/enfoque/nivel elegidos (no de un registro previo) */
 function buildPlanFor(discId, focusId, lvlIdx) {
-  const seed = seedNow();
+  const seed = routineSeed(discId, focusId);
   if (discId === "atletismo") {
     const distId = focusId || "1000m";
     const dist = DISTANCES.find((d) => d.id === distId) || DISTANCES[0];
@@ -3924,11 +3936,25 @@ function leastUsedDiscipline(sessions) {
 }
 
 function focusGroupOf(label) {
-  const l = (label || "").toLowerCase();
-  if (/pecho|hombro|brazo/.test(l)) return "empuje";
-  if (/espalda/.test(l)) return "tiron";
-  if (/pierna|glúte|gluteo/.test(l)) return "piernas";
+  if (!label) return "otro";
+  const l = label.toLowerCase();
+  if (/push|pecho|hombro|tricep|empuje/.test(l)) return "empuje";
+  if (/pull|espalda|bicep|tiron|jalón/.test(l)) return "tiron";
+  if (/leg|pierna|glúte|gluteo|lower|sentadil/.test(l)) return "piernas";
+  if (/upper|superior|tren sup/.test(l)) return "empuje";
+  if (/full.?body|todo el cuerpo|completo/.test(l)) return "fullbody";
+  if (/core|abdomen/.test(l)) return "core";
+  if (/brazo|arm/.test(l)) return "brazos";
   return "otro";
+}
+
+/* Nivel del usuario centralizado: específico de disciplina → global → calculado del historial */
+function getUserLevel(discId) {
+  const discLevel = store.get(`level_${discId}`, null);
+  if (discLevel !== null) return discLevel;
+  const globalLevel = store.get("level_global", null);
+  if (globalLevel !== null) return globalLevel;
+  return mostFrequentLevel(store.get("sessions", []));
 }
 
 /* ─── Recuperación muscular ─── */
@@ -4063,11 +4089,25 @@ function getRecoveryStatus() {
 
 /* Devuelve una lista de sugerencias (la primera es la principal; "ver otro plan" rota entre el resto) */
 function dailyPlanCandidates(sessions) {
+  const acwr = calcACWR(sessions);
+  if (acwr !== null && acwr > 1.5) {
+    return [
+      { discId: "cuerpo", focusId: null, lvlIdx: 0, reason: `⚠️ Carga alta (ACWR ${acwr.toFixed(2)}). Tu cuerpo necesita recuperación hoy.` },
+      { discId: leastUsedDiscipline(sessions), focusId: "todo", lvlIdx: Math.max(0, mostFrequentLevel(sessions) - 1), reason: "Si prefieres entrenar: baja la intensidad." },
+    ];
+  }
+
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const lvlIdx = mostFrequentLevel(sessions);
 
   if (!workouts.length) {
     return [{ discId: "calistenia", focusId: "todo", lvlIdx: 0, reason: "Es tu primera vez. Empecemos con calistenia." }];
+  }
+
+  const sncFatigue = store.get("snc_fatigued_today", null);
+  const isSncFatiguedToday = sncFatigue && sncFatigue.date === new Date().toDateString();
+  if (isSncFatiguedToday) {
+    return [{ discId: "cuerpo", focusId: null, lvlIdx: 0, reason: `🧠 SNC fatigado (${Math.round(sncFatigue.ratio * 100)}% de tu promedio). Movilidad o técnica hoy, no intensidad.` }];
   }
 
   const streakDays = calcStreak(sessions, []);
@@ -4091,7 +4131,7 @@ function dailyPlanCandidates(sessions) {
   }
 
   if (yesterday.disc === "gimnasio") {
-    const grp = focusGroupOf(yesterday.focusLabel);
+    const grp = yesterday.muscleGroup || focusGroupOf(yesterday.focusLabel);
     if (grp === "empuje") {
       return [
         { discId: "gimnasio", focusId: "espalda", lvlIdx, reason: "Ayer trabajaste pecho/hombros/brazos, hoy toca espalda." },
@@ -4109,6 +4149,21 @@ function dailyPlanCandidates(sessions) {
         { discId: "gimnasio", focusId: "sup", lvlIdx, reason: "Ayer trabajaste piernas, hoy toca parte superior." },
         { discId: "futbolGym", focusId: "todo", lvlIdx, reason: "Alternativa: fútbol." },
       ];
+    }
+    if (grp === "fullbody") {
+      return [
+        { discId: "cuerpo", focusId: null, lvlIdx, reason: "Ayer fue full body. Hoy movilidad o descanso." },
+        { discId: "atletismo", focusId: "1000m", lvlIdx, reason: "Alternativa: cardio suave." },
+      ];
+    }
+    if (grp === "brazos") {
+      return [
+        { discId: "gimnasio", focusId: "legs", lvlIdx, reason: "Ayer trabajaste brazos. Hoy piernas." },
+        { discId: "calistenia", focusId: "piernas", lvlIdx, reason: "Alternativa: piernas en calistenia." },
+      ];
+    }
+    if (grp === "core") {
+      return [{ discId: "gimnasio", focusId: "push", lvlIdx, reason: "Core ayer. Hoy parte superior." }];
     }
     return [{ discId: "gimnasio", focusId: "todo", lvlIdx, reason: "Sigue con tu rutina de gimnasio." }];
   }
@@ -7634,7 +7689,7 @@ function AmrapMode({ onFinish, onSave }) {
       setSecondsLeft(min * 60);
       return;
     }
-    const c = genRoutine("calistenia", "todo", 2, seedNow(), { noBar: true }).slice(0, 5);
+    const c = genRoutine("calistenia", "todo", 2, routineSeed("calistenia", "todo"), { noBar: true }).slice(0, 5);
     setCircuit(c);
     secRef.current = min * 60;
     setSecondsLeft(min * 60);
@@ -7812,7 +7867,7 @@ function EmomMode({ onFinish, onSave }) {
 
   const chooseDuration = (min) => {
     setDuration(min);
-    const ex = genRoutine("calistenia", "todo", 1, seedNow(), { noBar: true }).slice(0, 2);
+    const ex = genRoutine("calistenia", "todo", 1, routineSeed("calistenia", "todo"), { noBar: true }).slice(0, 2);
     setExercises(ex);
   };
 
@@ -11910,52 +11965,43 @@ const PLAYER_AXES = [
   { id: "agilidad", label: "Agilidad", genericLabel: "Agilidad" },
   { id: "tiro", label: "Tiro", genericLabel: "Potencia" },
 ];
-const PLAYER_LEVEL_BONUS = { iniciado: 0, guerrero: 8, campeon: 16, elite: 24, leyenda: 32, the_one: 40 };
 function calcPlayerRadar(sessions) {
-  const workouts = sessions.filter((s) => s.kind === "entreno");
-  const partidos = sessions.filter((s) => s.kind === "partido");
-  const bodyWeight = store.get("weight", 70);
-  const squat1RM = store.get("1rm", {})["Sentadilla"]?.rm || 0;
-  const userLevel = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"][mostFrequentLevel(workouts)] || "iniciado";
-
-  const rsaSessions = workouts.filter((s) => s.type === "RSA");
-  const velocidadBase = rsaSessions.length > 0
-    ? Math.min(85, 20 + rsaSessions.length * 5)
-    : Math.min(85, 20 + workouts.filter((s) => s.disc === "atletismo").length * 5);
-  const velocidad = Math.min(100, velocidadBase + (PLAYER_LEVEL_BONUS[userLevel] || 0) * 0.5);
-
-  const eliteSquat = bodyWeight * 2;
-  let defensa;
-  if (squat1RM > 0) {
-    defensa = Math.min(100, (squat1RM / eliteSquat) * 100);
-  } else {
-    const legSessions = workouts.filter((s) => (s.focusLabel || "").toLowerCase().includes("pierna")).length;
-    defensa = Math.min(70, 15 + legSessions * 3);
-  }
-
-  let pase = 10;
-  if (partidos.length > 0) {
-    const avgDuelos = partidos.reduce((a, s) => a + (s.duelos ?? 5), 0) / partidos.length;
-    pase = Math.min(100, avgDuelos * 8);
-  }
-
-  const agilitySessions = workouts.filter((s) => s.disc === "futbolGym" || s.disc === "futbolParque" || s.disc === "atletismo" || s.disc === "basquetCancha" || s.disc === "basquetSinCancha").length;
-  const agilidad = Math.min(100, 10 + agilitySessions * 4);
-
-  let tiro = 10;
-  if (partidos.length > 0) {
-    const avgRpe = partidos.reduce((a, s) => a + (10 - (s.rpe ?? 7)), 0) / partidos.length;
-    tiro = Math.min(100, 10 + avgRpe * 8 + partidos.length * 5);
-  }
-
+  const workouts = sessions.filter((s) => s.kind === "entreno" || s.kind === "partido");
   const totalSessions = workouts.length;
-  const recentSessions = workouts.filter((s) => Date.now() - s.ts <= 28 * 86400000).length;
-  const motor = Math.min(100, 10 + totalSessions * 1.5 + recentSessions * 3);
 
-  return {
-    velocidad: Math.round(velocidad), motor: Math.round(motor), defensa: Math.round(defensa),
-    pase: Math.round(pase), agilidad: Math.round(agilidad), tiro: Math.round(tiro),
-  };
+  /* VELOCIDAD: sesiones de atletismo/fútbol parque + nivel declarado */
+  const atletismoCount = workouts.filter((s) => s.disc === "atletismo" || s.disc === "futbolParque").length;
+  const userLevel = getUserLevel("atletismo");
+  const velocidad = Math.min(100, Math.round(
+    15 + atletismoCount * 6 + userLevel * 10 + (totalSessions > 20 ? 10 : 0)
+  ));
+
+  /* DEFENSA (fuerza): 1RM de sentadilla si existe, si no historial de gimnasio */
+  const gymSessions = workouts.filter((s) => s.disc === "gimnasio" || s.disc === "futbolGym").length;
+  const squat1RM = store.get("1rm", {})["Sentadilla"]?.rm || 0;
+  const bodyWeight = store.get("weight", 70);
+  const defensa = squat1RM > 0
+    ? Math.min(100, Math.round((squat1RM / (bodyWeight * 2)) * 100))
+    : Math.min(100, Math.round(15 + gymSessions * 4));
+
+  /* PASE: sesiones de fútbol o partidos jugados */
+  const futbolSessions = workouts.filter((s) => s.disc === "futbolParque" || s.disc === "futbolGym" || s.kind === "partido").length;
+  const pase = Math.min(100, Math.round(10 + futbolSessions * 5));
+
+  /* AGILIDAD: combinación de disciplinas rápidas */
+  const agilidad = Math.min(100, Math.round(
+    10 + atletismoCount * 4 + futbolSessions * 3 + (totalSessions > 10 ? 8 : 0)
+  ));
+
+  /* TIRO: sesiones de fútbol parque específicamente */
+  const parqueSessions = workouts.filter((s) => s.disc === "futbolParque").length;
+  const tiro = Math.min(100, Math.round(10 + parqueSessions * 7));
+
+  /* MOTOR: consistencia general y volumen reciente */
+  const last4wSessions = workouts.filter((s) => (Date.now() - s.ts) / 86400000 <= 28).length;
+  const motor = Math.min(100, Math.round(10 + totalSessions * 1.5 + last4wSessions * 4));
+
+  return { velocidad, defensa, pase, agilidad, tiro, motor };
 }
 function getPlayerRank(radar) {
   const avg = Object.values(radar).reduce((a, b) => a + b, 0) / 6;
@@ -12426,7 +12472,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
     const globalIdx0 = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
     const startDay = (item) => {
       if (item.rest || !onQuickStart) return;
-      const seed = seedNow();
+      const seed = routineSeed(item.discId, item.focusId);
       if (item.discId === "atletismo") {
         const exercises = genAtletismoRoutine(item.focusId, globalIdx0, seed);
         onQuickStart({ discId: "atletismo", discLabel: "Atletismo", discColor: C.purple, discIcon: "🏃", focusLabel: DISTANCES.find((d) => d.id === item.focusId)?.label, lvlIdx: globalIdx0, exercises });
@@ -13742,7 +13788,10 @@ export default function App() {
   const MAX_SESSIONS = 500;
   const TRIM_SESSIONS = 50;
 
-  const saveSession = (record) => {
+  const saveSession = (recordIn) => {
+    const record = recordIn.kind === "entreno" && recordIn.disc === "gimnasio" && !recordIn.muscleGroup
+      ? { ...recordIn, muscleGroup: focusGroupOf(recordIn.focusLabel) }
+      : recordIn;
     let next = [...sessions, record];
     if (next.length > MAX_SESSIONS) {
       exportCSV(next);
