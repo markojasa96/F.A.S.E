@@ -1566,19 +1566,20 @@ const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 
 /* ─── Héroes por racha (escala histórica, 12 niveles desde 0 días) ─── */
 const HEROES = [
-  { id: "esclavo", days: 0, emoji: "🗡️", name: "Esclavo romano", quote: "Tu camino apenas comienza. Cada día es una cadena rota.", color: C.mut },
-  { id: "arquero", days: 3, emoji: "🏹", name: "Arquero mongol", quote: "Aprendes a apuntar. La precisión viene con la práctica.", color: C.green },
-  { id: "legionario", days: 7, emoji: "⚔️", name: "Legionario romano", quote: "La disciplina empieza a forjarte. La legión no descansa.", color: C.red },
-  { id: "caballero", days: 14, emoji: "🛡️", name: "Caballero medieval", quote: "Portador del escudo y el honor. Tu fortaleza crece.", color: C.cyan },
-  { id: "ninja", days: 21, emoji: "🥷", name: "Ninja", quote: "Sigilo, velocidad y precisión. El entrenamiento se vuelve arte.", color: C.purple },
-  { id: "vikingo", days: 30, emoji: "🏴‍☠️", name: "Vikingo", quote: "Guerrero del norte imparable. Nada te detiene.", color: C.orange },
-  { id: "espartano", days: 45, emoji: "⚔️", name: "Espartano", quote: "Este es tu camino. Regresa con el escudo o sobre él.", color: C.red },
-  { id: "samurai", days: 60, emoji: "🐉", name: "Samurái", quote: "El camino del guerrero perfecto. La espada y la mente como uno.", color: C.yellow },
-  { id: "gladiador", days: 90, emoji: "🏛️", name: "Gladiador campeón", quote: "El coliseo te conoce. La multitud grita tu nombre.", color: C.orange },
-  { id: "conquistador", days: 120, emoji: "🌍", name: "Conquistador", quote: "El mundo es tu territorio. No hay fronteras para ti.", color: C.green },
-  { id: "general", days: 180, emoji: "👑", name: "General de ejércitos", quote: "Comandas tus propios límites. Eres la estrategia y la fuerza.", color: C.yellow },
-  { id: "leyenda", days: 365, emoji: "⚡", name: "Leyenda absoluta", quote: "Tu nombre se escribe en la historia. Un año de fuego puro.", color: C.purple },
+  { id: "recluta", days: 0, emoji: "🌱", name: "Recluta", quote: "El primer paso es el más importante. Empieza.", color: C.mut },
+  { id: "atleta", days: 7, emoji: "🏃", name: "Atleta", quote: "Una semana de consistencia. El hábito empieza aquí.", color: C.green },
+  { id: "competidor", days: 21, emoji: "💪", name: "Competidor", quote: "3 semanas. Tu cuerpo ya cambió aunque no lo veas.", color: C.cyan },
+  { id: "avanzado", days: 45, emoji: "⚡", name: "Avanzado", quote: "45 días. Lo que empezó como esfuerzo ahora es rutina.", color: C.yellow },
+  { id: "elite", days: 90, emoji: "🔥", name: "Élite", quote: "3 meses sin parar. Estás en el 5% que sí lo hace.", color: C.orange },
+  { id: "profesional", days: 180, emoji: "🏆", name: "Profesional", quote: "6 meses. Esto ya no es disciplina — es quién eres.", color: C.red },
+  { id: "leyenda", days: 365, emoji: "⚡", name: "Leyenda", quote: "Un año completo. Muy pocos llegan aquí. Tú sí.", color: C.purple },
 ];
+/* Mapa de compatibilidad para IDs de héroes guardados en localStorage antes de v30 */
+const LEGACY_HERO_ID_MAP = {
+  esclavo: "recluta", arquero: "atleta", legionario: "atleta", caballero: "competidor",
+  ninja: "competidor", vikingo: "avanzado", espartano: "avanzado", samurai: "elite",
+  gladiador: "elite", conquistador: "profesional", general: "profesional", leyenda: "leyenda",
+};
 
 /* Devuelve el héroe con days más alto que sea <= streak */
 function getMascot(streak) {
@@ -4088,6 +4089,16 @@ function getRecoveryStatus() {
 }
 
 /* Devuelve una lista de sugerencias (la primera es la principal; "ver otro plan" rota entre el resto) */
+/* Compatibilidad de focusIds antiguos con los nuevos GYM_WORKOUT_TYPES */
+const FOCUS_COMPAT = {
+  espalda: "pull", pecho: "push", sup: "upper", piernas: "legs", todo: "full_body",
+};
+function resolveGymFocusId(id) {
+  const exists = DISCIPLINES.gimnasio.focuses.some((f) => f.id === id);
+  if (exists) return id;
+  return FOCUS_COMPAT[id] || "full_body";
+}
+
 function dailyPlanCandidates(sessions) {
   const acwr = calcACWR(sessions);
   if (acwr !== null && acwr > 1.5) {
@@ -4111,7 +4122,9 @@ function dailyPlanCandidates(sessions) {
   }
 
   const streakDays = calcStreak(sessions, []);
-  if (streakDays >= 5) {
+  const weeklyGoal = store.get("weekly_goal", 4);
+  const restThreshold = weeklyGoal >= 5 ? 6 : 5;
+  if (streakDays >= restThreshold) {
     return [
       { discId: "cuerpo", focusId: null, lvlIdx, reason: `Llevas ${streakDays} días seguidos entrenando. Hoy toca descanso activo.` },
       { discId: leastUsedDiscipline(sessions), focusId: "todo", lvlIdx, reason: "Alternativa si prefieres seguir activo." },
@@ -4134,19 +4147,19 @@ function dailyPlanCandidates(sessions) {
     const grp = yesterday.muscleGroup || focusGroupOf(yesterday.focusLabel);
     if (grp === "empuje") {
       return [
-        { discId: "gimnasio", focusId: "espalda", lvlIdx, reason: "Ayer trabajaste pecho/hombros/brazos, hoy toca espalda." },
+        { discId: "gimnasio", focusId: resolveGymFocusId("espalda"), lvlIdx, reason: "Ayer trabajaste pecho/hombros/brazos, hoy toca espalda." },
         { discId: "calistenia", focusId: "tiron", lvlIdx, reason: "Alternativa: tirón en calistenia." },
       ];
     }
     if (grp === "tiron") {
       return [
-        { discId: "gimnasio", focusId: "piernas", lvlIdx, reason: "Ayer trabajaste espalda/bíceps, hoy toca piernas." },
+        { discId: "gimnasio", focusId: resolveGymFocusId("piernas"), lvlIdx, reason: "Ayer trabajaste espalda/bíceps, hoy toca piernas." },
         { discId: "calistenia", focusId: "piernas", lvlIdx, reason: "Alternativa: piernas en calistenia." },
       ];
     }
     if (grp === "piernas") {
       return [
-        { discId: "gimnasio", focusId: "sup", lvlIdx, reason: "Ayer trabajaste piernas, hoy toca parte superior." },
+        { discId: "gimnasio", focusId: resolveGymFocusId("sup"), lvlIdx, reason: "Ayer trabajaste piernas, hoy toca parte superior." },
         { discId: "futbolGym", focusId: "todo", lvlIdx, reason: "Alternativa: fútbol." },
       ];
     }
@@ -4158,19 +4171,19 @@ function dailyPlanCandidates(sessions) {
     }
     if (grp === "brazos") {
       return [
-        { discId: "gimnasio", focusId: "legs", lvlIdx, reason: "Ayer trabajaste brazos. Hoy piernas." },
+        { discId: "gimnasio", focusId: resolveGymFocusId("legs"), lvlIdx, reason: "Ayer trabajaste brazos. Hoy piernas." },
         { discId: "calistenia", focusId: "piernas", lvlIdx, reason: "Alternativa: piernas en calistenia." },
       ];
     }
     if (grp === "core") {
-      return [{ discId: "gimnasio", focusId: "push", lvlIdx, reason: "Core ayer. Hoy parte superior." }];
+      return [{ discId: "gimnasio", focusId: resolveGymFocusId("push"), lvlIdx, reason: "Core ayer. Hoy parte superior." }];
     }
-    return [{ discId: "gimnasio", focusId: "todo", lvlIdx, reason: "Sigue con tu rutina de gimnasio." }];
+    return [{ discId: "gimnasio", focusId: resolveGymFocusId("todo"), lvlIdx, reason: "Sigue con tu rutina de gimnasio." }];
   }
 
   if (yesterday.disc === "calistenia") {
     return [
-      { discId: "gimnasio", focusId: "todo", lvlIdx, reason: "Ayer hiciste calistenia, hoy prueba gimnasio." },
+      { discId: "gimnasio", focusId: resolveGymFocusId("todo"), lvlIdx, reason: "Ayer hiciste calistenia, hoy prueba gimnasio." },
       { discId: "atletismo", focusId: "1000m", lvlIdx, reason: "Alternativa: atletismo." },
     ];
   }
@@ -4181,7 +4194,7 @@ function dailyPlanCandidates(sessions) {
 
   if (yesterday.disc === "futbolGym" || yesterday.disc === "futbolParque") {
     return [
-      { discId: "gimnasio", focusId: "todo", lvlIdx, reason: "Ayer jugaste fútbol, hoy fuerza en gimnasio." },
+      { discId: "gimnasio", focusId: resolveGymFocusId("todo"), lvlIdx, reason: "Ayer jugaste fútbol, hoy fuerza en gimnasio." },
       { discId: "cuerpo", focusId: null, lvlIdx, reason: "Alternativa: descanso activo." },
     ];
   }
@@ -4385,7 +4398,8 @@ function programDailyCandidate(sessions) {
   const today = active.program.structure[dayIdx];
   if (!today) return null;
   const lvlIdx = Math.max(active.program.minLevelIdx, mostFrequentLevel(sessions));
-  return { discId: today.discId, focusId: today.focusId, lvlIdx, reason: `Semana ${active.week} — ${active.program.name}: ${today.label}` };
+  const focusId = today.discId === "gimnasio" ? resolveGymFocusId(today.focusId) : today.focusId;
+  return { discId: today.discId, focusId, lvlIdx, reason: `Semana ${active.week} — ${active.program.name}: ${today.label}` };
 }
 
 /* Grupo muscular objetivo de un candidato de plan (para evitar sugerir un grupo sin recuperar) */
@@ -6197,13 +6211,11 @@ function FullHistory({ sessions, onDelete, onBack }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [], onSaveMatch }) {
+function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [], onSaveMatch }) {
   const [menuId, setMenuId] = useState(null);
-  const [tappedHero, setTappedHero] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
-  const [heroExpanded, setHeroExpanded] = useState(false);
   const longPressRef = useRef(null);
   const prevStreakRef = useRef(streak);
   const [streakBounce, setStreakBounce] = useState(false);
@@ -6244,20 +6256,6 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
     if (next >= waterGoal) awardBonusXpOnce("water_bonus_" + todayKey(), 25);
   };
 
-  /* Tip del día */
-  const [tipState, setTipState] = useState(() => {
-    const today = todayKey();
-    const cached = store.get("tip_state", null);
-    if (cached && cached.date === today) return cached;
-    const next = { date: today, index: dayOfYear() % DAILY_TIPS.length };
-    store.set("tip_state", next);
-    return next;
-  });
-  const nextTip = () => {
-    const next = { date: todayKey(), index: (tipState.index + 1) % DAILY_TIPS.length };
-    setTipState(next);
-    store.set("tip_state", next);
-  };
   const startLongPress = (id) => {
     longPressRef.current = setTimeout(() => setMenuId(id), 500);
   };
@@ -6315,17 +6313,8 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
   return (
     <div className="screen" style={{ paddingTop: 0 }}>
       {!pro && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 -16px 12px", padding: "14px 16px 10px", background: C.surface, borderBottom: `1px solid ${C.borderSubtle || C.border}` }}>
-          <div style={{ fontSize: 42, lineHeight: 1, flexShrink: 0 }}>{hero.emoji}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: C.dim, marginBottom: 2 }}>{greetWord}, {name}</div>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 2 }}>{hero.name}</div>
-            <div style={{ fontSize: 11, fontStyle: "italic", color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hero.quote}</div>
-          </div>
-          <div style={{ textAlign: "center", flexShrink: 0 }}>
-            <div className={streakBounce ? "number-bounce" : ""} style={{ fontSize: 20, fontWeight: 900, color: "#FF6B2B", lineHeight: 1 }}>🔥 {streak}</div>
-            <div style={{ fontSize: 10, color: C.dim }}>días</div>
-          </div>
+        <div style={{ margin: "0 -16px 0", padding: "14px 16px 0", background: C.surface, borderBottom: `1px solid ${C.borderSubtle || C.border}` }}>
+          <p style={{ fontSize: 13, color: C.dim }}>{greetWord}, {name}</p>
         </div>
       )}
       {pro && <p style={{ fontSize: 18, fontWeight: 800 }}>Hola, <span style={{ color: C.cyan }}>{name}</span></p>}
@@ -6339,73 +6328,22 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           <StatBox label="Días activos (mes)" value={activeDaysMonth} />
         </div>
       ) : (
-        /* Héroe: compacto en 1 línea, se expande al tocar */
-        <button
-          className="card" onClick={() => setHeroExpanded((v) => !v)}
-          style={{ marginTop: 16, textAlign: heroExpanded ? "center" : "left", padding: heroExpanded ? "22px 16px" : "12px 16px", overflow: "hidden", position: "relative", width: "100%", display: "block" }}
+        /* Héroe: card compacta de una sola línea, sin expandir */
+        <div
+          className="card"
+          style={{ marginTop: 16, maxHeight: 60, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, overflow: "hidden", position: "relative" }}
         >
-          <div
-            style={{
-              position: "absolute", inset: 0, pointerEvents: "none",
-              background: `radial-gradient(circle at 50% 0%, ${streak === 0 ? "rgba(138,138,173,0.10)" : "rgba(255,122,47,0.12)"}, transparent 70%)`,
-              animation: "glowPulse 3s ease-in-out infinite",
-            }}
-          />
-          {!heroExpanded ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 32 }}>{hero.emoji}</span>
-              <span style={{ fontSize: 14, fontWeight: 800, flex: 1 }}>{hero.name}</span>
-              {streak > 0 && <span style={{ fontSize: 13, fontWeight: 800, color: C.orange }}>🔥 {streak} días</span>}
+          <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{hero.emoji}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 800 }}>{hero.name}</span>
+              {streak > 0 && <span style={{ fontSize: 12, fontWeight: 800, color: C.orange }}>🔥 {streak} días</span>}
             </div>
-          ) : (
-            <>
-              <div className="pop" style={{ fontSize: 64 }} key={hero.name}>{hero.emoji}</div>
-              <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>{hero.name}</div>
-              <div style={{ color: C.mut, fontSize: 13, marginTop: 3, fontStyle: "italic" }}>“{hero.quote}”</div>
-              {nextHero && (
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${Math.min(100, (streak / nextHero.days) * 100)}%`,
-                        background: `linear-gradient(90deg, ${C.orange}, ${C.yellow})`,
-                        borderRadius: 99,
-                        transition: "width .5s ease",
-                      }}
-                    />
-                  </div>
-                  <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
-                    Próximo héroe: {nextHero.name} a los {nextHero.days} días de racha
-                  </div>
-                </div>
-              )}
-              {/* Colección */}
-              <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-                {HEROES.map((h) => {
-                  const has = unlockedHeroes.includes(h.id);
-                  return (
-                    <span
-                      key={h.id}
-                      onClick={(e) => { e.stopPropagation(); if (has) setTappedHero(h); }}
-                      aria-label={has ? `${h.name}, desbloqueado a los ${h.days} días de racha` : `${h.name} bloqueado`}
-                      style={{ textAlign: "center", minWidth: 44, minHeight: 44, position: "relative", display: "inline-block" }}
-                    >
-                      <div style={{ fontSize: has ? 28 : 20, opacity: has ? 1 : 0.2 }}>{h.emoji}</div>
-                      {!has && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", fontSize: 14 }}>🔒</div>}
-                      <div style={{ fontSize: 9, color: has ? C.mut : C.dim, marginTop: 2 }}>{h.days}d</div>
-                    </span>
-                  );
-                })}
-              </div>
-              {tappedHero && (
-                <p style={{ fontSize: 11, color: C.mut, marginTop: 8 }}>
-                  {tappedHero.name} — desbloqueado a los {tappedHero.days} días de racha
-                </p>
-              )}
-            </>
-          )}
-        </button>
+            <div style={{ fontSize: 10, color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {nextHero ? `→ ${nextHero.name} en ${nextHero.days - streak} días más` : "365 días de consistencia ⚡"}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Plan del día inteligente */}
@@ -6681,14 +6619,14 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
           <div style={{ fontSize: 34 }}>🌅</div>
           <p style={{ fontSize: 15, fontWeight: 800, marginTop: 8 }}>Nuevo comienzo</p>
           <p style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>
-            Tu mejor racha: {broken.lost} {broken.lost === 1 ? "día" : "días"}.<br />Hoy empieza la siguiente.
+            Tu mejor racha fue {broken.lost} {broken.lost === 1 ? "día" : "días"}.<br />Hoy empieza la siguiente.
           </p>
           <button
             className="btn-xl btn-physics"
             onClick={onTrain}
             style={{ marginTop: 14, background: C.cyan, color: "#07070C" }}
           >
-            ▶ Entrenar ahora
+            Entrenar ahora →
           </button>
           {canFreeze && (
             <button
@@ -6926,25 +6864,6 @@ function Home({ name, sessions, streak, unlockedHeroes, onTrain, onRepeat, onSta
         </button>
       )}
 
-      {/* Tip del día */}
-      {(() => {
-        const accents = [C.cyan, C.green, C.orange, C.purple, C.yellow];
-        const tipColor = accents[tipState.index % accents.length];
-        return (
-          <div className="card" style={{ marginTop: 16, padding: "13px 14px", borderLeft: `4px solid ${tipColor}` }}>
-            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 20 }}>💡</span>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 11, color: C.dim, fontWeight: 700, letterSpacing: 1 }}>TIP DEL DÍA</p>
-                <p style={{ fontSize: 13, color: C.mut, marginTop: 4, lineHeight: 1.4 }}>{DAILY_TIPS[tipState.index]}</p>
-                <button onClick={nextTip} style={{ fontSize: 11, color: tipColor, fontWeight: 700, marginTop: 6 }}>
-                  Siguiente tip ›
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
@@ -10282,7 +10201,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           {(() => {
             const lastSet = logs[exIdx]?.[logs[exIdx].length - 1];
             const lastRpe = lastSet?.rpe;
-            let tip = null;
+            let tip;
             if (lastRpe != null && lastRpe >= 9) tip = "Descansa bien, fue duro 💪";
             else if (lastRpe != null && lastRpe <= 6) tip = "¿Peso muy ligero hoy? Considera subirlo";
             else {
@@ -10291,6 +10210,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
               else if (cat === "tiron" || cat === "espalda") tip = "💡 Aprieta los omóplatos antes de jalar el peso.";
               else if (cat === "sentadilla" || cat === "piernas") tip = "💡 Rodillas alineadas con los pies, pecho arriba.";
               else if (ex.tag === "velocidad" || plan.discId === "atletismo") tip = "💡 Recupera con respiración profunda, no te sientes de golpe.";
+              else tip = `💡 ${DAILY_TIPS[dayOfYear() % DAILY_TIPS.length]}`;
             }
             return tip ? (
               <div className="card" style={{ padding: "8px 12px", marginBottom: 8, textAlign: "center" }}>
@@ -13492,7 +13412,11 @@ export default function App() {
     if (clean.length !== raw.length) store.set("sessions", clean);
     return clean;
   });
-  const [heroes, setHeroes] = useState(() => store.get("heroes_unlocked", store.get("heroes", [])));
+  const [heroes, setHeroes] = useState(() => {
+    const raw = store.get("heroes_unlocked", store.get("heroes", []));
+    const remapped = [...new Set(raw.map((id) => LEGACY_HERO_ID_MAP[id] || id).filter((id) => HEROES.some((h) => h.id === id)))];
+    return remapped;
+  });
   const [tab, setTab] = useState("inicio");
   const [yoSection, setYoSection] = useState("progreso");
   const [live, setLive] = useState(null);
@@ -13752,11 +13676,6 @@ export default function App() {
     store.set("freezes_used", { month: now.getMonth(), year: now.getFullYear(), count: 1 });
   };
 
-  /* Los héroes se desbloquean y se quedan aunque la racha baje */
-  const unlockedHeroes = useMemo(() => {
-    const earned = HEROES.filter((h) => streak >= h.days).map((h) => h.id);
-    return [...new Set([...heroes, ...earned])];
-  }, [heroes, streak]);
 
   const saveName = (n, m) => {
     setName(n);
@@ -13988,7 +13907,7 @@ export default function App() {
                 {darkMode && <ParticleBackground />}
                 <div style={{ position: "relative", zIndex: 1 }}>
                   <Home
-                    name={name} sessions={sessions} streak={streak} unlockedHeroes={unlockedHeroes}
+                    name={name} sessions={sessions} streak={streak}
                     onTrain={() => changeTab("entrenar")} mode={mode}
                     onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
                     onStartPlan={(discId, focusId, lvlIdx) => {
