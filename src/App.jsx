@@ -3123,6 +3123,42 @@ function computeInsight(sessions) {
   if (workouts.length < 5) {
     return "Cada sesión cuenta. Sigue sumando para desbloquear tus primeros insights 💡";
   }
+
+  /* Insights de alta prioridad basados en datos reales recientes */
+  const firstSessionDate = store.get("first_session_date", null);
+  const weeksActive = firstSessionDate ? (Date.now() - firstSessionDate) / (7 * 86400000) : 0;
+  const acwr = calcACWR(sessions);
+  if (acwr !== null && acwr >= 0.8 && acwr <= 1.3 && weeksActive > 2) {
+    return "📈 Progresando bien — carga óptima esta semana";
+  }
+
+  const jumpHistory = store.get("jump_history", []);
+  const jumpBase = jumpBaseline();
+  const latestJump = jumpHistory.length ? jumpHistory[jumpHistory.length - 1].height : null;
+  if (jumpBase && latestJump && latestJump < jumpBase * 0.9) {
+    return "📉 Potencia baja hoy — evita sprints máximos";
+  }
+
+  const asymmetries = calcAsymmetryByExercise(sessions);
+  if (asymmetries.some((a) => a.pct > 15)) {
+    return "⚖️ Asimetría detectada — empieza por el lado débil";
+  }
+
+  const partidos = sessions.filter((s) => s.kind === "partido").sort((a, b) => b.ts - a.ts);
+  const daysSinceMatch = partidos.length ? (Date.now() - partidos[0].ts) / 86400000 : null;
+  if (partidos.length && partidos[0].rpe > 8 && daysSinceMatch <= 1) {
+    return "🔴 Partido intenso ayer — considera movilidad hoy";
+  }
+
+  const lastAtletismo = [...workouts].reverse().find((s) => s.disc === "atletismo");
+  const daysSinceAtletismo = lastAtletismo ? (Date.now() - lastAtletismo.ts) / 86400000 : Infinity;
+  const goal = getTrainingGoal();
+  const favDisc = Object.entries(workouts.reduce((acc, s) => { acc[s.disc] = (acc[s.disc] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const wantsSpeed = goal?.id === "athletic" || favDisc === "futbolGym" || favDisc === "futbolParque";
+  if (daysSinceAtletismo >= 21 && wantsSpeed) {
+    return "⚡ Sin correr en 3 semanas — añade un sprint hoy";
+  }
+
   const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
   const dayCount = {};
   sessions.forEach((s) => { const d = new Date(s.ts).getDay(); dayCount[d] = (dayCount[d] || 0) + 1; });
@@ -4131,6 +4167,37 @@ function dailyPlanCandidates(sessions) {
     ];
   }
 
+  const candidates = computeYesterdayBasedCandidates(sessions, workouts, lvlIdx);
+
+  /* Conecta el body_focus del onboarding: si el usuario eligió zonas prioritarias,
+     sin programa activo y con ACWR normal, sugiere esa zona como primera opción */
+  const bodyFocus = store.get("body_focus", []);
+  if (bodyFocus.length > 0 && !getActiveProgram()) {
+    const bodyFocusCandidate = bodyFocusToDisc(bodyFocus, lvlIdx);
+    if (bodyFocusCandidate) candidates.unshift(bodyFocusCandidate);
+  }
+
+  return candidates;
+}
+
+/* Sugiere una disciplina/enfoque según las zonas prioritarias elegidas en el onboarding */
+function bodyFocusToDisc(zones, lvlIdx) {
+  if (zones.includes("gluteos") || zones.includes("piernas")) {
+    return { discId: "gimnasio", focusId: "glutes_focus", lvlIdx, reason: "Tu objetivo incluye glúteos y piernas." };
+  }
+  if (zones.includes("espalda") || zones.includes("hombros")) {
+    return { discId: "gimnasio", focusId: "v_shape", lvlIdx, reason: "Tu objetivo: espalda ancha y hombros." };
+  }
+  if (zones.includes("pecho") || zones.includes("brazos")) {
+    return { discId: "gimnasio", focusId: "push", lvlIdx, reason: "Tu objetivo: tren superior." };
+  }
+  if (zones.includes("abs") || zones.includes("abdomen")) {
+    return { discId: "gimnasio", focusId: "core", lvlIdx, reason: "Tu objetivo: core y abdomen." };
+  }
+  return null;
+}
+
+function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
   const yestKey = dayKey(Date.now() - 86400000);
   const yesterday = [...workouts].reverse().find((s) => dayKey(s.ts) === yestKey);
 
@@ -4971,19 +5038,48 @@ function ExerciseIllustration({ category, color }) {
   );
 }
 
+/* GIFs/fotos reales de ejercicios (free-exercise-db, sin API key) para los más frecuentes.
+   Si la imagen falla (red, CORS, URL rota) se cae a la ilustración CSS existente. */
+const EXERCISE_GIFS = {
+  "Press banca con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/images/0.jpg",
+  "Sentadilla con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Full_Squat/images/0.jpg",
+  "Peso muerto convencional": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/images/0.jpg",
+  "Dominadas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pullup/images/0.jpg",
+  "Press militar de pie con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Shoulder_Press/images/0.jpg",
+  "Remo con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bent_Over_Row/images/0.jpg",
+  "Hip thrust con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/images/0.jpg",
+  "Sentadilla búlgara": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bulgarian_Split_Squat/images/0.jpg",
+  "Flexiones": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Push-Up/images/0.jpg",
+  "Curl con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/images/0.jpg",
+  "Press francés": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Barbell_Triceps_Extension/images/0.jpg",
+  "Peso muerto rumano": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Romanian_Deadlift/images/0.jpg",
+  "Prensa de piernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Press/images/0.jpg",
+  "Zancadas con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/images/0.jpg",
+  "Elevaciones laterales": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/images/0.jpg",
+};
+
 function ExerciseDemo({ exerciseName }) {
+  const [imgError, setImgError] = useState(false);
   const category = movementCategory(exerciseName);
   const color = MOVEMENT_COLORS[category];
+  const gifUrl = EXERCISE_GIFS[exerciseName];
   return (
     <div
       className="exercise-demo"
       style={{
         width: "100%", maxHeight: 160, minHeight: 140,
         borderRadius: 12, background: `${color}08`, border: `1px solid ${C.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden", position: "relative", padding: 16,
+        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden", position: "relative", padding: gifUrl && !imgError ? 0 : 16,
       }}
     >
-      <ExerciseIllustration category={category} color={color} />
+      {gifUrl && !imgError ? (
+        <img
+          src={gifUrl} alt={exerciseName} onError={() => setImgError(true)} loading="lazy"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : (
+        <ExerciseIllustration category={category} color={color} />
+      )}
     </div>
   );
 }
@@ -9306,6 +9402,13 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     }, 15000);
     return () => clearInterval(t);
   }, [phase, exIdx, setNum]);
+  const [showExDoneToast, setShowExDoneToast] = useState(false);
+  useEffect(() => {
+    if (phase !== "exdone") return undefined;
+    const t0 = setTimeout(() => setShowExDoneToast(true), 0);
+    const t1 = setTimeout(() => setShowExDoneToast(false), 1000);
+    return () => { clearTimeout(t0); clearTimeout(t1); };
+  }, [phase]);
   const [showQuickNote, setShowQuickNote] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
@@ -10196,6 +10299,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             </div>
           </div>
           <p style={{ color: C.dim, fontSize: 12, marginTop: 8 }}>segundos</p>
+          {plan.exercises[exIdx + 1] && (
+            <p style={{ color: C.dim, fontSize: 12, marginTop: 4 }}>Siguiente: {plan.exercises[exIdx + 1].name}</p>
+          )}
         </div>
         <div style={{ width: "100%", maxWidth: 430 }}>
           {(() => {
@@ -10680,6 +10786,18 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         </>
       ) : (
         <>
+          {showExDoneToast && (
+            <div
+              className="pop"
+              style={{
+                position: "fixed", top: "40%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 300,
+                background: C.card, border: `1px solid ${C.green}`, borderRadius: 14, padding: "14px 22px",
+                fontSize: 16, fontWeight: 800, color: C.green, textAlign: "center",
+              }}
+            >
+              ✓ Ejercicio completado
+            </div>
+          )}
           <div className="card fade-up" style={{ marginTop: 16, textAlign: "left" }}>
             <p style={{ fontSize: 13, fontWeight: 700, textAlign: "center" }}>¿Cómo estuvo la técnica?</p>
             <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
@@ -11182,11 +11300,10 @@ function SettingsScreen({
         </p>
         <SettingsRow label="Superseries automáticas">
           <SettingsToggle
-            on={store.get("supersets_enabled", mostFrequentLevel(sessions.filter((s) => s.kind === "entreno")) >= 3)}
+            on={store.get("supersets_enabled", false)}
             aria-label="Alternar superseries automáticas"
             onClick={() => {
-              const current = store.get("supersets_enabled", mostFrequentLevel(sessions.filter((s) => s.kind === "entreno")) >= 3);
-              store.set("supersets_enabled", !current);
+              store.set("supersets_enabled", !store.get("supersets_enabled", false));
               refresh();
             }}
           />
