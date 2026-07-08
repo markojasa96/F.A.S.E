@@ -1034,13 +1034,15 @@ function IconProgress({ color }) {
     </svg>
   );
 }
-function IconCommunity({ color }) {
+function IconPrograms({ color }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
-      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 00-3-3.87" />
-      <path d="M16 3.13a4 4 0 010 7.75" />
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <line x1="8" y1="14" x2="10" y2="14" />
+      <line x1="8" y1="17" x2="13" y2="17" />
     </svg>
   );
 }
@@ -3134,6 +3136,9 @@ function computeInsight(sessions) {
   const firstSessionDate = store.get("first_session_date", null);
   const weeksActive = firstSessionDate ? (Date.now() - firstSessionDate) / (7 * 86400000) : 0;
   const acwr = calcACWR(sessions);
+  if (acwr !== null && acwr > 1.3) {
+    return `📊 Carga alta esta semana (ACWR ${acwr.toFixed(1)}). Mantén la intensidad moderada.`;
+  }
   if (acwr !== null && acwr >= 0.8 && acwr <= 1.3 && weeksActive > 2) {
     return "📈 Progresando bien — carga óptima esta semana";
   }
@@ -3146,8 +3151,10 @@ function computeInsight(sessions) {
   }
 
   const asymmetries = calcAsymmetryByExercise(sessions);
-  if (asymmetries.some((a) => a.pct > 15)) {
-    return "⚖️ Asimetría detectada — empieza por el lado débil";
+  const worstAsymmetry = asymmetries.length ? asymmetries.reduce((a, b) => (b.pct > a.pct ? b : a)) : null;
+  if (worstAsymmetry && worstAsymmetry.pct > 12) {
+    const weak = worstAsymmetry.dominant === "derecha" ? "izquierda" : "derecha";
+    return `⚖️ Tu lado ${worstAsymmetry.dominant} es ${worstAsymmetry.pct}% más fuerte en ${worstAsymmetry.name}. Empieza por el lado ${weak} hoy.`;
   }
 
   const partidos = sessions.filter((s) => s.kind === "partido").sort((a, b) => b.ts - a.ts);
@@ -5078,6 +5085,14 @@ const EXERCISE_GIFS = {
   "Press inclinado con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg",
   "Curl de bíceps con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bicep_Curl/0.jpg",
   "Extensión de tríceps en polea": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/0.jpg",
+  "Sentadilla goblet": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Goblet_Squat/0.jpg",
+  "Aperturas con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/0.jpg",
+  "Cruce de poleas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg",
+  "Face pull": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Face_Pull/0.jpg",
+  "Curl predicador": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/0.jpg",
+  "Peso muerto sumo": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Sumo_Deadlift/0.jpg",
+  "Plancha frontal": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/0.jpg",
+  "Sentadilla búlgara con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg",
 };
 
 function ExerciseDemo({ exerciseName }) {
@@ -9849,6 +9864,16 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         setBadgeTimeoutRef.current = setTimeout(() => setSetBadge(null), 1500);
       }
     }
+    if (ok) {
+      const doneInCurrentEx = setNum + 1;
+      const remainingInCurrentEx = Math.max(0, ex.sets - doneInCurrentEx);
+      const remainingInFollowingEx = plan.exercises.slice(exIdx + 1).reduce((a, e) => a + e.sets, 0);
+      const totalRemaining = remainingInCurrentEx + remainingInFollowingEx;
+      if (totalRemaining === 3) {
+        setShowLastSets(true);
+        setTimeout(() => setShowLastSets(false), 2000);
+      }
+    }
     if (setNum + 1 >= ex.sets) {
       setFlashDone(true);
       setTimeout(() => setFlashDone(false), 300);
@@ -9871,6 +9896,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [slideState, setSlideState] = useState("visible");
   const [justCompletedSet, setJustCompletedSet] = useState(null);
   const [showXpBadge, setShowXpBadge] = useState(false);
+  const [showLastSets, setShowLastSets] = useState(false);
 
   const nextExercise = () => {
     if (isLastEx) {
@@ -10704,6 +10730,17 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             background: setBadge.color, color: setBadge.color === "#FFD700" ? "#07070C" : "#07070C",
           }}>
             {setBadge.text}
+          </span>
+        </div>
+      )}
+
+      {showLastSets && (
+        <div className="set-badge-pop" style={{ textAlign: "center", marginTop: 10 }}>
+          <span style={{
+            display: "inline-block", padding: "8px 16px", borderRadius: 99, fontWeight: 900, fontSize: 13,
+            background: C.orange, color: "#07070C",
+          }}>
+            💪 Últimas 3 series
           </span>
         </div>
       )}
@@ -12845,7 +12882,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
                 }} />
               </div>
               <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
-                {LEVELS[globalIdx + 1].name} a las {nextThreshold} sesiones
+                → {LEVELS[globalIdx + 1].name} en {nextThreshold - sessions.length} sesiones más
               </div>
             </div>
           )}
@@ -13400,7 +13437,7 @@ const TABS = [
   { id: "inicio", label: "Hoy", Icon: IconHome },
   { id: "entrenar", label: "Entrenar", Icon: IconTrain },
   { id: "yo", label: "Yo", Icon: IconProgress },
-  { id: "explorar", label: "Explorar", Icon: IconCommunity },
+  { id: "explorar", label: "Programas", Icon: IconPrograms },
 ];
 
 /* Hint de primera vez para una feature: seen_<key> en localStorage */
@@ -13968,7 +14005,7 @@ export default function App() {
         onSave={saveSession}
         onSaveNote={updateSessionNote}
         onClose={() => { setLive(null); setTab("inicio"); }}
-        onViewStats={() => { setLive(null); setTab("progreso"); }}
+        onViewStats={() => { setLive(null); setTab("yo"); setYoSection("progreso"); }}
         name={name}
         onMentor={triggerMentor}
         voiceOn={voiceOn}
@@ -14005,19 +14042,26 @@ export default function App() {
       {!online && (
         <div style={{
           position: "sticky", top: 0, zIndex: 50, textAlign: "center", padding: "6px 10px",
-          background: "rgba(255,122,47,0.15)", borderBottom: "1px solid rgba(255,122,47,0.4)",
-          color: C.orange, fontSize: 12, fontWeight: 700,
+          background: "rgba(120,120,130,0.12)", borderBottom: "1px solid rgba(120,120,130,0.3)",
+          color: C.mut, fontSize: 12, fontWeight: 600,
         }}>
-          📵 Sin conexión — tus datos se guardan localmente
+          📵 Sin conexión
         </div>
       )}
       {toast && (
         <div style={{
-          position: "sticky", top: 0, zIndex: 50, textAlign: "center", padding: "6px 10px",
+          position: "sticky", top: 0, zIndex: 50, textAlign: "center", padding: "6px 32px 6px 10px",
           background: "rgba(0,229,255,0.15)", borderBottom: "1px solid rgba(0,229,255,0.4)",
           color: C.cyan, fontSize: 12, fontWeight: 700,
         }}>
           {toast}
+          <button
+            onClick={() => setToast(null)}
+            aria-label="Cerrar aviso"
+            style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: C.cyan, fontSize: 14, fontWeight: 800, padding: 4 }}
+          >
+            ✕
+          </button>
         </div>
       )}
       {showNotifPrompt && (
