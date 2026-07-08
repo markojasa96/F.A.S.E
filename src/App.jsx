@@ -1493,7 +1493,7 @@ function applyGymFocusToExercises(exercises, focusId) {
   };
   if (focusId === "v_shape") {
     bringFirst(["jalón al pecho agarre ancho", "dominadas agarre ancho", "jalón al pecho", "dominadas"]);
-  } else if (focusId === "glutes") {
+  } else if (focusId === "glutes" || focusId === "glutes_focus") {
     bringFirst(["hip thrust"]);
   } else if (focusId === "definition") {
     out = out.map((e) => ({ ...e, rest: Math.min(e.rest, 45) }));
@@ -2439,6 +2439,12 @@ function exerciseTypeIcon(name) {
 }
 
 /* ─── Asimetría izquierda/derecha en ejercicios unilaterales ─── */
+/* Última técnica numérica registrada (1/2/3) en los sets de un ejercicio, o null */
+function lastLoggedTechnique(sets) {
+  const withTechnique = (sets || []).filter((s) => typeof s.technique === "number");
+  return withTechnique.length ? withTechnique[withTechnique.length - 1].technique : null;
+}
+
 function isUnilateral(name) {
   const n = name.toLowerCase();
   return ["c/pierna", "c/lado", "búlgara", "pistol", "unilateral", "alterno", "a una pierna", "kickback"].some((k) => n.includes(k));
@@ -3189,7 +3195,9 @@ function computeInsight(sessions) {
   ].filter(Boolean);
 
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-  return candidates[dayOfYear % candidates.length];
+  const validCandidates = candidates.filter(Boolean);
+  if (!validCandidates.length) return "Sigue entrenando para desbloquear insights 💡";
+  return validCandidates[dayOfYear % validCandidates.length];
 }
 
 /* ─── Reto personal (torneo contra ti mismo) ─── */
@@ -3208,20 +3216,20 @@ const PLAN_GOALS = [
 const PLAN_DURATIONS = [30, 45, 60, 90];
 const PLAN_TEMPLATES = {
   fuerza: [
-    { discId: "gimnasio", focusId: "pecho", label: "Gimnasio — Pecho y tríceps" },
-    { discId: "gimnasio", focusId: "espalda", label: "Gimnasio — Espalda y bíceps" },
-    { discId: "gimnasio", focusId: "piernas", label: "Gimnasio — Piernas" },
-    { discId: "gimnasio", focusId: "hombros", label: "Gimnasio — Hombros y brazos" },
-    { discId: "gimnasio", focusId: "todo", label: "Gimnasio — Full body" },
-    { discId: "gimnasio", focusId: "gluteos", label: "Gimnasio — Glúteos y piernas" },
+    { discId: "gimnasio", focusId: "push", label: "Gimnasio — Push (Pecho, hombros, tríceps)" },
+    { discId: "gimnasio", focusId: "pull", label: "Gimnasio — Pull (Espalda, bíceps)" },
+    { discId: "gimnasio", focusId: "legs", label: "Gimnasio — Legs (Piernas)" },
+    { discId: "gimnasio", focusId: "upper", label: "Gimnasio — Upper Body" },
+    { discId: "gimnasio", focusId: "full_body", label: "Gimnasio — Full Body" },
+    { discId: "gimnasio", focusId: "glutes_focus", label: "Gimnasio — Glúteos y forma" },
   ],
   musculo: [
-    { discId: "gimnasio", focusId: "pecho", label: "Gimnasio — Pecho y tríceps" },
-    { discId: "gimnasio", focusId: "espalda", label: "Gimnasio — Espalda y bíceps" },
-    { discId: "calistenia", focusId: "core", label: "Calistenia — Core y hombros" },
-    { discId: "gimnasio", focusId: "piernas", label: "Gimnasio — Piernas" },
-    { discId: "gimnasio", focusId: "hombros", label: "Gimnasio — Hombros y brazos" },
-    { discId: "gimnasio", focusId: "brazos", label: "Gimnasio — Brazos" },
+    { discId: "gimnasio", focusId: "push", label: "Gimnasio — Push" },
+    { discId: "gimnasio", focusId: "pull", label: "Gimnasio — Pull" },
+    { discId: "calistenia", focusId: "core", label: "Calistenia — Core" },
+    { discId: "gimnasio", focusId: "legs", label: "Gimnasio — Legs" },
+    { discId: "gimnasio", focusId: "upper", label: "Gimnasio — Upper Body" },
+    { discId: "gimnasio", focusId: "arms", label: "Gimnasio — Brazos" },
   ],
   resistencia: [
     { discId: "futbolParque", focusId: "pivote", label: "Fútbol Parque — Pivote/Contención" },
@@ -3724,6 +3732,10 @@ function appendExtraMuscleExercises(routine, extraFocusIds, lvlIdx) {
 }
 
 function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
+  /* Brazos como sesión dedicada solo desde Campeón (lvlIdx >= 2); antes redirige a Push */
+  if (discId === "gimnasio" && focusId === "arms" && lvlIdx < 2) {
+    focusId = "push";
+  }
   if (discId === "basquetCancha" || discId === "basquetSinCancha") {
     return genBasquetRoutine(discId, lvlIdx, !!store.get("deload_active", null));
   }
@@ -4138,9 +4150,10 @@ function resolveGymFocusId(id) {
 function dailyPlanCandidates(sessions) {
   const acwr = calcACWR(sessions);
   if (acwr !== null && acwr > 1.5) {
+    const altDiscId = leastUsedDiscipline(sessions);
     return [
       { discId: "cuerpo", focusId: null, lvlIdx: 0, reason: `⚠️ Carga alta (ACWR ${acwr.toFixed(2)}). Tu cuerpo necesita recuperación hoy.` },
-      { discId: leastUsedDiscipline(sessions), focusId: "todo", lvlIdx: Math.max(0, mostFrequentLevel(sessions) - 1), reason: "Si prefieres entrenar: baja la intensidad." },
+      { discId: altDiscId, focusId: altDiscId === "gimnasio" ? "full_body" : "todo", lvlIdx: Math.max(0, mostFrequentLevel(sessions) - 1), reason: "Si prefieres entrenar: baja la intensidad." },
     ];
   }
 
@@ -4161,9 +4174,10 @@ function dailyPlanCandidates(sessions) {
   const weeklyGoal = store.get("weekly_goal", 4);
   const restThreshold = weeklyGoal >= 5 ? 6 : 5;
   if (streakDays >= restThreshold) {
+    const altDiscId = leastUsedDiscipline(sessions);
     return [
       { discId: "cuerpo", focusId: null, lvlIdx, reason: `Llevas ${streakDays} días seguidos entrenando. Hoy toca descanso activo.` },
-      { discId: leastUsedDiscipline(sessions), focusId: "todo", lvlIdx, reason: "Alternativa si prefieres seguir activo." },
+      { discId: altDiscId, focusId: altDiscId === "gimnasio" ? "full_body" : "todo", lvlIdx, reason: "Alternativa si prefieres seguir activo." },
     ];
   }
 
@@ -4205,7 +4219,7 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
     const leastId = leastUsedDiscipline(sessions);
     const label = DISCIPLINES[leastId]?.label || "Calistenia";
     return [
-      { discId: leastId, focusId: "todo", lvlIdx, reason: `No entrenaste ayer. Retoma con ${label}, tu disciplina menos trabajada esta semana.` },
+      { discId: leastId, focusId: leastId === "gimnasio" ? "full_body" : "todo", lvlIdx, reason: `No entrenaste ayer. Retoma con ${label}, tu disciplina menos trabajada esta semana.` },
       { discId: "calistenia", focusId: "todo", lvlIdx, reason: "O si prefieres, un full body de calistenia." },
     ];
   }
@@ -4226,7 +4240,7 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
     }
     if (grp === "piernas") {
       return [
-        { discId: "gimnasio", focusId: resolveGymFocusId("sup"), lvlIdx, reason: "Ayer trabajaste piernas, hoy toca parte superior." },
+        { discId: "gimnasio", focusId: "upper", lvlIdx, reason: "Ayer trabajaste piernas, hoy toca parte superior." },
         { discId: "futbolGym", focusId: "todo", lvlIdx, reason: "Alternativa: fútbol." },
       ];
     }
@@ -4245,12 +4259,12 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
     if (grp === "core") {
       return [{ discId: "gimnasio", focusId: resolveGymFocusId("push"), lvlIdx, reason: "Core ayer. Hoy parte superior." }];
     }
-    return [{ discId: "gimnasio", focusId: resolveGymFocusId("todo"), lvlIdx, reason: "Sigue con tu rutina de gimnasio." }];
+    return [{ discId: "gimnasio", focusId: "full_body", lvlIdx, reason: "Sigue con tu rutina de gimnasio." }];
   }
 
   if (yesterday.disc === "calistenia") {
     return [
-      { discId: "gimnasio", focusId: resolveGymFocusId("todo"), lvlIdx, reason: "Ayer hiciste calistenia, hoy prueba gimnasio." },
+      { discId: "gimnasio", focusId: "full_body", lvlIdx, reason: "Ayer hiciste calistenia, hoy prueba gimnasio." },
       { discId: "atletismo", focusId: "1000m", lvlIdx, reason: "Alternativa: atletismo." },
     ];
   }
@@ -4261,7 +4275,7 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
 
   if (yesterday.disc === "futbolGym" || yesterday.disc === "futbolParque") {
     return [
-      { discId: "gimnasio", focusId: resolveGymFocusId("todo"), lvlIdx, reason: "Ayer jugaste fútbol, hoy fuerza en gimnasio." },
+      { discId: "gimnasio", focusId: "full_body", lvlIdx, reason: "Ayer jugaste fútbol, hoy fuerza en gimnasio." },
       { discId: "cuerpo", focusId: null, lvlIdx, reason: "Alternativa: descanso activo." },
     ];
   }
@@ -9448,12 +9462,15 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     }
   };
 
-  const [techniqueRatings, setTechniqueRatings] = useState({});
-
-  const rateTechnique = (exerciseName, exerciseIdx, rating) => {
-    setTechniqueRatings((prev) => ({ ...prev, [exerciseIdx]: rating }));
+  /* Solo para resaltar el botón elegido en "¿Cómo estuvo la técnica?" (no persiste por separado; el valor real se guarda vía applyTechnique) */
+  const [lastTechButtonId, setLastTechButtonId] = useState({});
+  const rateTechnique = (exerciseName, exerciseIdx, ratingId) => {
+    setLastTechButtonId((prev) => ({ ...prev, [exerciseIdx]: ratingId }));
+    const value = { perfecta: 3, bien: 2, regular: 2, mal: 1 }[ratingId] ?? 2;
+    const exLogs = logs[exerciseIdx] || [];
+    if (exLogs.length) applyTechnique(exerciseIdx, exLogs.length - 1, value);
     const streakKey = `technique_bad_streak_${exerciseName}`;
-    if (rating === "mal" || rating === "regular") {
+    if (ratingId === "mal" || ratingId === "regular") {
       const count = store.get(streakKey, 0) + 1;
       store.set(streakKey, count);
       if (count >= 3) {
@@ -9739,7 +9756,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       cooldownBonus: !!gotCooldownBonus,
       note: sanitizeNote(quickNote) || undefined,
       dupType: plan.dupType || undefined,
-      exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i], technique: techniqueRatings[i] || null })),
+      exercises: plan.exercises.map((e, i) => ({ name: e.name, sets: finalLogs[i], technique: lastLoggedTechnique(finalLogs[i]) })),
     };
     onSave(record);
     setLastRecord(record);
@@ -9871,7 +9888,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       durationMin: Math.round(sessionSecs / 60),
       partial: true,
       exercises: plan.exercises
-        .map((e, i) => ({ name: e.name, sets: logs[i], technique: techniqueRatings[i] || null }))
+        .map((e, i) => ({ name: e.name, sets: logs[i], technique: lastLoggedTechnique(logs[i]) }))
         .filter((_, i) => logs[i].some((s) => s.ok)),
     };
     onSave(record);
@@ -10811,15 +10828,15 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
                   key={t.id} onClick={() => rateTechnique(ex.name, exIdx, t.id)}
                   style={{
                     flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 20,
-                    background: techniqueRatings[exIdx] === t.id ? `${t.color}33` : C.surface,
-                    border: `1px solid ${techniqueRatings[exIdx] === t.id ? t.color : C.border}`,
+                    background: lastTechButtonId[exIdx] === t.id ? `${t.color}33` : C.surface,
+                    border: `1px solid ${lastTechButtonId[exIdx] === t.id ? t.color : C.border}`,
                   }}
                 >
                   {t.emoji}
                 </button>
               ))}
             </div>
-            {(techniqueRatings[exIdx] === "mal" || techniqueRatings[exIdx] === "regular") && (
+            {(lastTechButtonId[exIdx] === "mal" || lastTechButtonId[exIdx] === "regular") && (
               <div style={{ marginTop: 10 }}>
                 {ex.tip && <p style={{ fontSize: 11, color: C.dim, lineHeight: 1.4 }}>💡 {ex.tip}</p>}
                 <p style={{ fontSize: 12, marginTop: 6, fontWeight: 700 }}>¿Que este ejercicio aparezca con peso más bajo la próxima vez?</p>
