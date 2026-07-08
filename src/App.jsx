@@ -5055,45 +5055,65 @@ function ExerciseIllustration({ category, color }) {
 /* GIFs/fotos reales de ejercicios (free-exercise-db, sin API key) para los más frecuentes.
    Si la imagen falla (red, CORS, URL rota) se cae a la ilustración CSS existente. */
 const EXERCISE_GIFS = {
-  "Press banca con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/images/0.jpg",
-  "Sentadilla con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Full_Squat/images/0.jpg",
-  "Peso muerto convencional": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/images/0.jpg",
-  "Dominadas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pullup/images/0.jpg",
-  "Press militar de pie con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Shoulder_Press/images/0.jpg",
-  "Remo con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bent_Over_Row/images/0.jpg",
-  "Hip thrust con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/images/0.jpg",
-  "Sentadilla búlgara": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bulgarian_Split_Squat/images/0.jpg",
-  "Flexiones": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Push-Up/images/0.jpg",
-  "Curl con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/images/0.jpg",
-  "Press francés": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Barbell_Triceps_Extension/images/0.jpg",
-  "Peso muerto rumano": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Romanian_Deadlift/images/0.jpg",
-  "Prensa de piernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Press/images/0.jpg",
-  "Zancadas con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/images/0.jpg",
-  "Elevaciones laterales": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/images/0.jpg",
+  "Press banca con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/0.jpg",
+  "Sentadilla con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Full_Squat/0.jpg",
+  "Peso muerto convencional": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/0.jpg",
+  "Dominadas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pullups/0.jpg",
+  "Press militar con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Shoulder_Press/0.jpg",
+  "Press militar de pie con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Shoulder_Press/0.jpg",
+  "Remo con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Barbell_Row/0.jpg",
+  "Hip thrust con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/0.jpg",
+  "Sentadilla búlgara": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg",
+  "Flexiones": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/0.jpg",
+  "Curl con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/0.jpg",
+  "Press francés": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Triceps_Press/0.jpg",
+  "Peso muerto rumano": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Romanian_Deadlift/0.jpg",
+  "Prensa de piernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Press/0.jpg",
+  "Zancadas con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/0.jpg",
+  "Elevaciones laterales": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg",
+  "Fondos en paralelas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Triceps_Version/0.jpg",
+  "Jalón al pecho": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Wide-Grip_Lat_Pulldown/0.jpg",
+  "Jalón al pecho agarre ancho": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Wide-Grip_Lat_Pulldown/0.jpg",
+  "Remo en polea baja sentado": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Cable_Rows/0.jpg",
+  "Press inclinado con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg",
+  "Curl de bíceps con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bicep_Curl/0.jpg",
+  "Extensión de tríceps en polea": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/0.jpg",
 };
 
 function ExerciseDemo({ exerciseName }) {
   const [imgError, setImgError] = useState(false);
+  const gifUrl = EXERCISE_GIFS[exerciseName];
   const category = movementCategory(exerciseName);
   const color = MOVEMENT_COLORS[category];
-  const gifUrl = EXERCISE_GIFS[exerciseName];
+
+  if (gifUrl && !imgError) {
+    return (
+      <div
+        className="exercise-demo"
+        style={{
+          width: "100%", aspectRatio: "4/3", maxHeight: 200,
+          borderRadius: 12, overflow: "hidden", background: C.card,
+          border: `1px solid ${C.border}`, marginTop: 12, position: "relative",
+        }}
+      >
+        <img
+          src={gifUrl} alt={exerciseName} onError={() => setImgError(true)} loading="lazy"
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className="exercise-demo"
       style={{
         width: "100%", maxHeight: 160, minHeight: 140,
         borderRadius: 12, background: `${color}08`, border: `1px solid ${C.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden", position: "relative", padding: gifUrl && !imgError ? 0 : 16,
+        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden", position: "relative", padding: 16,
       }}
     >
-      {gifUrl && !imgError ? (
-        <img
-          src={gifUrl} alt={exerciseName} onError={() => setImgError(true)} loading="lazy"
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      ) : (
-        <ExerciseIllustration category={category} color={color} />
-      )}
+      <ExerciseIllustration category={category} color={color} />
     </div>
   );
 }
@@ -6336,7 +6356,12 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
   const [showCombine, setShowCombine] = useState(false);
   const [showBodyPain, setShowBodyPain] = useState(false);
   const [previewTip, setPreviewTip] = useState(null);
-  const freezesLeft = 1;
+  const freezesUsedInfo = store.get("freezes_used", null);
+  const freezesUsedThisMonth = (() => {
+    const now = new Date();
+    return freezesUsedInfo && freezesUsedInfo.month === now.getMonth() && freezesUsedInfo.year === now.getFullYear() ? freezesUsedInfo.count : 0;
+  })();
+  const freezesLeft = Math.max(0, 1 - freezesUsedThisMonth);
   useEffect(() => {
     if (streak > prevStreakRef.current) {
       setStreakBounce(true);
@@ -9572,10 +9597,10 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const priorHistory = useMemo(() => sessions, []); // eslint-disable-line react-hooks/exhaustive-deps
   const priorRecords = useMemo(() => computeRecords(priorHistory), [priorHistory]);
   const priorAvgVolume = useMemo(() => {
-    const w = priorHistory.filter((s) => s.kind === "entreno");
-    if (!w.length) return 0;
-    return w.reduce((a, s) => a + sessionVolume(s), 0) / w.length;
-  }, [priorHistory]);
+    const sameType = priorHistory.filter((s) => s.kind === "entreno" && s.disc === plan.discId).slice(-3);
+    if (!sameType.length) return 0;
+    return sameType.reduce((a, s) => a + sessionVolume(s), 0) / sameType.length;
+  }, [priorHistory, plan.discId]);
 
   /* Foto finish: celebración especial al batir un récord (o racha 7 / sesión perfecta) */
   useEffect(() => {
@@ -10103,9 +10128,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <p style={{ fontSize: 11, color: C.mut, marginTop: 8 }}>Levantaste el peso de {bulldogs} bulldogs 🐕</p>
         )}
 
-        {volDiffPct !== null && (
-          <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan, marginTop: 8 }}>
-            vs sesión anterior: {volDiffPct >= 0 ? "+" : ""}{volDiffPct}% volumen {volDiffPct >= 0 ? "📈" : ""}
+        {volDiffPct !== null && volDiffPct > 0 && (
+          <p style={{ fontSize: 12, fontWeight: 700, color: C.green, marginTop: 8 }}>
+            📈 +{volDiffPct}% vs tu promedio
           </p>
         )}
 
@@ -10150,6 +10175,23 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             <span style={{ fontSize: 12, fontWeight: 700 }}>{suggestion}</span>
           </div>
         )}
+
+        {(() => {
+          const failedTechnique = plan.exercises
+            .map((e, i) => ({ e, technique: lastLoggedTechnique(logs[i]) }))
+            .filter((x) => x.technique === 1);
+          if (!failedTechnique.length) return null;
+          return (
+            <div className="card" style={{ marginTop: 8, padding: "11px", textAlign: "left", borderColor: `${C.yellow}55` }}>
+              {failedTechnique.map(({ e }) => (
+                <div key={e.name} style={{ marginBottom: 4 }}>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: C.yellow }}>⚠️ Técnica baja en: {e.name}</p>
+                  {e.tip && <p style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Tip: {e.tip}</p>}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {!noteSaved ? (
           <div className="card" style={{ marginTop: 14, textAlign: "left" }}>
