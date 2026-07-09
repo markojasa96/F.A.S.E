@@ -857,6 +857,9 @@ function AcwrCard({ sessions }) {
       {expanded && (
         <div style={{ marginTop: 8 }}>
           <p style={{ fontSize: 11, color: C.dim, lineHeight: 1.5 }}>{rec.detail}</p>
+          <p style={{ fontSize: 11, color: C.dim, marginTop: 6, lineHeight: 1.5 }}>
+            Ratio Agudo/Crónico: compara lo que entrenaste esta semana vs tu promedio de 4 semanas.
+          </p>
           <p style={{ fontSize: 10, color: C.dim, marginTop: 6, fontStyle: "italic" }}>
             ACWR {ratio.toFixed(2)} · Zona óptima: 0.8 — 1.3
           </p>
@@ -3303,6 +3306,60 @@ function buildWeeklyPlan(days, goal, duration) {
     return { day: name, rest: true, label: "Descanso" };
   });
   return { days, goal, duration, plan, createdTs: Date.now() };
+}
+
+/* ─── Semana completa sugerida al elegir un enfoque de Gimnasio específico ─── */
+const FOCUS_WEEK_TEMPLATES = {
+  glutes_focus: {
+    name: "Programa glúteos y piernas",
+    description: "Enfoque principal en glúteos y piernas pero con trabajo de todo el cuerpo para equilibrio.",
+    days: {
+      1: { discId: "gimnasio", focusId: "glutes_focus", label: "Glúteos y piernas (principal)" },
+      2: { discId: "gimnasio", focusId: "push", label: "Push (equilibrio superior)" },
+      3: { rest: true, label: "Descanso" },
+      4: { discId: "gimnasio", focusId: "glutes_focus", label: "Glúteos y piernas (variación)" },
+      5: { discId: "gimnasio", focusId: "pull", label: "Pull (espalda y bíceps)" },
+      6: { discId: "cuerpo", label: "Movilidad activa" },
+      7: { rest: true, label: "Descanso" },
+    },
+  },
+  v_shape: {
+    name: "Programa forma en V",
+    description: "Espalda ancha y hombros con trabajo equilibrado del resto del cuerpo.",
+    days: {
+      1: { discId: "gimnasio", focusId: "v_shape", label: "Forma en V (principal)" },
+      2: { discId: "gimnasio", focusId: "legs", label: "Piernas (equilibrio)" },
+      3: { rest: true, label: "Descanso" },
+      4: { discId: "gimnasio", focusId: "v_shape", label: "Forma en V (variación)" },
+      5: { discId: "gimnasio", focusId: "push", label: "Push (pecho y hombros)" },
+      6: { discId: "cuerpo", label: "Movilidad" },
+      7: { rest: true, label: "Descanso" },
+    },
+  },
+  push: {
+    name: "PPL — Semana tipo",
+    description: "Push/Pull/Legs con distribución óptima.",
+    days: {
+      1: { discId: "gimnasio", focusId: "push", label: "Push" },
+      2: { discId: "gimnasio", focusId: "pull", label: "Pull" },
+      3: { discId: "gimnasio", focusId: "legs", label: "Legs" },
+      4: { rest: true, label: "Descanso" },
+      5: { discId: "gimnasio", focusId: "push", label: "Push (variación)" },
+      6: { discId: "gimnasio", focusId: "pull", label: "Pull (variación)" },
+      7: { discId: "gimnasio", focusId: "legs", label: "Legs (variación)" },
+    },
+  },
+};
+
+function generateFocusWeek(focusId) {
+  const tpl = FOCUS_WEEK_TEMPLATES[focusId];
+  if (!tpl) return null;
+  const plan = PLAN_DAY_NAMES.map((name, i) => {
+    const d = tpl.days[i + 1];
+    if (!d) return { day: name, rest: true, label: "Descanso" };
+    return { day: name, ...d };
+  });
+  return { focusId, name: tpl.name, description: tpl.description, plan, createdTs: Date.now() };
 }
 
 function challengeProgress(challenge, sessions, streak) {
@@ -8668,6 +8725,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
   const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "partido"
+  const activeProgram = getActiveProgram();
+  const [trainMode, setTrainMode] = useState(() => (activeProgram ? "programa" : "musculo"));
+  const lastSession = useMemo(() => [...sessions].reverse().find((s) => s.kind === "entreno"), [sessions]);
+  const [weekChoice, setWeekChoice] = useState(null); // null | "solo" | "semana"
+  const [weekSavedMsg, setWeekSavedMsg] = useState(false);
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -8707,6 +8769,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     setExtraFocusIds([]);
     setExtraStepDone(false);
     setGymMethod(null);
+    setWeekChoice(null);
     if (finalId === "futbol") onAccent(C.orange);
     else if (finalId === "basquetbol") onAccent("#A855F7");
     else if (finalId === "atletismo") onAccent(C.purple);
@@ -8845,93 +8908,167 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>👇 Elige tu disciplina</p>
           </div>
         )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-          {trainCards.map((d) => (
+
+        {activeProgram ? (
+          <button
+            className="card fade-up"
+            onClick={() => {
+              const candidate = programDailyCandidate(sessions);
+              if (!candidate) return;
+              const p = buildPlanFor(candidate.discId, candidate.focusId, candidate.lvlIdx);
+              if (p) onStart(p);
+            }}
+            style={{ marginTop: 12, width: "100%", textAlign: "left", padding: 14, borderLeft: `4px solid ${activeProgram.program.color}` }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 800, color: activeProgram.program.color }}>▶ Continuar: {activeProgram.program.name}</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Semana {activeProgram.week} · Toca para iniciar la sesión de hoy</div>
+          </button>
+        ) : lastSession ? (
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button
-              key={d.id}
-              className="card fade-up"
-              onClick={() => pickDisc(d.id)}
-              style={{
-                display: "flex", alignItems: "center", gap: 14, textAlign: "left",
-                borderLeft: `4px solid ${d.color}`, transition: "transform .15s ease",
-              }}
+              className="card"
+              onClick={() => { const p = planFromSession(lastSession); if (p) onStart(p); }}
+              style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}
             >
-              <span style={{ fontSize: 30 }}>{d.icon}</span>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>{d.label}</div>
-                <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{d.desc}</div>
-              </div>
-              <span style={{ marginLeft: "auto", color: d.color, fontSize: 20 }}>›</span>
+              <div style={{ fontSize: 20 }}>🔄</div>
+              <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Repetir última</div>
             </button>
-          ))}
+            {customRoutines.length > 0 && (
+              <button className="card" onClick={() => setTrainMode("rutina")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+                <div style={{ fontSize: 20 }}>📋</div>
+                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Mi rutina guardada</div>
+              </button>
+            )}
+          </div>
+        ) : null}
+
+        <div className="chip-wrap" style={{ marginTop: 14 }}>
+          <button className={`chip ${trainMode === "musculo" ? "on" : ""}`} onClick={() => setTrainMode("musculo")}>💪 Entrenar por músculo</button>
+          <button className={`chip ${trainMode === "programa" ? "on" : ""}`} onClick={() => setTrainMode("programa")}>📅 Programa semanal</button>
+          <button className={`chip ${trainMode === "rutina" ? "on" : ""}`} onClick={() => setTrainMode("rutina")}>🔨 Crear mi rutina</button>
         </div>
 
-        <div className="sec-title">Modo especial</div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="card" onClick={() => setSpecial("amrap")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 22 }}>⏱</div>
-            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>AMRAP</div>
-          </button>
-          <button className="card" onClick={() => setSpecial("emom")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 22 }}>🔔</div>
-            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>EMOM</div>
-          </button>
-          <button className="card" onClick={() => setSpecial("intervalos")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 22 }}>📊</div>
-            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Intervalos</div>
-          </button>
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <button className="card" onClick={() => setSpecial("heavyduty")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 22 }}>💀</div>
-            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Heavy Duty</div>
-          </button>
-          <button className="card" onClick={() => setSpecial("gvt")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 22 }}>🔟</div>
-            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>GVT 10×10</div>
-          </button>
-          <button className="card" onClick={() => setSpecial("century")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 22 }}>💯</div>
-            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Century</div>
-          </button>
-        </div>
-        <button className="card" onClick={() => setSpecial("reto")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.yellow}` }}>
-          <span style={{ fontSize: 24 }}>🏆</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>Reto Personal</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{challenge ? "Ver progreso de tu reto activo" : "Crea un desafío contra ti mismo"}</div>
-          </div>
-        </button>
-        <button className="card" onClick={() => setSpecial("viaje")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `2px dashed ${C.border}` }}>
-          <span style={{ fontSize: 24 }}>✈️</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>Modo viaje</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
-          </div>
-        </button>
-        <div className="sec-title">Mi rutina</div>
-        <button
-          className="card fade-up"
-          onClick={() => setBuilderMode("new")}
-          style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", borderLeft: `4px solid ${C.cyan}` }}
-        >
-          <span style={{ fontSize: 26 }}>➕</span>
-          <div style={{ fontSize: 14, fontWeight: 800 }}>Crear rutina personalizada</div>
-        </button>
-        {customRoutines.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-            {customRoutines.map((r) => (
-              <div key={r.id} className="card" style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
-                  <div style={{ fontSize: 11, color: C.mut }}>{r.exercises.length} ejercicios</div>
-                </div>
-                <button onClick={() => startCustomRoutine(r)} style={{ fontSize: 16, padding: 4 }}>▶</button>
-                <button onClick={() => setBuilderMode(r)} style={{ fontSize: 14, padding: 4 }}>✏️</button>
-                <button onClick={() => deleteCustomRoutine(r.id)} style={{ fontSize: 14, padding: 4, color: C.red }}>🗑</button>
+        {trainMode === "musculo" && (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+              {trainCards.map((d) => (
+                <button
+                  key={d.id}
+                  className="card fade-up"
+                  onClick={() => pickDisc(d.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 14, textAlign: "left",
+                    borderLeft: `4px solid ${d.color}`, transition: "transform .15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: 30 }}>{d.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>{d.label}</div>
+                    <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{d.desc}</div>
+                  </div>
+                  <span style={{ marginLeft: "auto", color: d.color, fontSize: 20 }}>›</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="sec-title">Modo especial</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="card" onClick={() => setSpecial("amrap")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+                <div style={{ fontSize: 22 }}>⏱</div>
+                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>AMRAP</div>
+              </button>
+              <button className="card" onClick={() => setSpecial("emom")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+                <div style={{ fontSize: 22 }}>🔔</div>
+                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>EMOM</div>
+              </button>
+              <button className="card" onClick={() => setSpecial("intervalos")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+                <div style={{ fontSize: 22 }}>📊</div>
+                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Intervalos</div>
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="card" onClick={() => setSpecial("heavyduty")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+                <div style={{ fontSize: 22 }}>💀</div>
+                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Heavy Duty</div>
+              </button>
+              <button className="card" onClick={() => setSpecial("gvt")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+                <div style={{ fontSize: 22 }}>🔟</div>
+                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>GVT 10×10</div>
+              </button>
+              <button className="card" onClick={() => setSpecial("century")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
+                <div style={{ fontSize: 22 }}>💯</div>
+                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Century</div>
+              </button>
+            </div>
+            <button className="card" onClick={() => setSpecial("reto")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.yellow}` }}>
+              <span style={{ fontSize: 24 }}>🏆</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>Reto Personal</div>
+                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{challenge ? "Ver progreso de tu reto activo" : "Crea un desafío contra ti mismo"}</div>
               </div>
-            ))}
-          </div>
+            </button>
+            <button className="card" onClick={() => setSpecial("viaje")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `2px dashed ${C.border}` }}>
+              <span style={{ fontSize: 24 }}>✈️</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>Modo viaje</div>
+                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
+              </div>
+            </button>
+          </>
+        )}
+
+        {trainMode === "programa" && (
+          <>
+            {activeProgram && (() => {
+              const candidate = programDailyCandidate(sessions);
+              if (!candidate) return null;
+              return (
+                <div className="card" style={{ marginTop: 14, padding: 14, borderColor: `${activeProgram.program.color}55` }}>
+                  <p style={{ fontSize: 12, fontWeight: 800, color: activeProgram.program.color }}>Tu sesión de hoy según el programa</p>
+                  <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>{candidate.reason}</p>
+                  <button
+                    className="btn-xl"
+                    onClick={() => { const p = buildPlanFor(candidate.discId, candidate.focusId, candidate.lvlIdx); if (p) onStart(p); }}
+                    style={{ marginTop: 10, background: activeProgram.program.color, color: "#07070C", fontSize: 14 }}
+                  >
+                    ▶ Empezar
+                  </button>
+                </div>
+              );
+            })()}
+            <div style={{ marginTop: 14 }}>
+              <ProgramsScreen />
+            </div>
+          </>
+        )}
+
+        {trainMode === "rutina" && (
+          <>
+            <div className="sec-title">Mi rutina</div>
+            <button
+              className="card fade-up"
+              onClick={() => setBuilderMode("new")}
+              style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", borderLeft: `4px solid ${C.cyan}` }}
+            >
+              <span style={{ fontSize: 26 }}>➕</span>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>Crear rutina personalizada</div>
+            </button>
+            {customRoutines.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                {customRoutines.map((r) => (
+                  <div key={r.id} className="card" style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
+                      <div style={{ fontSize: 11, color: C.mut }}>{r.exercises.length} ejercicios</div>
+                    </div>
+                    <button onClick={() => startCustomRoutine(r)} style={{ fontSize: 16, padding: 4 }}>▶</button>
+                    <button onClick={() => setBuilderMode(r)} style={{ fontSize: 14, padding: 4 }}>✏️</button>
+                    <button onClick={() => deleteCustomRoutine(r.id)} style={{ fontSize: 14, padding: 4, color: C.red }}>🗑</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     );
@@ -9163,7 +9300,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
           {GYM_WORKOUT_TYPES.filter((t) => !t.minLevel || isCampeonPlusGym).map((t) => (
             <button
-              key={t.id} className="card" onClick={() => { setFocusId(t.id); setGymTypeChosen(true); }}
+              key={t.id} className="card" onClick={() => { setFocusId(t.id); setGymTypeChosen(true); setWeekChoice(null); }}
               style={{ textAlign: "left", padding: "12px 10px" }}
             >
               <div style={{ fontSize: 24 }}>{t.emoji}</div>
@@ -9329,6 +9466,45 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
               </button>
             </div>
           </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ── Enfoque con semana completa disponible: preguntar antes del nivel/rutina ── */
+  if (discId === "gimnasio" && gymMethod && FOCUS_WEEK_TEMPLATES[focusId] && !weekChoice) {
+    const tpl = FOCUS_WEEK_TEMPLATES[focusId];
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <div style={{ fontSize: 40 }}>📅</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>{tpl.name}</h2>
+        <p className="muted" style={{ marginTop: 6 }}>¿Quieres solo esta sesión o guardar una semana completa?</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button className="card" onClick={() => setWeekChoice("solo")} style={{ flex: 1, padding: "16px 8px" }}>
+            <div style={{ fontSize: 22 }}>▶</div>
+            <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>Solo hoy</div>
+          </button>
+          <button
+            className="card"
+            onClick={() => {
+              const week = generateFocusWeek(focusId);
+              if (week) { store.set("weekly_plan", week); setWeekSavedMsg(true); }
+            }}
+            style={{ flex: 1, padding: "16px 8px", borderColor: `${C.cyan}66` }}
+          >
+            <div style={{ fontSize: 22 }}>📅</div>
+            <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>Guardar semana completa</div>
+          </button>
+        </div>
+        {weekSavedMsg && (
+          <>
+            <p style={{ fontSize: 12, color: C.cyan, marginTop: 16, lineHeight: 1.5 }}>
+              Semana guardada. Ve a Yo → Progreso → Mi plan para ver tu semana completa.
+            </p>
+            <button className="btn-xl" onClick={() => setWeekChoice("solo")} style={{ marginTop: 14, background: C.cyan, color: "#07070C" }}>
+              Continuar a la sesión de hoy
+            </button>
+          </>
         )}
       </div>
     );
@@ -11804,6 +11980,9 @@ function OneRM({ onBack }) {
       </button>
       <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>💪 Mi fuerza</h2>
       <p className="muted" style={{ marginTop: 2 }}>Calcula tu repetición máxima (1RM) con la fórmula Epley</p>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
+        El 1RM (1 repetición máxima) es el peso máximo que puedes levantar una sola vez. Úsalo para calcular cargas de entrenamiento con porcentajes.
+      </p>
 
       <div className="sec-title">Ejercicio</div>
       <div className="chip-wrap">
@@ -12125,7 +12304,10 @@ function MacrosCalculator({ sessions, onBack }) {
       <div className="screen">
         <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🧮 Mis macros</h2>
-        <p className="muted" style={{ marginTop: 2 }}>Paso 1 — Datos básicos</p>
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
+          Los macronutrientes son los 3 pilares de la alimentación: proteína (construye músculo), carbohidratos (energía para entrenar) y grasas (hormonas y recuperación).
+        </p>
+        <p className="muted" style={{ marginTop: 8 }}>Paso 1 — Datos básicos</p>
         <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 14, display: "block" }}>PESO (KG)</label>
         <input className="input" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 4 }} />
         <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>ALTURA (CM)</label>
@@ -12309,6 +12491,9 @@ function PlayerRadar({ sessions, isFootball }) {
   return (
     <div className="card" style={{ marginTop: 10 }}>
       <p style={{ fontSize: 13, fontWeight: 800 }}>{isFootball ? "⚽ Mi perfil de jugador" : "📊 Mi perfil atlético"}</p>
+      <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
+        Tu perfil atlético calculado de tu historial. Cada eje refleja diferentes capacidades. Se actualiza con cada sesión.
+      </p>
       <svg viewBox={`0 0 ${size} ${size}`} width="100%" style={{ maxWidth: 280, display: "block", margin: "8px auto 0" }}>
         {gridLevels.map((lvl) => {
           const gridPts = Array.from({ length: axes }, (_, i) => radarPoint(lvl, i, axes, center, radius));
@@ -12733,7 +12918,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   if (showPlan) {
     const globalIdx0 = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
     const startDay = (item) => {
-      if (item.rest || !onQuickStart) return;
+      if (item.rest || !onQuickStart || item.discId === "cuerpo") return;
       const seed = routineSeed(item.discId, item.focusId);
       if (item.discId === "atletismo") {
         const exercises = genAtletismoRoutine(item.focusId, globalIdx0, seed);
@@ -12760,8 +12945,10 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
     return (
       <div className="screen">
         <button onClick={() => setShowPlan(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 Mi plan semanal</h2>
-        <p className="muted" style={{ marginTop: 2 }}>{weeklyPlan.days} días/semana · {PLAN_GOALS.find((g) => g.id === weeklyPlan.goal)?.label} · {weeklyPlan.duration} min</p>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 {weeklyPlan.name || "Mi plan semanal"}</h2>
+        <p className="muted" style={{ marginTop: 2 }}>
+          {weeklyPlan.description || `${weeklyPlan.days} días/semana · ${PLAN_GOALS.find((g) => g.id === weeklyPlan.goal)?.label} · ${weeklyPlan.duration} min`}
+        </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
           {weeklyPlan.plan.map((d) => (
             <div key={d.day} className="card" style={{ padding: "12px 14px", borderLeft: `4px solid ${d.rest ? C.border : C.cyan}` }}>
@@ -12770,7 +12957,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
                   <div style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>{d.day.toUpperCase()}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>{d.label}</div>
                 </div>
-                {!d.rest && (
+                {!d.rest && d.discId !== "cuerpo" && (
                   <button onClick={() => startDay(d)} style={{ fontSize: 11, fontWeight: 800, color: C.cyan, border: `1px solid ${C.cyan}55`, padding: "6px 10px", borderRadius: 99 }}>
                     ▶ Iniciar
                   </button>
@@ -13605,29 +13792,81 @@ function getTabAccent(tabId) {
   return { inicio: C.cyan, entrenar: C.green, yo: C.purple, explorar: C.orange }[tabId];
 }
 
-/* ─── YO: perfil, progreso, cuerpo y configuración en un solo lugar ─── */
-const YO_SECTIONS = [
-  { id: "progreso", label: "📊 Progreso" },
-  { id: "cuerpo", label: "🧘 Cuerpo" },
-];
+/* ─── YO: perfil, progreso y cuerpo en un solo lugar (config vive solo en el header) ─── */
+function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart, onCompleteBody }) {
+  if (section === "progreso") {
+    return (
+      <div className="screen">
+        <button onClick={() => onSection(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Yo</button>
+        <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} />
+      </div>
+    );
+  }
 
-function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart, onCompleteBody, onOpenSettings }) {
+  if (section === "cuerpo") {
+    return (
+      <div className="screen">
+        <button onClick={() => onSection(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Yo</button>
+        <Body onComplete={onCompleteBody} />
+      </div>
+    );
+  }
+
+  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
+  const globalLvl = LEVELS[globalIdx];
+  const nextThreshold = GLOBAL_LEVEL_THRESHOLDS[globalIdx + 1];
+  const sessionsToNext = nextThreshold ? nextThreshold - sessions.length : null;
+  const prevThreshold = GLOBAL_LEVEL_THRESHOLDS[globalIdx] || 0;
+
   return (
     <div className="screen">
-      <div className="chip-wrap">
-        {YO_SECTIONS.map((s) => (
-          <button
-            key={s.id} className={`chip ${section === s.id ? "on" : ""}`}
-            style={section === s.id ? { background: C.purple } : {}}
-            onClick={() => onSection(s.id)}
-          >
-            {s.label}
-          </button>
-        ))}
-        <button onClick={onOpenSettings} className="chip">⚙️ Configuración</button>
+      <div style={{ textAlign: "center", padding: "20px 0 16px" }}>
+        <div style={{ fontSize: 48 }}>{globalLvl.emoji}</div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: globalLvl.color, marginTop: 8 }}>{globalLvl.name}</div>
+        <div style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>
+          {sessions.length} {sessions.length === 1 ? "sesión total" : "sesiones totales"}
+        </div>
+        {sessionsToNext !== null && (
+          <>
+            <div style={{ height: 6, background: C.surface, borderRadius: 99, margin: "12px 0 6px", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${Math.min(100, (1 - sessionsToNext / (nextThreshold - prevThreshold)) * 100)}%`,
+                background: globalLvl.color, borderRadius: 99, transition: "width 0.5s ease",
+              }} />
+            </div>
+            <div style={{ fontSize: 11, color: C.dim }}>
+              → {LEVELS[globalIdx + 1]?.name} en {sessionsToNext} sesiones más
+            </div>
+          </>
+        )}
       </div>
-      {section === "progreso" && <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} />}
-      {section === "cuerpo" && <Body onComplete={onCompleteBody} />}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <button onClick={() => onSection("progreso")} className="card" style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", padding: 16 }}>
+          <span style={{ fontSize: 28 }}>📊</span>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>Mi progreso</div>
+            <div style={{ fontSize: 12, color: C.mut }}>Récords, estadísticas, DNA atlético, logros y más</div>
+          </div>
+          <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
+        </button>
+
+        <button onClick={() => onSection("cuerpo")} className="card" style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", padding: 16 }}>
+          <span style={{ fontSize: 28 }}>🧘</span>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>Movilidad y cuerpo</div>
+            <div style={{ fontSize: 12, color: C.mut }}>Estiramientos, movilidad articular y recuperación activa</div>
+          </div>
+          <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+        <StatBox label="Racha" value={`${streak}d 🔥`} />
+        <StatBox label="Esta semana" value={sessions.filter((s) => s.ts >= startOfWeek()).length} />
+        <StatBox label="Total" value={sessions.length} />
+      </div>
     </div>
   );
 }
@@ -13760,7 +13999,7 @@ export default function App() {
     return remapped;
   });
   const [tab, setTab] = useState("inicio");
-  const [yoSection, setYoSection] = useState("progreso");
+  const [yoSection, setYoSection] = useState(null);
   const [live, setLive] = useState(null);
   const [accent, setAccent] = useState(() => getTabAccent("inicio"));
   const [online, setOnline] = useState(() => navigator.onLine);
@@ -14282,7 +14521,7 @@ export default function App() {
               <YoScreen
                 section={yoSection} onSection={setYoSection}
                 sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive}
-                onCompleteBody={completeBody} onOpenSettings={() => setShowSettings(true)}
+                onCompleteBody={completeBody}
               />
             )}
             {tab === "explorar" && <ExplorarScreen />}
