@@ -5448,16 +5448,27 @@ const WATER_LEVEL_INFO = [
   { max: 1.01, color: "#00CCFF", opacity: 1.0, label: "Excelente 💧" },
 ];
 
-function WaterGlass({ count, goal, bubbleKey }) {
+/* Color del número de vasos según el % de la meta — comunica el estado sin texto ni banners */
+function waterLevelColor(count, goal) {
+  const pct = goal > 0 ? count / goal : 0;
+  if (pct < 0.25) return "#FF4444";
+  if (pct < 0.5) return "#FF8800";
+  if (pct < 0.75) return "#0099FF";
+  return "#00E676";
+}
+
+function WaterGlass({ count, goal, bubbleKey, compact }) {
   const pct = goal > 0 ? Math.min(1, count / goal) : 0;
   const full = count >= goal;
   const fillY = 114 - pct * 100;
   const level = WATER_LEVEL_INFO.find((l) => pct <= l.max) || WATER_LEVEL_INFO[0];
   const showWave = pct >= 0.1 && pct <= 0.9;
   const bubbles = pct > 0 ? Array.from({ length: 4 }) : [];
+  const w = compact ? 55 : 80;
+  const h = compact ? 80 : 120;
   return (
-    <div style={{ position: "relative", width: 80, height: 120, flexShrink: 0 }}>
-      <svg width="80" height="120" viewBox="0 0 80 120" style={{ overflow: "visible" }}>
+    <div style={{ position: "relative", width: w, height: h, flexShrink: 0 }}>
+      <svg width={w} height={h} viewBox="0 0 80 120" style={{ overflow: "visible" }}>
         <defs>
           <clipPath id="glassClip">
             <path d="M14 8 L66 8 L58 114 L22 114 Z" />
@@ -5503,7 +5514,7 @@ function WaterGlass({ count, goal, bubbleKey }) {
         </g>
       </svg>
       {full && <div className="water-wave-msg" style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", fontSize: 18 }}>🌊</div>}
-      <p style={{ fontSize: 9, fontWeight: 700, color: level.color, textAlign: "center", marginTop: 4 }}>{level.label}</p>
+      {!compact && <p style={{ fontSize: 9, fontWeight: 700, color: level.color, textAlign: "center", marginTop: 4 }}>{level.label}</p>}
     </div>
   );
 }
@@ -5589,35 +5600,76 @@ const HEALTH_ISSUE_OPTIONS = [
   { id: "saltos", emoji: "⚡", label: "No puedo hacer saltos" },
 ];
 
-const BODY_ZONE_OPTIONS = [
-  { id: "todo", name: "Todo el cuerpo" },
-  { id: "hombros", name: "Hombros" },
-  { id: "pecho", name: "Pecho" },
-  { id: "espalda", name: "Espalda" },
-  { id: "brazos", name: "Brazos" },
-  { id: "abdomen", name: "Abdomen" },
-  { id: "gluteos", name: "Glúteos" },
-  { id: "piernas", name: "Piernas" },
+/* Mapa corporal anatómico interactivo: SVG con zonas iluminables + lista de checks a la derecha */
+const BODY_MAP_ZONES = [
+  { id: "hombros", label: "Hombros", color: C.cyan },
+  { id: "pecho", label: "Pecho", color: "#FF6B2B" },
+  { id: "brazos", label: "Brazos", color: "#00AACC" },
+  { id: "abdomen", label: "Abdomen", color: "#FFD600" },
+  { id: "gluteos", label: "Glúteos", color: "#FF9EC4" },
+  { id: "piernas", label: "Piernas", color: "#A855F7" },
+  { id: "espalda", label: "Espalda", color: C.cyan },
 ];
 
-/* Silueta humana simple con zonas iluminables según fase_body_focus */
-function BodyZoneFigure({ selected }) {
-  const on = (id) => selected.includes(id) || selected.includes("todo");
-  const fillFor = (id) => (on(id) ? C.cyan : C.border);
+function BodyMapSVG({ selected, onChange }) {
+  const isSelected = (id) => selected.includes(id) || selected.includes("todo");
+  const toggle = (id) => onChange(id);
+  const colorFor = (id) => BODY_MAP_ZONES.find((z) => z.id === id)?.color || C.cyan;
+
   return (
-    <svg viewBox="0 0 100 200" width="100%" height="220">
-      <circle cx="50" cy="20" r="14" fill={fillFor("todo")} opacity={on("todo") ? 1 : 0.5} />
-      <rect x="30" y="36" width="40" height="16" rx="6" fill={fillFor("hombros")} />
-      <rect x="34" y="52" width="32" height="30" rx="4" fill={fillFor("pecho")} />
-      <rect x="34" y="82" width="32" height="26" rx="4" fill={fillFor("abdomen")} />
-      <rect x="16" y="54" width="14" height="55" rx="6" fill={fillFor("brazos")} />
-      <rect x="70" y="54" width="14" height="55" rx="6" fill={fillFor("brazos")} />
-      <rect x="34" y="108" width="32" height="14" rx="5" fill={fillFor("gluteos")} />
-      <rect x="34" y="122" width="14" height="60" rx="6" fill={fillFor("piernas")} />
-      <rect x="52" y="122" width="14" height="60" rx="6" fill={fillFor("piernas")} />
-      {on("espalda") && <rect x="14" y="52" width="6" height="58" rx="3" fill={C.cyan} />}
-      {on("espalda") && <rect x="80" y="52" width="6" height="58" rx="3" fill={C.cyan} />}
-    </svg>
+    <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+      <svg viewBox="0 0 200 400" style={{ width: "48%", maxWidth: 180, flexShrink: 0 }}>
+        <ellipse cx="100" cy="30" rx="22" ry="28" fill="#1E1E2E" stroke={C.border} strokeWidth="1" />
+        <rect x="90" y="56" width="20" height="14" fill="#1E1E2E" stroke={C.border} strokeWidth="1" />
+
+        <ellipse cx="64" cy="82" rx="22" ry="14" fill={isSelected("hombros") ? colorFor("hombros") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("hombros")} style={{ cursor: "pointer" }} />
+        <ellipse cx="136" cy="82" rx="22" ry="14" fill={isSelected("hombros") ? colorFor("hombros") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("hombros")} style={{ cursor: "pointer" }} />
+
+        <path d="M78,70 Q100,68 122,70 L125,110 Q100,118 75,110 Z" fill={isSelected("pecho") ? colorFor("pecho") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("pecho")} style={{ cursor: "pointer" }} />
+
+        <ellipse cx="52" cy="112" rx="12" ry="26" fill={isSelected("brazos") ? colorFor("brazos") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
+        <ellipse cx="148" cy="112" rx="12" ry="26" fill={isSelected("brazos") ? colorFor("brazos") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
+        <ellipse cx="48" cy="156" rx="10" ry="22" fill={isSelected("brazos") ? colorFor("brazos") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
+        <ellipse cx="152" cy="156" rx="10" ry="22" fill={isSelected("brazos") ? colorFor("brazos") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
+
+        <path d="M78,110 Q100,118 122,110 L120,158 Q100,162 80,158 Z" fill={isSelected("abdomen") ? colorFor("abdomen") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("abdomen")} style={{ cursor: "pointer" }} />
+
+        <path d="M80,158 Q100,162 120,158 L124,185 Q100,192 76,185 Z" fill={isSelected("gluteos") ? colorFor("gluteos") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("gluteos")} style={{ cursor: "pointer" }} />
+
+        <ellipse cx="88" cy="218" rx="18" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
+        <ellipse cx="112" cy="218" rx="18" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
+        <ellipse cx="88" cy="258" rx="13" ry="10" fill="#1A1A28" stroke={C.border} strokeWidth="1" />
+        <ellipse cx="112" cy="258" rx="13" ry="10" fill="#1A1A28" stroke={C.border} strokeWidth="1" />
+        <ellipse cx="88" cy="298" rx="13" ry="28" fill={isSelected("piernas") ? colorFor("piernas") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
+        <ellipse cx="112" cy="298" rx="13" ry="28" fill={isSelected("piernas") ? colorFor("piernas") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
+
+        <text x="100" y="85" textAnchor="middle" fontSize="7" fill={C.dim}>HOMBROS</text>
+        <text x="100" y="95" textAnchor="middle" fontSize="7" fill={C.dim}>PECHO</text>
+        <text x="100" y="138" textAnchor="middle" fontSize="7" fill={C.dim}>ABDOMEN</text>
+        <text x="100" y="176" textAnchor="middle" fontSize="7" fill={C.dim}>GLÚTEOS</text>
+        <text x="100" y="222" textAnchor="middle" fontSize="7" fill={C.dim}>PIERNAS</text>
+      </svg>
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        {BODY_MAP_ZONES.map((z) => {
+          const on = isSelected(z.id);
+          return (
+            <button
+              key={z.id}
+              onClick={() => toggle(z.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, textAlign: "left",
+                minHeight: 44, padding: "4px 8px", borderRadius: 8,
+                background: on ? `${z.color}18` : "transparent",
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{on ? "☑" : "☐"}</span>
+              <span style={{ fontSize: 12, fontWeight: on ? 800 : 600, color: on ? z.color : C.mut }}>{z.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -6178,26 +6230,19 @@ function Welcome({ onDone }) {
     return wrap(
       <>
         <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Qué zona quieres trabajar más?</p>
-        <div style={{ display: "flex", gap: 12, marginTop: 6, alignItems: "center" }}>
-          <div style={{ width: "55%", display: "flex", flexDirection: "column", gap: 6 }}>
-            {BODY_ZONE_OPTIONS.map((z) => (
-              <button
-                key={z.id}
-                onClick={() => toggleZone(z.id)}
-                style={{
-                  padding: "8px 12px", borderRadius: 10, textAlign: "left", fontSize: 12, fontWeight: 700,
-                  border: `1px solid ${bodyFocus.includes(z.id) || bodyFocus.includes("todo") ? C.cyan : C.border}`,
-                  background: bodyFocus.includes(z.id) || bodyFocus.includes("todo") ? `${C.cyan}18` : C.card,
-                  color: bodyFocus.includes(z.id) || bodyFocus.includes("todo") ? C.cyan : C.text,
-                }}
-              >
-                {z.name}
-              </button>
-            ))}
-          </div>
-          <div style={{ width: "45%" }}>
-            <BodyZoneFigure selected={bodyFocus} />
-          </div>
+        <button
+          onClick={() => toggleZone("todo")}
+          style={{
+            marginTop: 10, padding: "8px 12px", borderRadius: 10, textAlign: "center", fontSize: 12, fontWeight: 700, width: "100%",
+            border: `1px solid ${bodyFocus.includes("todo") ? C.cyan : C.border}`,
+            background: bodyFocus.includes("todo") ? `${C.cyan}18` : C.card,
+            color: bodyFocus.includes("todo") ? C.cyan : C.text,
+          }}
+        >
+          {bodyFocus.includes("todo") ? "☑" : "☐"} Todo el cuerpo
+        </button>
+        <div style={{ marginTop: 12 }}>
+          <BodyMapSVG selected={bodyFocus} onChange={toggleZone} />
         </div>
         {continueBtn(() => go(8))}
       </>,
@@ -7066,12 +7111,26 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
         </div>
       )}
 
-      {/* Contador de agua */}
-      <div className="card" style={{ marginTop: 16, padding: "13px 14px", borderColor: waterCount >= waterGoal ? "#0099FF88" : undefined }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <p style={{ fontSize: 13, fontWeight: 800 }}>💧 Agua hoy</p>
-          <button onClick={() => setShowWaterGoal((v) => !v)} style={{ fontSize: 13, fontWeight: 900, color: "#0099FF" }}>
-            {waterCount} / {waterGoal} vasos
+      {/* Contador de agua: compacto, sin banners — el color del número comunica el estado */}
+      <div className="card" style={{ marginTop: 16, padding: "10px 14px", maxHeight: 90, borderColor: waterCount >= waterGoal ? "#0099FF88" : undefined }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <WaterGlass count={waterCount} goal={waterGoal} bubbleKey={waterBubbleKey} compact />
+          <button
+            onClick={() => setShowWaterGoal((v) => !v)}
+            style={{ flex: 1, textAlign: "center", fontSize: 24, fontWeight: 900, color: waterLevelColor(waterCount, waterGoal) }}
+          >
+            {waterCount}<span style={{ color: C.mut, fontSize: 14, fontWeight: 700 }}>/{waterGoal} vasos</span>
+          </button>
+          <button
+            onClick={addWater}
+            disabled={waterCount >= waterGoal}
+            aria-label="Sumar vaso de agua"
+            style={{
+              width: 48, height: 48, borderRadius: "50%", fontSize: 22, fontWeight: 900, flexShrink: 0,
+              background: waterCount >= waterGoal ? C.surface : "#0099FF", color: waterCount >= waterGoal ? C.dim : "#07070C",
+            }}
+          >
+            +
           </button>
         </div>
         {showWaterGoal && (
@@ -7087,30 +7146,6 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
             ))}
           </div>
         )}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
-          <WaterGlass count={waterCount} goal={waterGoal} bubbleKey={waterBubbleKey} />
-          <div style={{ flex: 1, textAlign: "center", fontSize: 24, fontWeight: 900 }}>
-            {waterCount}<span style={{ color: C.mut, fontSize: 16, fontWeight: 700 }}>/{waterGoal} vasos</span>
-          </div>
-          <button
-            onClick={addWater}
-            disabled={waterCount >= waterGoal}
-            aria-label="Sumar vaso de agua"
-            style={{
-              width: 56, height: 56, borderRadius: "50%", fontSize: 26, fontWeight: 900, flexShrink: 0,
-              background: waterCount >= waterGoal ? C.surface : "#0099FF", color: waterCount >= waterGoal ? C.dim : "#07070C",
-            }}
-          >
-            +
-          </button>
-        </div>
-        {waterCount >= waterGoal ? (
-          <p style={{ fontSize: 12, color: "#0099FF", fontWeight: 700, marginTop: 8 }}>💧 ¡Hidratación completa! +25 XP</p>
-        ) : new Date().getHours() >= 15 && waterCount < 4 ? (
-          <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 10, border: `1px solid ${C.yellow}66`, background: "rgba(255,214,0,0.08)" }}>
-            <p style={{ fontSize: 11, color: C.yellow, fontWeight: 700 }}>⚠️ Llevas solo {waterCount} vasos. ¡Hidratación importante!</p>
-          </div>
-        ) : null}
       </div>
 
       {/* Heatmap de actividad */}
