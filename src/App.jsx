@@ -4528,12 +4528,12 @@ const PROGRAMS = [
     durationWeeks: 8, daysPerWeek: 6, minLevelIdx: 1, goalTags: ["musculo"],
     desc: "El programa más probado para ganar músculo. Divide el cuerpo en empuje, jalón y piernas. Alta frecuencia, alto volumen.",
     structure: [
-      { discId: "gimnasio", focusId: "pecho", label: "Empuje (pecho, hombros, tríceps)" },
-      { discId: "gimnasio", focusId: "espalda", label: "Jalón (espalda, bíceps)" },
-      { discId: "gimnasio", focusId: "piernas", label: "Piernas (cuádriceps, isquios, glúteos)" },
-      { discId: "gimnasio", focusId: "hombros", label: "Empuje (variaciones)" },
-      { discId: "gimnasio", focusId: "brazos", label: "Jalón (variaciones)" },
-      { discId: "gimnasio", focusId: "gluteos", label: "Piernas (énfasis glúteo e isquio)" },
+      { discId: "gimnasio", focusId: "push", label: "Empuje (pecho, hombros, tríceps)" },
+      { discId: "gimnasio", focusId: "pull", label: "Jalón (espalda, bíceps)" },
+      { discId: "gimnasio", focusId: "legs", label: "Piernas (cuádriceps, isquios, glúteos)" },
+      { discId: "gimnasio", focusId: "push", label: "Empuje (variaciones)" },
+      { discId: "gimnasio", focusId: "pull", label: "Jalón (variaciones)" },
+      { discId: "gimnasio", focusId: "glutes_focus", label: "Piernas (énfasis glúteo e isquio)" },
       null,
     ],
   },
@@ -4542,11 +4542,11 @@ const PROGRAMS = [
     durationWeeks: 12, daysPerWeek: 3, minLevelIdx: 2, goalTags: ["musculo", "rendimiento"],
     desc: "Sentadilla, peso muerto, press banca, press militar, remo. 5 series de 5 reps. Añades peso cada sesión. Simple y brutal.",
     structure: [
-      { discId: "gimnasio", focusId: "piernas", label: "Día A: Sentadilla + Press banca + Remo (5×5)" },
+      { discId: "gimnasio", focusId: "legs", label: "Día A: Sentadilla + Press banca + Remo (5×5)" },
       null,
-      { discId: "gimnasio", focusId: "todo", label: "Día B: Sentadilla + Press militar + Peso muerto (5×5 / 1×5)" },
+      { discId: "gimnasio", focusId: "full_body", label: "Día B: Sentadilla + Press militar + Peso muerto (5×5 / 1×5)" },
       null,
-      { discId: "gimnasio", focusId: "piernas", label: "Día A: Sentadilla + Press banca + Remo (5×5)" },
+      { discId: "gimnasio", focusId: "legs", label: "Día A: Sentadilla + Press banca + Remo (5×5)" },
       null, null,
     ],
   },
@@ -4607,11 +4607,11 @@ const PROGRAMS = [
     durationWeeks: 12, daysPerWeek: 4, minLevelIdx: 3, goalTags: ["rendimiento", "musculo"],
     desc: "El programa de fuerza más probado del mundo. Ciclos de 4 semanas con porcentajes exactos del Training Max. Requiere 1RM registrado.",
     structure: [
-      { discId: "gimnasio", focusId: "piernas", label: "Sentadilla + accesorios de piernas" },
-      { discId: "gimnasio", focusId: "hombros", label: "Press militar + accesorios de hombros" },
+      { discId: "gimnasio", focusId: "legs", label: "Sentadilla + accesorios de piernas" },
+      { discId: "gimnasio", focusId: "upper", label: "Press militar + accesorios de hombros" },
       null,
-      { discId: "gimnasio", focusId: "espalda", label: "Peso muerto + accesorios de espalda" },
-      { discId: "gimnasio", focusId: "pecho", label: "Press banca + accesorios de pecho" },
+      { discId: "gimnasio", focusId: "pull", label: "Peso muerto + accesorios de espalda" },
+      { discId: "gimnasio", focusId: "push", label: "Press banca + accesorios de pecho" },
       null, null,
     ],
   },
@@ -4620,11 +4620,11 @@ const PROGRAMS = [
     durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["recomposition"],
     desc: "Perder grasa y ganar músculo simultáneamente con estructura Upper/Lower y cardio al final. Requiere disciplina nutricional además del entrenamiento.",
     structure: [
-      { discId: "gimnasio", focusId: "sup", label: "Upper A (pecho, espalda, hombros)" },
-      { discId: "gimnasio", focusId: "piernas", label: "Lower A (piernas + cardio final)" },
+      { discId: "gimnasio", focusId: "upper", label: "Upper A (pecho, espalda, hombros)" },
+      { discId: "gimnasio", focusId: "legs", label: "Lower A (piernas + cardio final)" },
       null,
-      { discId: "gimnasio", focusId: "sup", label: "Upper B (variación)" },
-      { discId: "gimnasio", focusId: "gluteos", label: "Lower B (glúteos + cardio final)" },
+      { discId: "gimnasio", focusId: "upper", label: "Upper B (variación)" },
+      { discId: "gimnasio", focusId: "glutes_focus", label: "Lower B (glúteos + cardio final)" },
       null, null,
     ],
   },
@@ -4633,11 +4633,11 @@ const PROGRAMS = [
     durationWeeks: 6, daysPerWeek: 3, minLevelIdx: 0, goalTags: ["aesthetics"],
     desc: "Programa dedicado al desarrollo de glúteos y forma de piernas: hip thrust, sentadilla búlgara, abducción y peso muerto rumano. Funciona para cualquier género.",
     structure: [
-      { discId: "gimnasio", focusId: "gluteos", label: "Glúteos A: Hip thrust + búlgara" },
+      { discId: "gimnasio", focusId: "glutes_focus", label: "Glúteos A: Hip thrust + búlgara" },
       null,
-      { discId: "gimnasio", focusId: "piernas", label: "Piernas: cuádriceps + isquios" },
+      { discId: "gimnasio", focusId: "legs", label: "Piernas: cuádriceps + isquios" },
       null,
-      { discId: "gimnasio", focusId: "gluteos", label: "Glúteos B: abducción + rumano" },
+      { discId: "gimnasio", focusId: "glutes_focus", label: "Glúteos B: abducción + rumano" },
       null, null,
     ],
   },
@@ -4659,14 +4659,44 @@ const PROGRAMS = [
     durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["aesthetics"],
     desc: "Espalda ancha, hombros grandes, cintura marcada. El clásico físico de superhéroe: jalón agarre ancho, remo, press militar y elevaciones laterales.",
     structure: [
-      { discId: "gimnasio", focusId: "espalda", label: "Espalda ancha: jalón + remo agarre ancho" },
-      { discId: "gimnasio", focusId: "hombros", label: "Hombros: press militar + elevaciones laterales" },
+      { discId: "gimnasio", focusId: "v_shape", label: "Espalda ancha: jalón + remo agarre ancho" },
+      { discId: "gimnasio", focusId: "upper", label: "Hombros: press militar + elevaciones laterales" },
       null,
-      { discId: "gimnasio", focusId: "espalda", label: "Espalda: dominadas + remo en T-bar" },
-      { discId: "gimnasio", focusId: "hombros", label: "Hombros + core: definición de cintura" },
+      { discId: "gimnasio", focusId: "v_shape", label: "Espalda: dominadas + remo en T-bar" },
+      { discId: "gimnasio", focusId: "upper", label: "Hombros + core: definición de cintura" },
       null, null,
     ],
   },
+];
+
+/* Modo de entrenamiento global: cuánta decisión diaria quiere tomar el usuario */
+const TRAIN_MODES = [
+  {
+    id: "auto", emoji: "🤖", name: "Piloto automático",
+    desc: "La app decide todo. Solo toca Empezar cada día.",
+    detail: "Basado en tu objetivo, nivel y recuperación muscular.",
+  },
+  {
+    id: "program", emoji: "📅", name: "Seguir un programa",
+    desc: "Elige un plan de 4-12 semanas y síguelo.",
+    detail: "PPL, 5x5, Glúteos, Fútbol y más opciones.",
+  },
+  {
+    id: "manual", emoji: "🎯", name: "Yo decido",
+    desc: "Tú eliges qué entrenar cada día.",
+    detail: "Máximo control. Para quien sabe lo que hace.",
+  },
+];
+
+/* Objetivo rápido → programa recomendado (para elegir piloto automático o programa por primera vez) */
+const OBJECTIVE_TO_PROGRAM = [
+  { id: "musculo", emoji: "💪", label: "Ganar músculo", programId: "ppl" },
+  { id: "definicion", emoji: "🔥", label: "Definirme", programId: "recomp_8w" },
+  { id: "gluteos", emoji: "🍑", label: "Glúteos y piernas", programId: "glutes_6w" },
+  { id: "futbol", emoji: "⚽", label: "Fútbol", programId: "football_athlete" },
+  { id: "atletismo", emoji: "🏃", label: "Atletismo", programId: "atletismo_velocidad" },
+  { id: "salud", emoji: "🌱", label: "Salud general", programId: "calistenia_cero" },
+  { id: "v_shape", emoji: "🔺", label: "Forma en V", programId: "v_shape_8w" },
 ];
 
 function getActiveProgram() {
@@ -4703,12 +4733,12 @@ function programDailyCandidate(sessions) {
 function candidateMuscleGroup(c) {
   if (c.discId === "gimnasio") {
     const f = (c.focusId || "").toLowerCase();
-    if (f === "todo") return null;
-    if (f === "piernas" || f === "gluteos" || f === "inf") return "Piernas";
-    if (f === "espalda") return "Espalda";
-    if (f === "pecho" || f === "sup") return "Pecho";
-    if (f === "hombros") return "Hombros";
-    if (f === "brazos") return "Brazos";
+    if (f === "todo" || f === "full_body") return null;
+    if (f === "piernas" || f === "gluteos" || f === "inf" || f === "legs" || f === "glutes_focus") return "Piernas";
+    if (f === "espalda" || f === "pull") return "Espalda";
+    if (f === "pecho" || f === "sup" || f === "push") return "Pecho";
+    if (f === "hombros" || f === "upper" || f === "v_shape") return "Hombros";
+    if (f === "brazos" || f === "arms") return "Brazos";
     return null;
   }
   if (c.discId === "calistenia") return "Calistenia";
@@ -8835,6 +8865,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     const saved = store.get("energy", null);
     return saved && saved.day === todayKey() ? saved.value : null;
   });
+  /* Modo de entrenamiento global (auto/programa/manual) — solo se pregunta la primera vez */
+  const [trainStyle, setTrainStyle] = useState(() => store.get("train_mode", null));
+  const [objectiveChoice, setObjectiveChoice] = useState(null);
 
   const GYM_LEVEL_IDS = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
   const isCampeonPlusGym = ["campeon", "elite", "leyenda", "the_one"].includes(GYM_LEVEL_IDS[mostFrequentLevel(sessions)]);
@@ -8846,10 +8879,227 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     return undefined;
   }, [discId, gymTypeChosen, extraStepDone, gymMethod, isCampeonPlusGym]);
 
+  const isConcreteDisc = discId && discId !== "futbol" && discId !== "basquetbol" && discId !== "atletismo";
+  const disc = isConcreteDisc ? DISCIPLINES[discId] : null;
+
+  const focusLabelForDUP = isConcreteDisc ? DISCIPLINES[discId]?.focuses.find((f) => f.id === focusId)?.label : null;
+  const dupType = useMemo(() => {
+    if (discId !== "gimnasio" || gymMethod !== "dup") return null;
+    return getDUPDay(sessions, focusLabelForDUP);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discId, gymMethod, focusLabelForDUP]);
+
+  const routine = useMemo(() => {
+    if (!isConcreteDisc || lvlIdx === null) return null;
+    /* Con poca energía: un nivel menos y una serie menos por ejercicio */
+    const effLvl = energy === "low" ? Math.max(0, lvlIdx - 1) : lvlIdx;
+    /* Semilla automática: cambia cada 3 sesiones + botón "Variar" */
+    const focusHash = [...(discId + focusId)].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + effLvl * 17 + focusHash;
+    let r = genRoutine(discId, focusId, effLvl, seedVal, {
+      noBar: discId === "calistenia" && calLocation === "casa",
+      noEquip: noEquipment,
+    });
+    if (energy === "low") r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
+    if (energy === "high") r = r.map((e, i) => (i === 0 ? { ...e, sets: Math.min(6, e.sets + 1) } : e));
+    if (dupType && r.some((e) => e.type === "peso")) {
+      const dup = DUP_SCHEMES[dupType];
+      r = r.map((e) => (e.type !== "peso" ? e : { ...e, sets: dup.sets, reps: dup.reps, rest: dup.restMin + (dup.restMax - dup.restMin) / 2, dupType }));
+    }
+    if (discId === "gimnasio" && extraFocusIds.length > 0) {
+      r = appendExtraMuscleExercises(r, extraFocusIds, effLvl);
+    }
+    return r;
+  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment, dupType, extraFocusIds]);
+
+  const atletRoutine = useMemo(() => {
+    if (discId !== "atletismo" || !distance || lvlIdx === null) return null;
+    const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + lvlIdx * 17;
+    return genAtletismoRoutine(distance, lvlIdx, seedVal);
+  }, [discId, distance, lvlIdx, seed, totalSessions]);
+
   const startAndFinishTutorial = (planToStart) => {
     if (showTutorial) store.set("tutorial_done", true);
     onStart(planToStart);
   };
+
+  /* ── Modo de entrenamiento: preguntar una sola vez, o mostrar el flujo simplificado según lo elegido ── */
+  if (trainStyle === null) {
+    return (
+      <div className="screen fade-up" style={{ paddingTop: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, textAlign: "center" }}>¿Cómo prefieres entrenar?</h2>
+        <p className="muted" style={{ textAlign: "center", marginTop: 4 }}>Puedes cambiarlo cuando quieras en Configuración</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+          {TRAIN_MODES.map((m) => (
+            <button
+              key={m.id} className="card fade-up"
+              onClick={() => { store.set("train_mode", m.id); setTrainStyle(m.id); }}
+              style={{ textAlign: "left", padding: 16, borderLeft: `4px solid ${C.cyan}` }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 26 }}>{m.emoji}</span>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>{m.name}</span>
+              </div>
+              <p style={{ fontSize: 12, color: C.mut, marginTop: 6 }}>{m.desc}</p>
+              <p style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>{m.detail}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if ((trainStyle === "auto" || trainStyle === "program") && !getActiveProgram() && !objectiveChoice) {
+    return (
+      <div className="screen fade-up" style={{ paddingTop: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, textAlign: "center" }}>¿Cuál es tu objetivo ahora mismo?</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
+          {OBJECTIVE_TO_PROGRAM.map((o) => (
+            <button
+              key={o.id} className="card" onClick={() => setObjectiveChoice(o)}
+              style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px" }}
+            >
+              <span style={{ fontSize: 22 }}>{o.emoji}</span>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{o.label}</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setTrainStyle("manual")} style={{ marginTop: 16, color: C.dim, fontSize: 12, fontWeight: 700, textAlign: "center", width: "100%" }}>
+          Prefiero elegir yo mismo →
+        </button>
+      </div>
+    );
+  }
+
+  if ((trainStyle === "auto" || trainStyle === "program") && !getActiveProgram() && objectiveChoice) {
+    const rec = PROGRAMS.find((p) => p.id === objectiveChoice.programId);
+    return (
+      <div className="screen fade-up" style={{ paddingTop: 20 }}>
+        <button onClick={() => setObjectiveChoice(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
+        <div style={{ textAlign: "center", marginTop: 10 }}>
+          <div style={{ fontSize: 40 }}>{rec.emoji}</div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>{rec.name}</h2>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.5 }}>{rec.desc}</p>
+          <p style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>{rec.durationWeeks} semanas · {rec.daysPerWeek} días/semana</p>
+        </div>
+        <p className="muted" style={{ textAlign: "center", marginTop: 16 }}>¿Empezar este programa?</p>
+        <button
+          className="btn-xl" onClick={() => { startProgram(rec.id); setObjectiveChoice(null); }}
+          style={{ marginTop: 10, background: rec.color, color: "#07070C" }}
+        >
+          Sí, empezar
+        </button>
+        <button
+          className="btn-xl" onClick={() => setTrainStyle("__programs_screen")}
+          style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}
+        >
+          Ver todos los programas
+        </button>
+      </div>
+    );
+  }
+
+  if (trainStyle === "__programs_screen") {
+    return (
+      <div className="screen">
+        <button onClick={() => { setTrainStyle("program"); setObjectiveChoice(null); }} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
+        <ProgramsScreen />
+      </div>
+    );
+  }
+
+  if (trainStyle === "auto" && getActiveProgram()) {
+    const active = getActiveProgram();
+    const candidate = programDailyCandidate(sessions);
+    return (
+      <div className="screen fade-up" style={{ paddingTop: 20 }}>
+        <div className="card" style={{ padding: 16, borderLeft: `4px solid ${active.program.color}` }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: active.program.color }}>📅 {active.program.name} — Semana {active.week}</p>
+          {candidate ? (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 900, marginTop: 8 }}>{candidate.reason.split(": ")[1] || candidate.reason}</p>
+              <button
+                className="btn-xl" onClick={() => { const p = buildPlanFor(candidate.discId, candidate.focusId, candidate.lvlIdx); if (p) startAndFinishTutorial(p); }}
+                style={{ marginTop: 14, background: active.program.color, color: "#07070C", fontSize: 16 }}
+              >
+                ▶ EMPEZAR SESIÓN
+              </button>
+            </>
+          ) : (
+            <p style={{ fontSize: 13, color: C.mut, marginTop: 8 }}>Hoy toca descanso 🧘</p>
+          )}
+        </div>
+        <button onClick={() => setTrainStyle(null)} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 700 }}>Cambiar modo de entrenamiento</button>
+      </div>
+    );
+  }
+
+  if (trainStyle === "auto") {
+    const dp = getDailyPlan(sessions).plan;
+    const info = describeDailyPlan(dp);
+    if (!energy) {
+      return (
+        <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800 }}>¿Cuánta energía tienes?</h2>
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            {ENERGY_OPTIONS.map((o) => (
+              <button key={o.id} onClick={() => chooseEnergy(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
+                <div style={{ fontSize: 26 }}>{o.emoji}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>{o.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="screen fade-up" style={{ paddingTop: 20 }}>
+        <div className="card" style={{ padding: 16, borderLeft: `4px solid ${info.color}` }}>
+          <p style={{ fontSize: 12, color: C.dim, fontWeight: 700 }}>HOY TE SUGERIMOS</p>
+          <p style={{ fontSize: 16, fontWeight: 900, marginTop: 4 }}>{info.label}{info.focusLabel ? ` · ${info.focusLabel}` : ""}</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 6 }}>{dp.reason}</p>
+          <button
+            className="btn-xl" onClick={() => { const p = buildPlanFor(dp.discId, dp.focusId, dp.lvlIdx); if (p) startAndFinishTutorial(p); }}
+            style={{ marginTop: 14, background: info.color, color: "#07070C", fontSize: 16 }}
+          >
+            ▶ EMPEZAR SESIÓN
+          </button>
+        </div>
+        <button onClick={() => setTrainStyle(null)} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 700 }}>Cambiar modo de entrenamiento</button>
+      </div>
+    );
+  }
+
+  if (trainStyle === "program") {
+    const active = getActiveProgram();
+    const candidate = active ? programDailyCandidate(sessions) : null;
+    return (
+      <div className="screen">
+        {active && candidate && (
+          <div className="card" style={{ marginTop: 4, padding: 14, borderLeft: `4px solid ${active.program.color}` }}>
+            <p style={{ fontSize: 12, fontWeight: 800, color: active.program.color }}>📅 {active.program.name} — Semana {active.week}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, marginTop: 4 }}>{candidate.reason.split(": ")[1] || candidate.reason}</p>
+            <button
+              className="btn-xl" onClick={() => { const p = buildPlanFor(candidate.discId, candidate.focusId, candidate.lvlIdx); if (p) startAndFinishTutorial(p); }}
+              style={{ marginTop: 10, background: active.program.color, color: "#07070C", fontSize: 14 }}
+            >
+              ▶ EMPEZAR SESIÓN
+            </button>
+          </div>
+        )}
+        {active && !candidate && (
+          <div className="card" style={{ marginTop: 4, padding: 14, textAlign: "center" }}>
+            <p style={{ fontSize: 13, color: C.mut }}>Hoy toca descanso 🧘 — Semana {active.week} de {active.program.name}</p>
+          </div>
+        )}
+        <div style={{ marginTop: 14 }}>
+          <ProgramsScreen />
+        </div>
+        <button onClick={() => setTrainStyle(null)} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 700 }}>Cambiar modo de entrenamiento</button>
+      </div>
+    );
+  }
+
 
   const chooseEnergy = (v) => {
     setEnergy(v);
@@ -8922,45 +9172,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
       })),
     });
   };
-
-  const isConcreteDisc = discId && discId !== "futbol" && discId !== "basquetbol" && discId !== "atletismo";
-  const disc = isConcreteDisc ? DISCIPLINES[discId] : null;
-
-  const focusLabelForDUP = isConcreteDisc ? DISCIPLINES[discId]?.focuses.find((f) => f.id === focusId)?.label : null;
-  const dupType = useMemo(() => {
-    if (discId !== "gimnasio" || gymMethod !== "dup") return null;
-    return getDUPDay(sessions, focusLabelForDUP);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [discId, gymMethod, focusLabelForDUP]);
-
-  const routine = useMemo(() => {
-    if (!isConcreteDisc || lvlIdx === null) return null;
-    /* Con poca energía: un nivel menos y una serie menos por ejercicio */
-    const effLvl = energy === "low" ? Math.max(0, lvlIdx - 1) : lvlIdx;
-    /* Semilla automática: cambia cada 3 sesiones + botón "Variar" */
-    const focusHash = [...(discId + focusId)].reduce((a, c) => a + c.charCodeAt(0), 0);
-    const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + effLvl * 17 + focusHash;
-    let r = genRoutine(discId, focusId, effLvl, seedVal, {
-      noBar: discId === "calistenia" && calLocation === "casa",
-      noEquip: noEquipment,
-    });
-    if (energy === "low") r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
-    if (energy === "high") r = r.map((e, i) => (i === 0 ? { ...e, sets: Math.min(6, e.sets + 1) } : e));
-    if (dupType && r.some((e) => e.type === "peso")) {
-      const dup = DUP_SCHEMES[dupType];
-      r = r.map((e) => (e.type !== "peso" ? e : { ...e, sets: dup.sets, reps: dup.reps, rest: dup.restMin + (dup.restMax - dup.restMin) / 2, dupType }));
-    }
-    if (discId === "gimnasio" && extraFocusIds.length > 0) {
-      r = appendExtraMuscleExercises(r, extraFocusIds, effLvl);
-    }
-    return r;
-  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment, dupType, extraFocusIds]);
-
-  const atletRoutine = useMemo(() => {
-    if (discId !== "atletismo" || !distance || lvlIdx === null) return null;
-    const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + lvlIdx * 17;
-    return genAtletismoRoutine(distance, lvlIdx, seedVal);
-  }, [discId, distance, lvlIdx, seed, totalSessions]);
 
   /* ── Creador / editor de rutina personalizada ── */
   if (builderMode) {
@@ -11549,6 +11760,7 @@ function SettingsScreen({
   const [height, setHeight] = useState(() => store.get("height", ""));
   const [vibrationOn, setVibrationOn] = useState(() => store.get("vibration_on", true));
   const [breathingPref, setBreathingPref] = useState(() => store.get("breathing_pref", true));
+  const [showTrainModePicker, setShowTrainModePicker] = useState(false);
   const [reminderOn, setReminderOn] = useState(() => store.get("reminder_enabled", false));
   const [reminderHour, setReminderHour] = useState(() => store.get("reminder_hour", 17));
   const [waterReminderOn, setWaterReminderOn] = useState(() => store.get("water_reminder_enabled", false));
@@ -11587,6 +11799,44 @@ function SettingsScreen({
       <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>⚙️ Configuración</h2>
 
       <div className="sec-title">🎯 Mi entrenamiento</div>
+      <div className="card" style={{ marginBottom: 10 }}>
+        <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>MODO DE ENTRENAMIENTO</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>
+            {TRAIN_MODES.find((m) => m.id === store.get("train_mode", "manual"))?.emoji || "🎯"}{" "}
+            {TRAIN_MODES.find((m) => m.id === store.get("train_mode", "manual"))?.name || "Yo decido"}
+          </span>
+          <button onClick={() => setShowTrainModePicker(true)} style={{ fontSize: 12, fontWeight: 800, color: C.cyan }}>Cambiar</button>
+        </div>
+      </div>
+      {showTrainModePicker && (
+        <div
+          onClick={() => setShowTrainModePicker(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card" style={{ width: "100%", maxWidth: 430, padding: "20px 20px calc(20px + env(safe-area-inset-bottom))", borderRadius: "20px 20px 0 0" }}
+          >
+            <p style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 12 }}>¿Cómo prefieres entrenar?</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {TRAIN_MODES.map((m) => (
+                <button
+                  key={m.id} className="card"
+                  onClick={() => { store.set("train_mode", m.id); setShowTrainModePicker(false); refresh(); }}
+                  style={{ textAlign: "left", padding: 14, border: store.get("train_mode", "manual") === m.id ? `2px solid ${C.cyan}` : undefined }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{m.emoji}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800 }}>{m.name}</span>
+                  </div>
+                  <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{m.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <button
         onClick={onShowSummary}
         style={{ width: "100%", padding: "14px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, color: C.text, fontSize: 14, fontWeight: 700, textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}
@@ -12866,11 +13116,11 @@ function WeekComparisonCard({ sessions }) {
 
 /* ─── Análisis de punto débil ─── */
 const GROUP_TO_PLAN = {
-  Pecho: { discId: "gimnasio", focusId: "pecho" },
-  Espalda: { discId: "gimnasio", focusId: "espalda" },
-  Piernas: { discId: "gimnasio", focusId: "piernas" },
-  Hombros: { discId: "gimnasio", focusId: "hombros" },
-  Brazos: { discId: "gimnasio", focusId: "brazos" },
+  Pecho: { discId: "gimnasio", focusId: "push" },
+  Espalda: { discId: "gimnasio", focusId: "pull" },
+  Piernas: { discId: "gimnasio", focusId: "legs" },
+  Hombros: { discId: "gimnasio", focusId: "upper" },
+  Brazos: { discId: "gimnasio", focusId: "arms" },
   Atletismo: { discId: "atletismo", focusId: "1000m" },
   "Fútbol": { discId: "futbolParque", focusId: "todo" },
   Calistenia: { discId: "calistenia", focusId: "todo" },
