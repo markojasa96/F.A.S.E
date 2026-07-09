@@ -1295,6 +1295,40 @@ function BreathingScreen({ onDone, voiceOn }) {
   );
 }
 
+/* Overlay compacto de 10s al iniciar la primera serie (alternativa ligera a BreathingScreen completa) */
+function QuickBreath({ onDone }) {
+  const [secs, setSecs] = useState(10);
+
+  useEffect(() => {
+    if (secs <= 0) { onDone(); return undefined; }
+    const t = setTimeout(() => setSecs((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [secs, onDone]);
+
+  return (
+    <div
+      style={{
+        position: "absolute", inset: 0, background: "rgba(7,7,12,0.85)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        zIndex: 50, borderRadius: 16,
+      }}
+    >
+      <div
+        style={{
+          width: 80, height: 80, borderRadius: "50%", border: `3px solid ${C.cyan}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          animation: "breathe 4s ease-in-out infinite",
+        }}
+      >
+        <span style={{ fontSize: 28 }}>💨</span>
+      </div>
+      <p style={{ color: C.cyan, fontWeight: 800, fontSize: 16, marginTop: 16 }}>Respira profundo</p>
+      <p style={{ color: C.mut, fontSize: 13, marginTop: 6 }}>Empieza en {secs}s</p>
+      <button onClick={onDone} style={{ marginTop: 16, color: C.dim, fontSize: 12, fontWeight: 600 }}>Saltar →</button>
+    </div>
+  );
+}
+
 /* ─── Selector rápido de RPE tras cada serie exitosa ─── */
 const RPE_COLORS = { 6: C.green, 7: "#8BC34A", 8: C.yellow, 9: C.orange, 10: C.red };
 
@@ -5876,7 +5910,7 @@ const PLAN_LOADING_MESSAGES = [
 ];
 
 /* Resumen personalizado reutilizable: recalcula macros con el peso más reciente registrado */
-function PersonalSummaryScreen({ name, onBack }) {
+function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
   const weightLog = getWeightLog();
   const weight = weightLog.length ? weightLog[weightLog.length - 1].weight : store.get("weight", 70);
   const height = store.get("height", 170);
@@ -5886,10 +5920,11 @@ function PersonalSummaryScreen({ name, onBack }) {
   const days = store.get("weekly_goal", 4);
   const targetWeight = store.get("target_weight", weight);
   const healthIssues = store.get("health_issues", []);
+  const bodyFat = parseFloat(store.get("body_fat", ""));
   const goalObj = TRAINING_GOALS.find((g) => g.id === goalId) || TRAINING_GOALS[0];
   const sex = gender === "f" ? "f" : "m";
-  const tmb = sex === "f" ? 10 * weight + 6.25 * height - 5 * age - 161 : 10 * weight + 6.25 * height - 5 * age + 5;
-  const activityMult = days >= 5 ? 1.55 : days >= 3 ? 1.375 : 1.2;
+  const tmb = calcTMB(weight, height, age, sex, bodyFat);
+  const activityMult = getActivityMult(sessions, days);
   const tdee = tmb * activityMult;
   const calGoal = goalId === "fat_loss" ? tdee - 400 : goalId === "muscle" ? tdee + 300 : goalId === "athletic" || goalId === "endurance" ? tdee + 200 : tdee;
   const calories = Math.round(calGoal);
@@ -6087,8 +6122,8 @@ function Welcome({ onDone }) {
     const goalObj = TRAINING_GOALS.find((g) => g.id === goal) || TRAINING_GOALS[0];
     const w = weight, h = height, a = age;
     const sex = gender === "f" ? "f" : "m";
-    const tmb = sex === "f" ? 10 * w + 6.25 * h - 5 * a - 161 : 10 * w + 6.25 * h - 5 * a + 5;
-    const activityMult = days >= 5 ? 1.55 : days >= 3 ? 1.375 : 1.2;
+    const tmb = calcTMB(w, h, a, sex, null);
+    const activityMult = getActivityMult([], days);
     const tdee = tmb * activityMult;
     const calGoal = goal === "fat_loss" ? tdee - 400 : goal === "muscle" ? tdee + 300 : goal === "athletic" || goal === "endurance" ? tdee + 200 : tdee;
     const calories = Math.round(calGoal);
@@ -9847,6 +9882,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [showExtras, setShowExtras] = useState(false);
   const [quickNote, setQuickNote] = useState("");
   const [activationDone, setActivationDone] = useState({});
+  const [showFullBreathing, setShowFullBreathing] = useState(false);
+  const [quickBreathDone, setQuickBreathDone] = useState(false);
 
   useEffect(() => () => { clearTimeout(rpeTimeoutRef.current); clearTimeout(techniqueTimeoutRef.current); }, []);
 
@@ -10362,7 +10399,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 10 }}>Calentamiento — 5 min</h2>
         <p className="muted" style={{ marginTop: 6 }}>Prepara tu cuerpo para {plan.discLabel}</p>
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button className="btn-xl" onClick={() => setPhase("breathing")} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>
+          <button className="btn-xl" onClick={beginWork} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}>
             Saltar
           </button>
           <button className="btn-xl" onClick={() => setPhase("warmup")} style={{ background: plan.discColor || C.cyan, color: "#07070C" }}>
@@ -10378,13 +10415,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       <GuidedMiniFlow
         title="🔥 Calentamiento" subtitle={`Preparando ${plan.discLabel}`} color={plan.discColor || C.cyan}
         exercises={WARMUP_ROUTINES[warmupKeyFor(plan.discId)]}
-        onDone={() => { setJustWarmedUp(true); setPhase("breathing"); }}
+        onDone={() => { setJustWarmedUp(true); beginWork(); }}
       />
     );
-  }
-
-  if (phase === "breathing") {
-    return <BreathingScreen onDone={beginWork} voiceOn={voiceOn} />;
   }
 
   /* Enfriamiento opcional al terminar, antes de la pantalla de felicitaciones */
@@ -10809,8 +10842,15 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
 
   /* Ejercicio (work / exdone) */
   const doneSets = logs[exIdx];
+  const showQuickBreath = exIdx === 0 && setNum === 0 && phase === "work" && !quickBreathDone && store.get("breathing_pref", true);
   return (
-    <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30 }}>
+    <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30, position: "relative" }}>
+      {showQuickBreath && <QuickBreath onDone={() => setQuickBreathDone(true)} />}
+      {showFullBreathing && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 260 }}>
+          <BreathingScreen onDone={() => setShowFullBreathing(false)} voiceOn={voiceOn} />
+        </div>
+      )}
       <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} onPickTechnique={applyTechnique} techniqueSelected={techniqueSelected} />
         {autoDefaultBadge && (
           <div className="pop" style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 300, background: C.card, border: `1px solid ${C.cyan}`, borderRadius: 99, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: C.cyan }}>
@@ -10927,6 +10967,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             <button onClick={toggleLiveMode} aria-label="Modo pantalla activa" style={{ fontSize: 18, padding: 4 }}>
               {liveMode ? "👁️‍🗨️" : "👁️"}
             </button>
+            <button onClick={() => setShowFullBreathing(true)} aria-label="Respiración guiada" style={{ fontSize: 18, padding: 4 }}>🫁</button>
           </div>
           {showQuickNote && (
             <div style={{ marginTop: 10 }}>
@@ -11507,6 +11548,7 @@ function SettingsScreen({
   const [profile, setProfile] = useState(() => store.get("profile", {}));
   const [height, setHeight] = useState(() => store.get("height", ""));
   const [vibrationOn, setVibrationOn] = useState(() => store.get("vibration_on", true));
+  const [breathingPref, setBreathingPref] = useState(() => store.get("breathing_pref", true));
   const [reminderOn, setReminderOn] = useState(() => store.get("reminder_enabled", false));
   const [reminderHour, setReminderHour] = useState(() => store.get("reminder_hour", 17));
   const [waterReminderOn, setWaterReminderOn] = useState(() => store.get("water_reminder_enabled", false));
@@ -11699,6 +11741,12 @@ function SettingsScreen({
         </SettingsRow>
         <SettingsRow label="Modo sin equipo 🎒">
           <SettingsToggle on={noEquipment} onClick={onToggleEquipment} aria-label="Alternar modo sin equipo" />
+        </SettingsRow>
+        <SettingsRow label="Respiración pre-sesión 🫁">
+          <SettingsToggle
+            on={breathingPref} aria-label="Alternar respiración pre-sesión"
+            onClick={() => { const n = !breathingPref; setBreathingPref(n); store.set("breathing_pref", n); }}
+          />
         </SettingsRow>
       </div>
 
@@ -12304,6 +12352,30 @@ function WeightSection() {
   );
 }
 
+/* TMB: Cunningham (más precisa con % de grasa corporal) o Mifflin-St Jeor estándar */
+function calcTMB(weight, height, age, sex, bodyFat) {
+  if (bodyFat && bodyFat > 0 && bodyFat < 50) {
+    const lbm = weight * (1 - bodyFat / 100);
+    return 500 + 22 * lbm;
+  }
+  return sex === "f" ? 10 * weight + 6.25 * height - 5 * age - 161 : 10 * weight + 6.25 * height - 5 * age + 5;
+}
+
+/* Multiplicador de actividad: usa el historial real de las últimas 4 semanas si hay datos suficientes */
+function getActivityMult(sessions, daysConfig) {
+  const recentSessions = sessions.filter((s) => {
+    const daysAgo = (Date.now() - s.ts) / 86400000;
+    return daysAgo <= 28 && s.kind === "entreno";
+  });
+  const avgDaysPerWeek = recentSessions.length / 4;
+  const effectiveDays = recentSessions.length > 4 ? avgDaysPerWeek : daysConfig;
+  if (effectiveDays < 1.5) return 1.2;
+  if (effectiveDays < 3) return 1.375;
+  if (effectiveDays < 4.5) return 1.55;
+  if (effectiveDays < 6) return 1.725;
+  return 1.9;
+}
+
 /* ─── Periodización nutricional dinámica ─── */
 const NUTRITION_PROFILES = {
   rsa_partido: { carbMult: 1.4, protMult: 1.0, label: "⚽ Alta carga de carbos", color: "#FFD600" },
@@ -12351,11 +12423,11 @@ function MacrosCalculator({ sessions, onBack }) {
   const [height, setHeight] = useState(() => store.get("height", "") || "");
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("m");
+  const [bodyFat, setBodyFat] = useState(() => store.get("body_fat", ""));
   const [goal, setGoal] = useState(null);
   const [activity, setActivity] = useState(() => {
-    const cutoff = Date.now() - 28 * 86400000;
-    const perWeek = sessions.filter((s) => s.kind === "entreno" && s.ts >= cutoff).length / 4;
-    return perWeek >= 3 ? "moderate" : perWeek >= 1 ? "light" : "sedentary";
+    const mult = getActivityMult(sessions, 3);
+    return MACRO_ACTIVITY.reduce((best, a) => (Math.abs(a.mult - mult) < Math.abs(best.mult - mult) ? a : best)).id;
   });
 
   const imc = weight && height ? parseFloat(weight) / (parseFloat(height) / 100) ** 2 : null;
@@ -12366,7 +12438,9 @@ function MacrosCalculator({ sessions, onBack }) {
     const a = parseInt(age, 10) || 30;
     if (!(w > 0) || !(h > 0)) return;
     store.set("height", height);
-    const tmb = sex === "f" ? 10 * w + 6.25 * h - 5 * a - 161 : 10 * w + 6.25 * h - 5 * a + 5;
+    const bf = parseFloat(bodyFat);
+    if (bf > 0) store.set("body_fat", bodyFat); else store.set("body_fat", "");
+    const tmb = calcTMB(w, h, a, sex, bf);
     const mult = MACRO_ACTIVITY.find((x) => x.id === activity)?.mult || 1.55;
     const tdee = tmb * mult;
     const gm = {
@@ -12442,7 +12516,15 @@ function MacrosCalculator({ sessions, onBack }) {
           <button className={`chip ${sex === "m" ? "on" : ""}`} onClick={() => setSex("m")}>Hombre</button>
           <button className={`chip ${sex === "f" ? "on" : ""}`} onClick={() => setSex("f")}>Mujer</button>
         </div>
+        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>% DE GRASA CORPORAL (OPCIONAL)</label>
+        <input
+          className="input" type="number" min="5" max="50" placeholder="ej: 15"
+          value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} style={{ marginTop: 4 }}
+        />
         {imc && <p style={{ fontSize: 12, color: C.mut, marginTop: 10 }}>IMC: {imc.toFixed(1)} (informativo, sin juicio de valor)</p>}
+        <p style={{ fontSize: 10, color: C.dim, marginTop: 10, fontStyle: "italic", lineHeight: 1.4 }}>
+          Con Cunningham (requiere % grasa): ±3% error. Con Mifflin-St Jeor: ±10% error. Son estimaciones — usa un nutriólogo para precisión.
+        </p>
         <button
           className="btn-xl" onClick={() => setStep(2)} disabled={!weight || !height || !age}
           style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}
@@ -14537,7 +14619,7 @@ export default function App() {
   }
 
   if (showSummary) {
-    return <PersonalSummaryScreen name={name} onBack={() => setShowSummary(false)} />;
+    return <PersonalSummaryScreen name={name} onBack={() => setShowSummary(false)} sessions={sessions} />;
   }
 
   if (showSettings) {
