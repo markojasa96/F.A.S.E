@@ -1524,16 +1524,36 @@ function goalContextCopy() {
   return GOAL_CONTEXT_COPY[goal.id] || null;
 }
 
-/* Ajusta series y descanso de una rutina de gimnasio según el objetivo activo (sin tocar reps en formato string) */
+/* Principio de especificidad: rango de reps/descanso/intensidad según el objetivo (no solo series/descanso) */
+const GOAL_REP_RANGES = {
+  strength: { compound: { reps: "4", rest: 180 }, assistance: { reps: "6", rest: 120 }, setsMultiplier: 0.85, intensityLabel: "85-95% 1RM" },
+  hypertrophy: { compound: { reps: "8", rest: 90 }, assistance: { reps: "12", rest: 60 }, setsMultiplier: 1.0, intensityLabel: "65-85% 1RM" },
+  endurance: { compound: { reps: "15", rest: 45 }, assistance: { reps: "20", rest: 30 }, setsMultiplier: 1.1, intensityLabel: "40-60% 1RM" },
+  fat_loss: { compound: { reps: "12", rest: 45 }, assistance: { reps: "15", rest: 30 }, setsMultiplier: 0.9, intensityLabel: "Circuito — descanso mínimo" },
+  athletic: { compound: { reps: "5", rest: 150 }, assistance: { reps: "8", rest: 90 }, setsMultiplier: 1.0, intensityLabel: "Potencia — explosivo" },
+  recomposition: { compound: { reps: "10", rest: 75 }, assistance: { reps: "12", rest: 60 }, setsMultiplier: 1.0, intensityLabel: "60-75% 1RM" },
+};
+/* Los objetivos reales de TRAINING_GOALS se mapean a las 6 categorías científicas de arriba */
+const GOAL_ID_TO_REP_RANGE = {
+  strength: "strength", muscle: "hypertrophy", recomposition: "recomposition", fat_loss: "fat_loss",
+  athletic: "athletic", health: "endurance", endurance: "endurance", aesthetics: "hypertrophy",
+};
+
+/* Ajusta series, reps, descanso e intensidad de una rutina de gimnasio según el objetivo activo */
 function applyGoalToExercises(exercises, goalId) {
-  const goal = TRAINING_GOALS.find((g) => g.id === goalId);
-  if (!goal) return exercises;
-  const { setsMultiplier, restSeconds } = goal.params;
-  return exercises.map((e) => ({
-    ...e,
-    sets: Math.max(1, Math.min(6, Math.round(e.sets * setsMultiplier))),
-    rest: Math.round((e.rest + restSeconds) / 2 / 5) * 5,
-  }));
+  const goalRange = GOAL_REP_RANGES[GOAL_ID_TO_REP_RANGE[goalId]];
+  if (!goalRange) return exercises;
+  return exercises.map((e) => {
+    const isCompound = classifyExerciseOrder(e.name).startsWith("compound");
+    const params = isCompound ? goalRange.compound : goalRange.assistance;
+    return {
+      ...e,
+      sets: Math.max(1, Math.min(6, Math.round(e.sets * goalRange.setsMultiplier))),
+      reps: e.type === "peso" ? params.reps : e.reps,
+      rest: params.rest,
+      intensity: goalRange.intensityLabel,
+    };
+  });
 }
 
 /* ─── Niveles de entrenamiento ─── */
@@ -2529,6 +2549,23 @@ function computeFreezeInfo(sessions, freezes) {
 }
 
 /* Sugerencia de peso según la última vez que se hizo el ejercicio */
+/* Doble progresión (3×8-12): sube reps hasta el techo, luego sube peso y vuelve al piso. Método estándar para hipertrofia. */
+function calcDoubleProgression(entries) {
+  if (!entries.length) return { weight: null, targetReps: 8, reason: "🌱 Primera vez — empieza ligero" };
+  const last = entries[entries.length - 1];
+  const okSets = last.sets.filter((s) => s.ok);
+  const lastWeight = Math.max(...last.sets.map((x) => x.weight || 0));
+  const targetMax = 12;
+  const targetMin = 8;
+  const lastReps = okSets.length ? Math.round(okSets.reduce((a, s) => a + s.reps, 0) / okSets.length) : targetMin;
+  if (lastReps >= targetMax) {
+    const nextWeight = lastWeight + 2.5;
+    return { weight: nextWeight, targetReps: targetMin, up: true, reason: `✅ Llegaste a ${targetMax} reps → subimos a ${nextWeight}kg, volvemos a ${targetMin}` };
+  }
+  const nextReps = Math.min(targetMax, lastReps + 1);
+  return { weight: lastWeight, targetReps: nextReps, up: false, reason: `Peso: ${lastWeight}kg → intenta ${nextReps} reps hoy` };
+}
+
 function weightSuggestion(sessions, exName) {
   const entries = [];
   sessions.forEach((s) => {
@@ -2539,6 +2576,18 @@ function weightSuggestion(sessions, exName) {
   });
   if (!entries.length) return null;
   entries.sort((a, b) => a.ts - b.ts);
+
+  /* Objetivos de hipertrofia/estética usan doble progresión; el resto mantiene el sistema de +2.5kg por RPE */
+  const goalId = store.get("training_goal", null);
+  if (goalId === "muscle" || goalId === "aesthetics") {
+    const dp = calcDoubleProgression(entries);
+    if (store.get(`reduce_${exName}`, false) && dp.weight) {
+      const reduced = Math.max(0, Math.round(dp.weight * 0.9 * 2) / 2);
+      return { ...dp, weight: reduced, up: false, reason: `↩ Bajamos a ${reduced}kg — técnica a mejorar en este ejercicio` };
+    }
+    return dp;
+  }
+
   const last = entries[entries.length - 1];
   const maxW = Math.max(...last.sets.map((x) => x.weight || 0));
   if (maxW <= 0) return null;
@@ -3953,8 +4002,31 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   }
   const withFocus = applyGymFocusToExercises(sorted, store.get("gym_focus", null));
   const withGoal = applyGoalToExercises(withFocus, store.get("training_goal", null));
+  const withOrder = sortByGoalOrder(withGoal, store.get("training_goal", null));
   const supersetsEnabled = store.get("supersets_enabled", effLvlIdx >= 3);
-  return supersetsEnabled ? tagSupersets(withGoal, effLvlIdx, deloadActive) : withGoal;
+  return supersetsEnabled ? tagSupersets(withOrder, effLvlIdx, deloadActive) : withOrder;
+}
+
+/* Orden de ejercicios afinado según el objetivo: fuerza/potencia prioriza compuestos pesados primero,
+   hipertrofia prioriza el compuesto principal seguido de aislamiento del músculo objetivo */
+function sortByGoalOrder(exercises, goalId) {
+  const isStrength = ["strength", "athletic"].includes(goalId);
+  const isHypertrophy = ["muscle", "aesthetics", "recomposition"].includes(goalId);
+  if (!isStrength && !isHypertrophy) return exercises;
+  const getOrder = (ex) => {
+    const cat = classifyExerciseOrder(ex.name);
+    if (isStrength) {
+      if (cat === "compound_primary") return 1;
+      if (cat === "compound_secondary") return 2;
+      if (cat === "assistance") return 3;
+      return 4; // core
+    }
+    if (cat === "compound_primary") return 1;
+    if (cat === "compound_secondary") return 1.5;
+    if (cat === "assistance") return 2;
+    return 3; // core
+  };
+  return [...exercises].sort((a, b) => getOrder(a) - getOrder(b));
 }
 
 /* Marca parejas de ejercicios claramente antagonistas como superset (Campeón+, conservador) */
@@ -4288,6 +4360,39 @@ function resolveGymFocusId(id) {
   return FOCUS_COMPAT[id] || "full_body";
 }
 
+/* Volumen semanal mínimo/máximo efectivo por grupo (series semanales) — principio MEV/MAV/MRV de Renaissance Periodization */
+const VOLUME_LANDMARKS = {
+  Pecho: { MEV: 10, MAV: 16, MRV: 22 },
+  Espalda: { MEV: 10, MAV: 18, MRV: 25 },
+  Piernas: { MEV: 8, MAV: 16, MRV: 20 },
+  Hombros: { MEV: 8, MAV: 14, MRV: 20 },
+  Brazos: { MEV: 8, MAV: 14, MRV: 18 },
+};
+const VOLUME_GROUP_TO_FOCUS = { Pecho: "push", Espalda: "pull", Piernas: "legs", Hombros: "upper", Brazos: "arms" };
+
+function calcWeeklyVolume(sessions, muscleGroup) {
+  const weekStart = startOfWeek();
+  return sessions
+    .filter((s) => s.kind === "entreno" && s.disc === "gimnasio" && s.ts >= weekStart && muscleGroupOf(s) === muscleGroup)
+    .flatMap((s) => s.exercises)
+    .reduce((sum, e) => sum + e.sets.filter((st) => st.ok).length, 0);
+}
+
+/* Si algún grupo está muy por debajo de su volumen mínimo efectivo esta semana, sugiere priorizarlo */
+function volumeCheck(sessions, lvlIdx) {
+  const underMEV = Object.entries(VOLUME_LANDMARKS)
+    .filter(([group, { MEV }]) => calcWeeklyVolume(sessions, group) < MEV * 0.7)
+    .map(([group]) => group);
+  if (!underMEV.length) return null;
+  const priority = underMEV[0];
+  return {
+    discId: "gimnasio",
+    focusId: VOLUME_GROUP_TO_FOCUS[priority] || "full_body",
+    lvlIdx,
+    reason: `📊 ${priority} necesita más volumen esta semana (por debajo del mínimo efectivo).`,
+  };
+}
+
 function dailyPlanCandidates(sessions) {
   /* 0. Programa activo: fuente primaria, sin lógica genérica de por medio */
   if (getActiveProgram()) {
@@ -4317,6 +4422,12 @@ function dailyPlanCandidates(sessions) {
 
   if (!workouts.length) {
     return [{ discId: "calistenia", focusId: "todo", lvlIdx: 0, reason: "Es tu primera vez. Empecemos con calistenia." }];
+  }
+
+  /* 3. Volumen semanal (MEV/MAV/MRV): con suficiente historial, prioriza el grupo más deficitario */
+  if (workouts.length >= 6) {
+    const deficit = volumeCheck(sessions, lvlIdx);
+    if (deficit) return [deficit];
   }
 
   const streakDays = calcStreak(sessions, []);
@@ -8295,10 +8406,16 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 
   const focusLabelForDUP = isConcreteDisc ? DISCIPLINES[discId]?.focuses.find((f) => f.id === focusId)?.label : null;
   const dupType = useMemo(() => {
-    if (discId !== "gimnasio" || gymMethod !== "dup") return null;
-    return getDUPDay(sessions, focusLabelForDUP);
+    if (discId !== "gimnasio") return null;
+    if (gymMethod === "dup") return getDUPDay(sessions, focusLabelForDUP);
+    /* DUP automático para Campeón+ sin metodología elegida aún, con 3+ sesiones del mismo enfoque */
+    if (!gymMethod && isCampeonPlusGym) {
+      const sameGroupCount = sessions.filter((s) => s.kind === "entreno" && s.disc === "gimnasio" && s.focusLabel === focusLabelForDUP).length;
+      if (sameGroupCount >= 3) return getDUPDay(sessions, focusLabelForDUP);
+    }
+    return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [discId, gymMethod, focusLabelForDUP]);
+  }, [discId, gymMethod, focusLabelForDUP, isCampeonPlusGym]);
 
   const routine = useMemo(() => {
     if (!isConcreteDisc || lvlIdx === null) return null;
