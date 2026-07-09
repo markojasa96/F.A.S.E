@@ -2521,6 +2521,15 @@ function movementCategory(name) {
   return "generic";
 }
 
+/* Emoji de respaldo por categoría de movimiento cuando no hay GIF real */
+const MOVEMENT_EMOJIS = {
+  empuje: "💪", tiron: "🏋️", sentadilla: "🦵", sprint: "⚡", core: "🔥",
+  salto: "🦘", hipthrust: "🍑", curl: "💪", tiro: "⚽", pesomuerto: "🏋️", generic: "•",
+};
+function getExerciseEmoji(name) {
+  return MOVEMENT_EMOJIS[movementCategory(name)] || MOVEMENT_EMOJIS.generic;
+}
+
 const MUSCLE_GROUP_LABELS = {
   empuje: "Pecho/Hombros", tiron: "Espalda", sentadilla: "Piernas", pesomuerto: "Piernas",
   curl: "Brazos", core: "Core", sprint: "Velocidad", salto: "Explosividad", tiro: "Tiro",
@@ -6567,7 +6576,7 @@ function FullHistory({ sessions, onDelete, onBack }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, freezes = [], onSaveMatch }) {
+function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, onSaveMatch }) {
   const [menuId, setMenuId] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
@@ -6679,7 +6688,19 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
         </div>
       )}
       {pro && <p style={{ fontSize: 18, fontWeight: 800 }}>Hola, <span style={{ color: C.cyan }}>{name}</span></p>}
-      <p className="muted" style={{ marginTop: 2 }}>{pro ? "Resumen de tu entrenamiento." : "Tu momento es ahora."}</p>
+      {pro ? (
+        <p className="muted" style={{ marginTop: 2 }}>Resumen de tu entrenamiento.</p>
+      ) : (
+        (() => {
+          const acwr = calcACWR(sessions);
+          const line = acwr !== null && acwr > 1.3
+            ? "Carga alta esta semana 📊"
+            : getRecoveryStatus().peakGroups.length
+              ? "⚡ Pico de adaptación"
+              : null;
+          return line ? <p className="muted" style={{ marginTop: 2 }}>{line}</p> : null;
+        })()
+      )}
 
       {pro ? (
         /* Modo Control total: estadísticas limpias, sin héroes ni animaciones */
@@ -6698,7 +6719,6 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 14, fontWeight: 800 }}>{hero.name}</span>
-              {streak > 0 && <span style={{ fontSize: 12, fontWeight: 800, color: C.orange }}>🔥 {streak} días</span>}
             </div>
             <div style={{ fontSize: 10, color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {nextHero ? `→ ${nextHero.name} en ${nextHero.days - streak} días más` : "365 días de consistencia ⚡"}
@@ -6794,21 +6814,28 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
                     <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>{previewExercises.length} ejercicios · ~{totalMin} minutos</p>
                     <div style={{ overflowY: "auto", marginTop: 10, flex: 1 }}>
                       {previewExercises.map((ex, i) => {
-                        const cat = movementCategory(ex.name);
-                        const color = MOVEMENT_COLORS[cat];
+                        const gifUrl = EXERCISE_GIFS[ex.name];
                         const exMin = Math.round((ex.sets * 15 + ex.sets * ex.rest) / 60);
                         return (
                           <button
                             key={i}
                             onClick={() => setPreviewTip(previewTip === i ? null : i)}
-                            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 0", borderBottom: i < previewExercises.length - 1 ? `1px solid ${C.border}` : "none" }}
+                            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "8px 0", borderBottom: i < previewExercises.length - 1 ? `1px solid ${C.borderSubtle || C.border}` : "none" }}
                           >
-                            <div style={{ width: 48, height: 48, borderRadius: 10, background: `${color}14`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                              <div style={{ transform: "scale(0.3)" }}><ExerciseIllustration category={cat} color={color} /></div>
+                            <div style={{ width: 40, height: 40, borderRadius: 8, background: C.surface, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                              {gifUrl ? (
+                                <img
+                                  src={gifUrl} alt={ex.name} loading="lazy"
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  onError={(e) => { e.target.style.display = "none"; }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: 18 }}>{getExerciseEmoji(ex.name)}</span>
+                              )}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</div>
-                              <div style={{ fontSize: 12, color: C.mut, marginTop: 1 }}>{ex.sets} × {ex.reps}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ex.name}</div>
+                              <div style={{ fontSize: 11, color: C.mut }}>{ex.sets} series × {ex.reps}</div>
                               {previewTip === i && <div style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>{ex.tip}</div>}
                             </div>
                             <div style={{ fontSize: 11, color: C.dim, flexShrink: 0 }}>~{exMin} min</div>
@@ -7031,8 +7058,8 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
 
       {/* Stats */}
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-        <StatBox label="Racha actual" value={streak} accent={C.orange} />
         <StatBox label="Esta semana" value={week} accent={C.cyan} />
+        <StatBox label="Este mes" value={sessions.filter((s) => s.ts >= monthStart.getTime()).length} accent={C.orange} />
         <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
       </div>
 
@@ -7061,21 +7088,24 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
         </button>
       )}
 
-      {sessions.length > 0 && (
+      {sessions.length > 0 ? (
         <>
           {isStreakRecordToday ? (
             <div className="card pop" style={{ marginTop: 12, padding: "16px", textAlign: "center", background: "rgba(255,215,0,0.1)", borderColor: "#FFD700" }}>
               <div style={{ fontSize: 30 }}>🏆</div>
               <div style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", marginTop: 4 }}>RÉCORD DE RACHA — Día {streak}</div>
+              <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>💡 {insight}</p>
             </div>
           ) : trainedToday ? (
             <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>Ya entrenaste hoy 🔥 — Sesión completada</p>
               <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{todaySessions.length} {todaySessions.length === 1 ? "sesión" : "sesiones"} hoy{todayVolume > 0 ? ` · ${todayVolume} kg` : ""}</p>
+              <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>💡 {insight}</p>
             </div>
           ) : daysSince !== null && daysSince >= 2 ? (
             <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `1px solid ${C.cyan}33` }}>
               <p style={{ fontSize: 13, fontWeight: 800 }}>{name}, ¡sigue así! 💪</p>
+              <p style={{ fontSize: 12, color: C.mut, marginTop: 4, lineHeight: 1.4 }}>💡 {insight}</p>
               <button className="btn-xl btn-physics" onClick={onTrain} style={{ marginTop: 10, background: C.cyan, color: "#07070C", fontSize: 13 }}>
                 Entrenar hoy
               </button>
@@ -7083,15 +7113,15 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
           ) : (
             <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
               <p style={{ fontSize: 13, fontWeight: 700 }}>Buenos días {name} ☀️ — ¿Entrenamos hoy?</p>
+              <p style={{ fontSize: 12, color: C.mut, marginTop: 4, lineHeight: 1.4 }}>💡 {insight}</p>
             </div>
           )}
         </>
+      ) : (
+        <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>💡 {insight}</p>
+        </div>
       )}
-
-      <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.cyan}44` }}>
-        <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>💡 INSIGHT DEL DÍA</p>
-        <p style={{ fontSize: 13, marginTop: 3, lineHeight: 1.4 }}>{insight}</p>
-      </div>
 
       {challProg && (
         <div className="card" style={{ marginTop: 10, padding: "13px 14px" }}>
@@ -7147,9 +7177,6 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
           </div>
         )}
       </div>
-
-      {/* Heatmap de actividad */}
-      <Heatmap sessions={sessions} color={hero.color} freezes={freezes} />
 
       {/* Resumen semanal */}
       <div className="card" style={{ marginTop: 12, padding: "13px 16px" }}>
@@ -8765,6 +8792,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const lastSession = useMemo(() => [...sessions].reverse().find((s) => s.kind === "entreno"), [sessions]);
   const [weekChoice, setWeekChoice] = useState(null); // null | "solo" | "semana"
   const [weekSavedMsg, setWeekSavedMsg] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
@@ -8827,7 +8857,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         next = prev.map((r) => (r.id === routine.id ? routine : r));
       } else {
         if (prev.length >= MAX_CUSTOM_ROUTINES) {
-          alert("Límite alcanzado. Elimina una rutina para crear otra.");
+          showToast("Límite alcanzado. Elimina una rutina para crear otra.");
           return prev;
         }
         next = [...prev, routine];
@@ -8839,12 +8869,12 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   };
 
   const deleteCustomRoutine = (id) => {
-    if (!window.confirm("¿Eliminar esta rutina?")) return;
     setCustomRoutines((prev) => {
       const next = prev.filter((r) => r.id !== id);
       store.set("custom_routines", next);
       return next;
     });
+    setDeleteTarget(null);
   };
 
   const startCustomRoutine = (routine) => {
@@ -9098,13 +9128,22 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                     </div>
                     <button onClick={() => startCustomRoutine(r)} style={{ fontSize: 16, padding: 4 }}>▶</button>
                     <button onClick={() => setBuilderMode(r)} style={{ fontSize: 14, padding: 4 }}>✏️</button>
-                    <button onClick={() => deleteCustomRoutine(r.id)} style={{ fontSize: 14, padding: 4, color: C.red }}>🗑</button>
+                    <button onClick={() => setDeleteTarget(r.id)} style={{ fontSize: 14, padding: 4, color: C.red }}>🗑</button>
                   </div>
                 ))}
               </div>
             )}
           </>
         )}
+        <ConfirmSheet
+          visible={deleteTarget !== null}
+          title="¿Eliminar esta rutina?"
+          confirmLabel="Sí, eliminar"
+          confirmColor={C.red}
+          onConfirm={() => deleteCustomRoutine(deleteTarget)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+        <MiniToast message={toast} />
       </div>
     );
   }
@@ -11477,6 +11516,11 @@ function SettingsScreen({
   const fileRef = useRef(null);
   const weightLog = getWeightLog();
   const currentWeight = weightLog.length ? weightLog[weightLog.length - 1].weight : null;
+  const [toast, setToast] = useState(null);
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const [pendingRestore, setPendingRestore] = useState(null);
+  const [confirmDeactivatePlan, setConfirmDeactivatePlan] = useState(false);
+  const [confirmCleanOld, setConfirmCleanOld] = useState(false);
 
   const handleRestoreFile = (e) => {
     const file = e.target.files?.[0];
@@ -11487,11 +11531,9 @@ function SettingsScreen({
       try {
         const parsed = JSON.parse(String(reader.result));
         if (!isValidBackup(parsed)) throw new Error("formato inválido");
-        if (!window.confirm("Esto reemplazará todos tus datos actuales. ¿Continuar?")) return;
-        applyBackup(parsed);
-        window.location.reload();
+        setPendingRestore(parsed);
       } catch {
-        alert("Archivo de backup inválido o corrupto.");
+        showToast("Archivo de backup inválido o corrupto.");
       }
     };
     reader.readAsText(file);
@@ -11719,10 +11761,7 @@ function SettingsScreen({
             aria-label="Alternar plan de 12 semanas"
             onClick={() => {
               if (store.get("plan_start", null)) {
-                if (window.confirm("¿Desactivar tu plan de 12 semanas actual?")) {
-                  store.set("plan_start", null);
-                  refresh();
-                }
+                setConfirmDeactivatePlan(true);
               } else {
                 store.set("plan_start", new Date().toISOString());
                 store.set("plan_last_phase", null);
@@ -11763,7 +11802,7 @@ function SettingsScreen({
         <input ref={fileRef} type="file" accept="application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
         <button
           className="btn-xl"
-          onClick={() => { if (window.confirm("¿Eliminar sesiones de hace más de 6 meses? No se puede deshacer.")) onCleanOld(); }}
+          onClick={() => setConfirmCleanOld(true)}
           style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.red, fontSize: 12 }}
         >
           🗑️ Limpiar sesiones antiguas (+6 meses)
@@ -11807,6 +11846,32 @@ function SettingsScreen({
         <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Desarrollado con 💪 para atletas serios</p>
         <p style={{ fontSize: 11, color: C.cyan, marginTop: 6 }}>f-a-s-e.vercel.app</p>
       </div>
+
+      <ConfirmSheet
+        visible={!!pendingRestore}
+        title="¿Restaurar backup?"
+        message="Esto reemplazará todos tus datos actuales."
+        confirmLabel="Sí, restaurar"
+        onConfirm={() => { applyBackup(pendingRestore); window.location.reload(); }}
+        onCancel={() => setPendingRestore(null)}
+      />
+      <ConfirmSheet
+        visible={confirmDeactivatePlan}
+        title="¿Desactivar el plan?"
+        confirmLabel="Desactivar"
+        confirmColor={C.orange}
+        onConfirm={() => { store.set("plan_start", null); refresh(); setConfirmDeactivatePlan(false); }}
+        onCancel={() => setConfirmDeactivatePlan(false)}
+      />
+      <ConfirmSheet
+        visible={confirmCleanOld}
+        title="¿Limpiar historial antiguo?"
+        message="Se eliminarán sesiones de hace más de 6 meses. No se puede deshacer."
+        confirmLabel="Limpiar"
+        onConfirm={() => { onCleanOld(); setConfirmCleanOld(false); }}
+        onCancel={() => setConfirmCleanOld(false)}
+      />
+      <MiniToast message={toast} />
     </div>
   );
 }
@@ -11881,6 +11946,9 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
   const fileInputRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const [pendingRestore, setPendingRestore] = useState(null);
   const code = useMemo(() => getFaseCode(name), [name]);
   const { list: achievements } = useMemo(() => computeAchievements(sessions, freezes), [sessions, freezes]);
   const unlocked = achievements.filter((a) => a.unlocked);
@@ -11913,7 +11981,7 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch {
-      alert("No se pudo generar la imagen. Revisa tu conexión a internet.");
+      showToast("No se pudo generar la imagen. Revisa tu conexión a internet.");
     }
     setSaving(false);
   };
@@ -11927,11 +11995,9 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
       try {
         const parsed = JSON.parse(String(reader.result));
         if (!isValidBackup(parsed)) throw new Error("formato inválido");
-        if (!window.confirm("Esto reemplazará todos tus datos actuales. ¿Continuar?")) return;
-        applyBackup(parsed);
-        window.location.reload();
+        setPendingRestore(parsed);
       } catch {
-        alert("Archivo de backup inválido o corrupto.");
+        showToast("Archivo de backup inválido o corrupto.");
       }
     };
     reader.readAsText(file);
@@ -11984,6 +12050,16 @@ function ProfileCard({ name, sessions, streak, freezes, onBack }) {
         📂 Restaurar backup
       </button>
       <input ref={fileInputRef} type="file" accept="application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
+
+      <ConfirmSheet
+        visible={!!pendingRestore}
+        title="¿Restaurar backup?"
+        message="Esto reemplazará todos tus datos actuales."
+        confirmLabel="Sí, restaurar"
+        onConfirm={() => { applyBackup(pendingRestore); window.location.reload(); }}
+        onCancel={() => setPendingRestore(null)}
+      />
+      <MiniToast message={toast} />
     </div>
   );
 }
@@ -12115,12 +12191,12 @@ function getWeightLog() {
   return store.get("weight_log", []);
 }
 
-function saveWeightEntry(weightKg) {
+function saveWeightEntry(weightKg, force = false) {
   const log = getWeightLog();
   const today = todayKey();
   const existingIdx = log.findIndex((e) => dayKey(new Date(e.date).getTime()) === today);
+  if (existingIdx >= 0 && !force) return { needsConfirm: true, log };
   if (existingIdx >= 0) {
-    if (!window.confirm("Ya registraste tu peso hoy. ¿Actualizar el registro de hoy?")) return log;
     const next = [...log];
     next[existingIdx] = { date: new Date().toISOString(), weight: weightKg };
     store.set("weight_log", next);
@@ -12136,11 +12212,14 @@ function WeightSection() {
   const [log, setLog] = useState(() => getWeightLog());
   const [input, setInput] = useState("");
   const [now] = useState(() => Date.now());
+  const [pendingWeight, setPendingWeight] = useState(null);
 
   const submit = () => {
     const w = parseFloat(input);
     if (!(w > 0)) return;
-    setLog(saveWeightEntry(w));
+    const result = saveWeightEntry(w);
+    if (result.needsConfirm) { setPendingWeight(w); return; }
+    setLog(result);
     setInput("");
   };
 
@@ -12212,6 +12291,15 @@ function WeightSection() {
         <p style={{ fontSize: 12, color: C.mut }}>Este mes: <strong style={{ color: C.text }}>{fmtDiff(thisMonthDiff)}</strong></p>
         <p style={{ fontSize: 12, color: C.mut }}>Tendencia: <strong style={{ color: C.text }}>{trend}</strong></p>
       </div>
+      <ConfirmSheet
+        visible={pendingWeight !== null}
+        title="Ya registraste tu peso hoy"
+        message="¿Quieres actualizar el registro?"
+        confirmLabel="Actualizar"
+        confirmColor={C.cyan}
+        onConfirm={() => { setLog(saveWeightEntry(pendingWeight, true)); setPendingWeight(null); setInput(""); }}
+        onCancel={() => setPendingWeight(null)}
+      />
     </div>
   );
 }
@@ -12816,6 +12904,7 @@ function findMainPlateau(sessions) {
 function PlateauCard({ sessions }) {
   const plateau = useMemo(() => findMainPlateau(sessions), [sessions]);
   const [dismissed, setDismissed] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   if (!plateau || dismissed) return null;
   return (
     <div className="card" style={{ marginTop: 10, borderColor: `${C.orange}66`, background: "rgba(255,122,47,0.06)" }}>
@@ -12839,13 +12928,17 @@ function PlateauCard({ sessions }) {
       </p>
       <p style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>Peso actual promedio: {plateau.currentWeight}kg</p>
       <p style={{ fontSize: 12, color: C.text, marginTop: 8, fontWeight: 700 }}>💡 Sugerencia: {plateau.suggestion.title}</p>
-      <p style={{ fontSize: 11, color: C.mut, marginTop: 2, lineHeight: 1.4 }}>{plateau.suggestion.desc}</p>
       <button
-        className="btn-xl" onClick={() => alert(plateau.suggestion.desc)}
+        className="btn-xl" onClick={() => setShowDetail((v) => !v)}
         style={{ marginTop: 10, background: C.orange, color: "#07070C", fontSize: 12 }}
       >
         {plateau.suggestion.action}
       </button>
+      {showDetail && (
+        <p style={{ fontSize: 12, color: C.mut, marginTop: 8, lineHeight: 1.5, padding: "10px 12px", background: C.surface, borderRadius: 10 }}>
+          {plateau.suggestion.desc}
+        </p>
+      )}
     </div>
   );
 }
@@ -13069,6 +13162,8 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           <StatBox label="Racha actual" value={streak} accent={C.red} sparkData={last30DaysTrainedArray(sessions)} />
           <StatBox label="Mejor racha" value={bestStreak} accent={C.yellow} />
         </div>
+
+        <Heatmap sessions={sessions} color={C.cyan} freezes={freezes} />
 
         <div className="sec-title">Montaña de progreso (8 semanas)</div>
         <Mountain3DChart sessions={sessions} />
@@ -13796,6 +13891,68 @@ function useFirstTime(key) {
   const [seen, setSeenState] = useState(() => store.get(`seen_${key}`, false));
   const markSeen = () => { store.set(`seen_${key}`, true); setSeenState(true); };
   return [!seen, markSeen];
+}
+
+/* Bottom sheet de confirmación — reemplaza window.confirm() nativo */
+function ConfirmSheet({ visible, title, message, onConfirm, onCancel, confirmLabel = "Confirmar", confirmColor }) {
+  if (!visible) return null;
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: "fixed", inset: 0, zIndex: 300,
+        background: "rgba(0,0,0,0.7)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        animation: "fadeIn 0.2s ease",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 430, background: C.card,
+          borderRadius: "20px 20px 0 0", padding: "20px 20px calc(20px + env(safe-area-inset-bottom))",
+          animation: "sheetUp 0.3s ease-out", textAlign: "center",
+        }}
+      >
+        {title && <p style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>{title}</p>}
+        {message && <p style={{ fontSize: 13, color: C.mut, lineHeight: 1.5, marginBottom: 16 }}>{message}</p>}
+        <button
+          onClick={onConfirm}
+          style={{
+            width: "100%", minHeight: 52, background: confirmColor || C.red,
+            color: "#fff", fontWeight: 800, fontSize: 15, borderRadius: 12,
+            border: "none", cursor: "pointer", marginBottom: 8,
+          }}
+        >
+          {confirmLabel}
+        </button>
+        <button
+          onClick={onCancel}
+          style={{ width: "100%", minHeight: 44, background: "none", border: "none", color: C.mut, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Toast simple flotante — reemplaza alert() para mensajes informativos */
+function MiniToast({ message }) {
+  if (!message) return null;
+  return (
+    <div
+      className="pop"
+      style={{
+        position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+        background: C.card, border: `1px solid ${C.border}`, color: C.text,
+        padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 700,
+        zIndex: 400, boxShadow: "0 4px 16px rgba(0,0,0,0.4)", maxWidth: "85%", textAlign: "center",
+      }}
+    >
+      {message}
+    </div>
+  );
 }
 
 function FeatureTooltip({ visible, onDismiss, text }) {
@@ -14539,7 +14696,7 @@ export default function App() {
                       if (p) setLive(p);
                     }}
                     broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
-                    challenge={challenge} onDeleteSession={deleteSession} freezes={freezes}
+                    challenge={challenge} onDeleteSession={deleteSession}
                     onSaveMatch={saveSession}
                   />
                 </div>
