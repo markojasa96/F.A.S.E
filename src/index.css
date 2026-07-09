@@ -682,6 +682,38 @@ input[type='number'] {
 @media (prefers-reduced-motion: reduce) {
   .particle { animation: none !important; }
   .splash-f, .splash-fade, .splash-bar-fill { animation-duration: 1ms !important; }
+  .home-bg, .home-particle, .splash-bg { animation: none !important; }
+}
+
+/* ─── Fondo animado sutil de Inicio ─── */
+@keyframes bgShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.home-bg {
+  background: linear-gradient(-45deg, #07070c, #07070c, #0a0f1a, #070712, #07070c);
+  background-size: 400% 400%;
+  animation: bgShift 20s ease infinite;
+}
+.splash-bg {
+  background: linear-gradient(-45deg, #07070c, #070a14, #07070c, #0a0714);
+  background-size: 400% 400%;
+  animation: bgShift 6s ease infinite;
+}
+@keyframes particleFloat {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(30px, -20px); }
+  66% { transform: translate(-20px, 30px); }
+}
+
+/* ─── Entrada escalonada de tarjetas (sesión completada) ─── */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.slide-up-fade {
+  animation: slideUpFade 0.4s ease-out both;
 }
 @media (max-width: 360px) {
   .my-week-day { padding: 4px !important; }

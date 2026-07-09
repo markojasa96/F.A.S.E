@@ -952,12 +952,19 @@ function Splash({ onDone }) {
 
   return (
     <div
-      className={fadingOut ? "splash-out" : ""}
+      className={`splash-bg ${fadingOut ? "splash-out" : ""}`}
       style={{
-        position: "fixed", inset: 0, zIndex: 9999, background: "#07070C",
+        position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10,
       }}
     >
+      <div
+        style={{
+          position: "absolute", width: 120, height: 120, borderRadius: "50%",
+          background: "#00E5FF", filter: "blur(40px)", opacity: 0.15,
+          animation: "particleFloat 3s ease-in-out infinite",
+        }}
+      />
       <div className="splash-f" style={{ fontSize: 80, fontWeight: 900, color: "#00E5FF", lineHeight: 1 }}>F</div>
       <div className="splash-fade" style={{ fontSize: 14, letterSpacing: 8, color: "#00E5FF", animationDelay: "300ms" }}>
         F.A.S.E.
@@ -6746,7 +6753,7 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
   const greetWord = greetHour < 12 ? "Buenos días" : greetHour < 19 ? "Buenas tardes" : "Buenas noches";
 
   return (
-    <div className="screen" style={{ paddingTop: 0 }}>
+    <div className="screen home-bg" style={{ paddingTop: 0 }}>
       {!pro && (
         <div style={{ margin: "0 -16px 0", padding: "14px 16px 0", background: C.surface, borderBottom: `1px solid ${C.borderSubtle || C.border}` }}>
           <p style={{ fontSize: 13, color: C.dim }}>{greetWord}, {name}</p>
@@ -10735,7 +10742,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         )}
 
         {newRecord && (
-          <div className={`card pop ${photoFinish ? "record-zoom" : ""}`} style={{ marginTop: 12, borderColor: C.yellow, background: "rgba(255,214,0,0.1)" }}>
+          <div className={`card pop slide-up-fade ${photoFinish ? "record-zoom" : ""}`} style={{ marginTop: 12, borderColor: C.yellow, background: "rgba(255,214,0,0.1)", animationDelay: "200ms" }}>
             <div style={{ fontSize: 13, fontWeight: 900, color: C.yellow }}>🏆 NUEVO RÉCORD PERSONAL</div>
             <div style={{ fontSize: 12, color: C.text, marginTop: 4 }}>
               {newRecord.name}: {newRecord.weight > 0 ? `${newRecord.weight} kg × ${newRecord.reps}` : `${newRecord.reps} reps`}
@@ -10754,7 +10761,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         )}
         {photoFinish && <div className="white-flash" style={{ animationDuration: "200ms" }} />}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
+        <div className="slide-up-fade" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14, animationDelay: "0ms" }}>
           <div className="card" style={{ padding: "12px 8px" }}>
             <div style={{ fontSize: 18, fontWeight: 900, color: C.cyan }}>⏱ {formatDuration(Math.floor(sessionSecs / 60))}</div>
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Duración</div>
@@ -10796,7 +10803,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           else if (volPct < 0 && setsDiff <= 0) analysis = "Día más flojo. Normal, sigue mañana 💪";
           else analysis = "Sesión completada. Cada entrenamiento suma 💪";
           return (
-            <div className="card" style={{ marginTop: 10, padding: "12px", textAlign: "left" }}>
+            <div className="card slide-up-fade" style={{ marginTop: 10, padding: "12px", textAlign: "left", animationDelay: "100ms" }}>
               <p style={{ fontSize: 12, fontWeight: 800, color: C.mut, marginBottom: 6 }}>📊 Tu sesión vs la anterior</p>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
                 <span style={{ color: C.dim }}>Volumen</span>
@@ -10874,7 +10881,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         ) : null}
 
         <button
-          className="btn-xl"
+          className="btn-xl slide-up-fade"
           onClick={async () => {
             const lvlName = LEVELS[plan.lvlIdx]?.name || "";
             const text = `Completé ${okSets} series en ${plan.discLabel} nivel ${lvlName} con F.A.S.E. 💪 f-a-s-e.vercel.app`;
@@ -10886,7 +10893,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
               /* portapapeles no disponible */
             }
           }}
-          style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+          style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14, animationDelay: "300ms" }}
         >
           {copied ? "¡Copiado!" : "📤 Compartir"}
         </button>
@@ -14395,6 +14402,11 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart,
   );
 }
 
+const textForBg = (bgColor) => {
+  const lightColors = [C.cyan, C.green, C.yellow, "#FF9EC4", "#FFD700"];
+  return lightColors.includes(bgColor) ? "#07070C" : "#fff";
+};
+
 function ProgramsScreen() {
   const [detail, setDetail] = useState(null);
   const [, setTick] = useState(0);
@@ -14479,10 +14491,10 @@ function ProgramsScreen() {
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 14, fontWeight: 800 }}>{p.name}</span>
                   {recommended && !isActive && (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: C.green, padding: "2px 6px", borderRadius: 99 }}>RECOMENDADO</span>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: textForBg(C.green), background: C.green, padding: "2px 6px", borderRadius: 99 }}>RECOMENDADO</span>
                   )}
                   {isActive && (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: "#07070C", background: p.color, padding: "2px 6px", borderRadius: 99 }}>ACTIVO</span>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: textForBg(p.color), background: p.color, padding: "2px 6px", borderRadius: 99 }}>ACTIVO</span>
                   )}
                 </div>
                 <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{p.durationWeeks} sem · {p.daysPerWeek} días/sem · Nivel mín. {LEVELS[p.minLevelIdx]?.name}</div>
