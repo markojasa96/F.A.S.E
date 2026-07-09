@@ -605,6 +605,7 @@ function MatchDebriefScreen({ onSave, onClose }) {
 }
 
 /* ─── Mi semana: vista de calendario de la semana actual ─── */
+// eslint-disable-next-line no-unused-vars -- ya no tiene acceso desde Progreso; se deja el componente sin eliminar
 function MyWeekScreen({ sessions, onBack }) {
   const [detailDay, setDetailDay] = useState(null);
   const today = new Date();
@@ -931,16 +932,13 @@ function EmptyState({ icon, title, subtitle, color = C.cyan }) {
 
 function EmptyHistoryIllustration() {
   return (
-    <svg width="120" height="80" viewBox="0 0 120 80">
-      <line x1="0" y1="75" x2="120" y2="75" stroke="#2a2a3e" strokeWidth="2" />
-      <circle cx="85" cy="25" r="8" fill="none" stroke="#00E5FF" strokeWidth="2" />
-      <line x1="85" y1="33" x2="85" y2="55" stroke="#00E5FF" strokeWidth="2" />
-      <line x1="85" y1="42" x2="75" y2="52" stroke="#00E5FF" strokeWidth="2" />
-      <line x1="85" y1="42" x2="95" y2="38" stroke="#00E5FF" strokeWidth="2" />
-      <line x1="85" y1="55" x2="78" y2="68" stroke="#00E5FF" strokeWidth="2" />
-      <line x1="85" y1="55" x2="95" y2="65" stroke="#00E5FF" strokeWidth="2" />
-      <line x1="30" y1="20" x2="30" y2="75" stroke="#FFD600" strokeWidth="2" strokeDasharray="4,3" />
-      <circle cx="15" cy="72" r="10" fill="#FF7A2F" opacity="0.6" />
+    <svg width="80" height="80" viewBox="0 0 80 80">
+      <rect x="8" y="52" width="12" height="20" rx="3" fill="#00E5FF" opacity="0.3" />
+      <rect x="26" y="38" width="12" height="34" rx="3" fill="#00E5FF" opacity="0.5" />
+      <rect x="44" y="24" width="12" height="48" rx="3" fill="#00E5FF" opacity="0.7" />
+      <rect x="62" y="10" width="12" height="62" rx="3" fill="#00E5FF" opacity="1" />
+      <line x1="4" y1="74" x2="76" y2="74" stroke="#2a2a3e" strokeWidth="2" />
+      <text x="68" y="8" fontSize="10" textAnchor="middle" opacity="0.8">⭐</text>
     </svg>
   );
 }
@@ -3311,6 +3309,7 @@ const PLAN_TEMPLATES = {
 const PLAN_DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const PLAN_TRAIN_SLOTS = { 3: [0, 2, 4], 4: [0, 2, 3, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5] };
 
+// eslint-disable-next-line no-unused-vars -- ya no tiene acceso desde Progreso (PlanWizard); se deja sin eliminar
 function buildWeeklyPlan(days, goal, duration) {
   const templates = PLAN_TEMPLATES[goal] || PLAN_TEMPLATES.musculo;
   const trainDays = PLAN_TRAIN_SLOTS[days] || PLAN_TRAIN_SLOTS[4];
@@ -5333,6 +5332,7 @@ function StatBox({ label, value, accent, sparkData }) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars -- ya no se usa en Home; se deja disponible para Progreso
 function StreakBar({ streak }) {
   const filled = Math.min(streak, 7);
   return (
@@ -6726,28 +6726,7 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
             </button>
           )}
         </div>
-      ) : (
-        <div className="card" style={{ marginTop: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {streak >= 7 && (
-                <span style={{ fontSize: 10, fontWeight: 800, color: C.yellow, background: `${C.yellow}18`, padding: "2px 8px", borderRadius: 99 }}>
-                  ⭐ {streak >= 30 ? `${Math.floor(streak / 7)} semanas` : "1 semana"}
-                </span>
-              )}
-            </div>
-            {canFreeze && (
-              <button
-                onClick={() => setShowFreezeConfirm(true)}
-                style={{ fontSize: 12, fontWeight: 700, color: C.cyan, background: `${C.cyan}14`, border: `1px solid ${C.cyan}33`, borderRadius: 99, padding: "6px 12px", minHeight: 44 }}
-              >
-                ❄️ {freezesLeft} disponibles
-              </button>
-            )}
-          </div>
-          <StreakBar streak={streak} />
-        </div>
-      )}
+      ) : null}
 
       {/* Stats */}
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
@@ -9610,6 +9589,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [justWarmedUp, setJustWarmedUp] = useState(false);
   const [pendingLogs, setPendingLogs] = useState(null);
   const [lastRecord, setLastRecord] = useState(null);
+  // eslint-disable-next-line no-unused-vars -- se dejó el estado sin eliminar tras quitar el textarea de notas
   const [noteText, setNoteText] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
   const [summaryCopied, setSummaryCopied] = useState(false);
@@ -9734,6 +9714,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     return () => clearTimeout(t);
   }, [justWarmedUp]);
 
+  // eslint-disable-next-line no-unused-vars -- ya no se muestra el hint, se deja el estado sin eliminar
   const [showSwipeHint] = useState(() => store.get("session_count", 0) < 3);
   const [showGestureOverlay, setShowGestureOverlay] = useState(() => store.get("session_count", 0) === 0);
   const [showStep4, setShowStep4] = useState(() => store.get("session_count", 0) === 0 && !store.get("tutorial_done", false));
@@ -10229,8 +10210,28 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       }
     });
 
-    /* Sugerencia de la siguiente sesión (equilibrio muscular básico) */
-    const suggestion = plan.discId === "gimnasio" ? nextMuscleSuggestion(plan.focusLabel) : null;
+    /* Sugerencia de la siguiente sesión: día siguiente del programa activo, o equilibrio muscular básico */
+    const getSuggestion = () => {
+      const grp = plan.muscleGroup || focusGroupOf(plan.focusLabel);
+      const map = {
+        empuje: "Mañana: Pull o Piernas",
+        tiron: "Mañana: Push o Piernas",
+        piernas: "Mañana: Push o Pull",
+        fullbody: "Mañana: Descanso o movilidad",
+        core: "Mañana: Disciplina libre",
+        brazos: "Mañana: Piernas",
+      };
+      return map[grp] || null;
+    };
+    const activeProgramForSuggestion = getActiveProgram();
+    const suggestion = activeProgramForSuggestion
+      ? (() => {
+          const dayIdx = (new Date().getDay() + 6) % 7;
+          const tomorrowIdx = (dayIdx + 1) % 7;
+          const tomorrow = activeProgramForSuggestion.program.structure[tomorrowIdx];
+          return tomorrow ? `Mañana: ${tomorrow.label}` : "Mañana: Descanso";
+        })()
+      : plan.discId === "gimnasio" ? getSuggestion() : null;
 
     const isPerfect = pctComplete >= 1;
     return (
@@ -10360,7 +10361,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
 
         {suggestion && (
           <div className="card" style={{ marginTop: 8, padding: "11px" }}>
-            <span style={{ fontSize: 12, color: C.mut }}>Mañana sugerido: </span>
             <span style={{ fontSize: 12, fontWeight: 700 }}>{suggestion}</span>
           </div>
         )}
@@ -10383,34 +10383,34 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         })()}
 
         {!noteSaved ? (
-          <div className="card" style={{ marginTop: 14, textAlign: "left" }}>
-            <p style={{ fontSize: 13, fontWeight: 800 }}>📝 ¿Cómo te sentiste? (opcional)</p>
-            <textarea
-              className="input"
-              style={{ marginTop: 8, background: "#0f0f18", border: "1px solid #26263A", resize: "none", fontSize: 13 }}
-              rows={3} maxLength={300}
-              placeholder="Ej: Me sentí con mucha energía, el peso fue fácil, el tobillo bien..."
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-            />
-            <p style={{ fontSize: 10, color: C.dim, textAlign: "right", marginTop: 2 }}>{noteText.length}/300</p>
-            <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 4 }}>
-              <button
-                onClick={() => {
-                  const clean = sanitizeNote(noteText);
-                  if (clean && lastRecord) onSaveNote?.(lastRecord.id, clean);
-                  setNoteSaved(true);
-                }}
-                disabled={!noteText.trim()}
-                style={{ fontSize: 12, fontWeight: 700, color: C.cyan, padding: "8px 4px" }}
-              >
-                Guardar nota
-              </button>
-              <button onClick={() => setNoteSaved(true)} style={{ fontSize: 12, color: C.dim, fontWeight: 600 }}>Saltar</button>
+          <div className="card" style={{ marginTop: 14, textAlign: "center", padding: "16px 14px" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: C.mut, marginBottom: 12 }}>¿Cómo fue la sesión?</p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              {[
+                { emoji: "🔥", label: "Excelente", value: "great" },
+                { emoji: "💪", label: "Bien", value: "good" },
+                { emoji: "😴", label: "Cansado", value: "tired" },
+              ].map(({ emoji, label, value }) => (
+                <button
+                  key={value}
+                  onClick={() => {
+                    if (lastRecord) onSaveNote?.(lastRecord.id, label);
+                    setNoteSaved(true);
+                  }}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    padding: "12px 16px", borderRadius: 14, background: C.surface,
+                    border: `1px solid ${C.border}`, minWidth: 72, cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontSize: 28 }}>{emoji}</span>
+                  <span style={{ fontSize: 11, color: C.mut, fontWeight: 600 }}>{label}</span>
+                </button>
+              ))}
             </div>
           </div>
-        ) : noteText.trim() ? (
-          <p style={{ fontSize: 11, color: C.green, marginTop: 10, fontWeight: 700 }}>Nota guardada ✓</p>
+        ) : noteText?.trim() ? (
+          <p style={{ fontSize: 11, color: C.green, marginTop: 10, fontWeight: 700 }}>Guardado ✓</p>
         ) : null}
 
         <button
@@ -10885,9 +10885,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             <p style={{ marginTop: 6, fontSize: 11, color: C.yellow, fontWeight: 700 }}>⚠️ {warnMsg}</p>
           ) : null;
         })()}
-        {showSwipeHint && phase === "work" && ex.type !== "tiempo" && (
-          <p style={{ marginTop: 8, fontSize: 11, color: C.cyan, textAlign: "center" }}>💡 Desliza arriba para completar serie</p>
-        )}
         {ex.type === "peso" && progression && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
@@ -11317,6 +11314,7 @@ function Mountain3DChart({ sessions }) {
 }
 
 /* ─── Wizard de 3 preguntas para generar el plan semanal ─── */
+// eslint-disable-next-line no-unused-vars -- ya no tiene acceso desde Progreso; se deja el componente sin eliminar
 function PlanWizard({ onBack, onGenerate }) {
   const [days, setDays] = useState(4);
   const [goal, setGoal] = useState("musculo");
@@ -12393,86 +12391,88 @@ function MacrosCalculator({ sessions, onBack }) {
     );
   }
 
-  if (step === 1) {
+  if (step === 1 || step === 2 || step === 3) {
     return (
       <div className="screen">
         <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🧮 Mis macros</h2>
-        <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
-          Los macronutrientes son los 3 pilares de la alimentación: proteína (construye músculo), carbohidratos (energía para entrenar) y grasas (hormonas y recuperación).
-        </p>
-        <p className="muted" style={{ marginTop: 8 }}>Paso 1 — Datos básicos</p>
-        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 14, display: "block" }}>PESO (KG)</label>
-        <input className="input" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 4 }} />
-        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>ALTURA (CM)</label>
-        <input className="input" type="number" value={height} onChange={(e) => setHeight(e.target.value)} style={{ marginTop: 4 }} />
-        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>EDAD</label>
-        <input className="input" type="number" value={age} onChange={(e) => setAge(e.target.value)} style={{ marginTop: 4 }} />
-        <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>SEXO (PARA EL CÁLCULO)</label>
-        <div className="chip-wrap" style={{ marginTop: 6 }}>
-          <button className={`chip ${sex === "m" ? "on" : ""}`} onClick={() => setSex("m")}>Hombre</button>
-          <button className={`chip ${sex === "f" ? "on" : ""}`} onClick={() => setSex("f")}>Mujer</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🧮 Calcular mis macros</h2>
+
+        <div className="sec-title">Tus datos</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, display: "block" }}>PESO (KG)</label>
+            <input className="input" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} style={{ marginTop: 4 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, display: "block" }}>ALTURA (CM)</label>
+            <input className="input" type="number" value={height} onChange={(e) => setHeight(e.target.value)} style={{ marginTop: 4 }} />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, display: "block" }}>EDAD</label>
+            <input className="input" type="number" value={age} onChange={(e) => setAge(e.target.value)} style={{ marginTop: 4 }} />
+          </div>
+          <div style={{ flex: 1, paddingTop: 18 }}>
+            <div className="chip-wrap">
+              <button className={`chip ${sex === "m" ? "on" : ""}`} onClick={() => setSex("m")}>♂ H</button>
+              <button className={`chip ${sex === "f" ? "on" : ""}`} onClick={() => setSex("f")}>♀ M</button>
+            </div>
+          </div>
         </div>
         <label style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, display: "block" }}>% DE GRASA CORPORAL (OPCIONAL)</label>
         <input
           className="input" type="number" min="5" max="50" placeholder="ej: 15"
           value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} style={{ marginTop: 4 }}
         />
-        {imc && <p style={{ fontSize: 12, color: C.mut, marginTop: 10 }}>IMC: {imc.toFixed(1)} (informativo, sin juicio de valor)</p>}
-        <p style={{ fontSize: 10, color: C.dim, marginTop: 10, fontStyle: "italic", lineHeight: 1.4 }}>
-          Con Cunningham (requiere % grasa): ±3% error. Con Mifflin-St Jeor: ±10% error. Son estimaciones — usa un nutriólogo para precisión.
-        </p>
+        {imc && <p style={{ fontSize: 12, color: C.mut, marginTop: 8 }}>IMC: {imc.toFixed(1)} (informativo, sin juicio de valor)</p>}
+
+        <div className="sec-title" style={{ marginTop: 14 }}>Tu objetivo</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {MACRO_GOALS.map((g) => (
+            <button
+              key={g.id} className="card"
+              onClick={() => setGoal(g.id)}
+              style={{
+                textAlign: "center", padding: "12px 8px",
+                border: goal === g.id ? `2px solid ${C.cyan}` : undefined,
+                background: goal === g.id ? `${C.cyan}14` : C.card,
+              }}
+            >
+              <div style={{ fontSize: 22 }}>{g.emoji}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4 }}>{g.label}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="sec-title" style={{ marginTop: 14 }}>Nivel de actividad</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {MACRO_ACTIVITY.map((a) => (
+            <button
+              key={a.id} className="card"
+              onClick={() => setActivity(a.id)}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left", border: activity === a.id ? `2px solid ${C.cyan}` : undefined }}
+            >
+              <span style={{ fontSize: 18 }}>{a.emoji}</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700 }}>{a.label}</div>
+                <div style={{ fontSize: 10, color: C.mut }}>{a.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
         <button
-          className="btn-xl" onClick={() => setStep(2)} disabled={!weight || !height || !age}
+          className="btn-xl"
+          onClick={calculate}
+          disabled={!weight || !height || !age || !goal}
           style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}
         >
-          Continuar
+          Calcular mis macros →
         </button>
       </div>
     );
   }
-
-  if (step === 2) {
-    return (
-      <div className="screen">
-        <button onClick={() => setStep(1)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>¿Qué quieres lograr?</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
-          {MACRO_GOALS.map((g) => (
-            <button
-              key={g.id} className="card" onClick={() => { setGoal(g.id); setStep(3); }}
-              style={{ textAlign: "left", display: "flex", gap: 12, alignItems: "center", border: goal === g.id ? `2px solid ${C.cyan}` : undefined }}
-            >
-              <span style={{ fontSize: 22 }}>{g.emoji}</span>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{g.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="screen">
-      <button onClick={() => setStep(2)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>Nivel de actividad</h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
-        {MACRO_ACTIVITY.map((a) => (
-          <button
-            key={a.id} className="card" onClick={() => setActivity(a.id)}
-            style={{ textAlign: "left", display: "flex", gap: 12, alignItems: "center", border: activity === a.id ? `2px solid ${C.cyan}` : undefined }}
-          >
-            <span style={{ fontSize: 22 }}>{a.emoji}</span>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>{a.label}</div>
-              <div style={{ fontSize: 11, color: C.mut }}>{a.desc}</div>
-            </div>
-          </button>
-        ))}
-      </div>
-      <button className="btn-xl" onClick={calculate} style={{ marginTop: 16, background: C.cyan, color: "#07070C" }}>Calcular mis macros</button>
-    </div>
-  );
 }
 
 /* ─── DNA Atlético: radar chart SVG puro ─── */
@@ -12929,10 +12929,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const [recordDetail, setRecordDetail] = useState(null);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [showPlan, setShowPlan] = useState(false);
   const [showMacros, setShowMacros] = useState(false);
-  const [showMyWeek, setShowMyWeek] = useState(false);
-  const [weeklyPlan, setWeeklyPlan] = useState(() => store.get("weekly_plan", null));
 
   const [newAchievement, setNewAchievement] = useState(null);
   const [achConfetti, setAchConfetti] = useState(false);
@@ -13020,68 +13017,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
 
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
   if (showMacros) return <MacrosCalculator sessions={sessions} onBack={() => setShowMacros(false)} />;
-  if (showMyWeek) return <MyWeekScreen sessions={sessions} onBack={() => setShowMyWeek(false)} />;
-
-  if (showPlan) {
-    const globalIdx0 = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
-    const startDay = (item) => {
-      if (item.rest || !onQuickStart || item.discId === "cuerpo") return;
-      const seed = routineSeed(item.discId, item.focusId);
-      if (item.discId === "atletismo") {
-        const exercises = genAtletismoRoutine(item.focusId, globalIdx0, seed);
-        onQuickStart({ discId: "atletismo", discLabel: "Atletismo", discColor: C.purple, discIcon: "🏃", focusLabel: DISTANCES.find((d) => d.id === item.focusId)?.label, lvlIdx: globalIdx0, exercises });
-      } else {
-        const disc = DISCIPLINES[item.discId];
-        const exercises = genRoutine(item.discId, item.focusId, globalIdx0, seed);
-        onQuickStart({ discId: item.discId, discLabel: disc.label, discColor: disc.color, discIcon: disc.icon, focusLabel: disc.focuses.find((f) => f.id === item.focusId)?.label || item.focusId, lvlIdx: globalIdx0, exercises });
-      }
-    };
-
-    if (!weeklyPlan) {
-      return (
-        <PlanWizard
-          onBack={() => setShowPlan(false)}
-          onGenerate={(days, goal, duration) => {
-            const p = buildWeeklyPlan(days, goal, duration);
-            setWeeklyPlan(p);
-            store.set("weekly_plan", p);
-          }}
-        />
-      );
-    }
-    return (
-      <div className="screen">
-        <button onClick={() => setShowPlan(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 {weeklyPlan.name || "Mi plan semanal"}</h2>
-        <p className="muted" style={{ marginTop: 2 }}>
-          {weeklyPlan.description || `${weeklyPlan.days} días/semana · ${PLAN_GOALS.find((g) => g.id === weeklyPlan.goal)?.label} · ${weeklyPlan.duration} min`}
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-          {weeklyPlan.plan.map((d) => (
-            <div key={d.day} className="card" style={{ padding: "12px 14px", borderLeft: `4px solid ${d.rest ? C.border : C.cyan}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>{d.day.toUpperCase()}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>{d.label}</div>
-                </div>
-                {!d.rest && d.discId !== "cuerpo" && (
-                  <button onClick={() => startDay(d)} style={{ fontSize: 11, fontWeight: 800, color: C.cyan, border: `1px solid ${C.cyan}55`, padding: "6px 10px", borderRadius: 99 }}>
-                    ▶ Iniciar
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-        <button
-          className="btn-xl" onClick={() => { setWeeklyPlan(null); store.set("weekly_plan", null); }}
-          style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
-        >
-          Rehacer plan
-        </button>
-      </div>
-    );
-  }
 
   if (showAchievements) {
     return (
@@ -13339,17 +13274,9 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
             <div style={{ fontSize: 20 }}>📊</div>
             <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Estadísticas</div>
           </button>
-          <button className="card" onClick={() => setShowPlan(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 20 }}>📅</div>
-            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mi plan</div>
-          </button>
           <button className="card" onClick={() => setShowMacros(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
             <div style={{ fontSize: 20 }}>🧮</div>
             <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mis macros</div>
-          </button>
-          <button className="card" onClick={() => setShowMyWeek(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 20 }}>📅</div>
-            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Mi semana</div>
           </button>
         </div>
 
