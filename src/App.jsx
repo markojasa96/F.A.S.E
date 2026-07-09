@@ -373,77 +373,12 @@ function daysSinceLastCombine() {
   if (!last) return null;
   return Math.floor((Date.now() - last) / 86400000);
 }
-/* ─── Mapa corporal de dolor (versión de zonas por botones, sin SVG completo) ─── */
-const BODY_PAIN_ZONES = [
-  "Tobillo izq", "Tobillo der", "Rodilla izq", "Rodilla der",
-  "Isquios izq", "Isquios der", "Cadera izq", "Cadera der",
-  "Espalda baja", "Hombro izq", "Hombro der", "Otro",
-];
-function logBodyPain(zone, intensity) {
-  const map = store.get("body_pain_map", {});
-  const today = dayKey(Date.now());
-  const prev = map[zone];
-  const consecutiveDays = prev && dayKey(prev.lastDate) === dayKey(Date.now() - 86400000) ? prev.consecutiveDays + 1 : prev && dayKey(prev.lastDate) === today ? prev.consecutiveDays : 1;
-  map[zone] = { lastDate: Date.now(), consecutiveDays, intensity };
-  store.set("body_pain_map", map);
-}
 function persistentPainZones() {
   const map = store.get("body_pain_map", {});
   const today = dayKey(Date.now());
   return Object.entries(map)
     .filter(([, v]) => v.consecutiveDays >= 3 && (dayKey(v.lastDate) === today || dayKey(v.lastDate) === dayKey(Date.now() - 86400000)))
     .map(([zone]) => zone);
-}
-
-function BodyPainScreen({ onClose }) {
-  const [zone, setZone] = useState(null);
-  const [intensity, setIntensity] = useState(3);
-  const [saved, setSaved] = useState(false);
-
-  const save = () => {
-    logBodyPain(zone, intensity);
-    setSaved(true);
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, padding: 20, borderRadius: "20px 20px 0 0" }}>
-        {saved ? (
-          <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 14, fontWeight: 800, color: C.green }}>✓ Molestia registrada</p>
-            <button className="btn-xl" onClick={onClose} style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>Cerrar</button>
-          </div>
-        ) : (
-          <>
-            <p style={{ fontSize: 15, fontWeight: 800 }}>¿Dónde sientes molestia?</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
-              {BODY_PAIN_ZONES.map((z) => (
-                <button
-                  key={z} onClick={() => setZone(z)}
-                  style={{ padding: "10px 8px", borderRadius: 10, fontSize: 12, fontWeight: 700, border: `1px solid ${zone === z ? C.red : C.border}`, background: zone === z ? `${C.red}18` : C.card, color: zone === z ? C.red : C.text }}
-                >
-                  {z}
-                </button>
-              ))}
-            </div>
-            {zone && (
-              <>
-                <p style={{ fontSize: 12, color: C.mut, marginTop: 14 }}>Intensidad</p>
-                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button key={n} onClick={() => setIntensity(n)} style={{ flex: 1, minHeight: 44, borderRadius: 10, fontSize: 16, border: `1px solid ${intensity === n ? C.orange : C.border}`, background: intensity === n ? `${C.orange}18` : C.card }}>
-                      {["🙂", "😐", "😣", "😖", "😭"][n - 1]}
-                    </button>
-                  ))}
-                </div>
-                <button className="btn-xl btn-physics" onClick={save} style={{ marginTop: 14, background: C.red, color: "#fff" }}>Guardar molestia</button>
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
 }
 
 function CombineScreen({ onClose }) {
@@ -4484,28 +4419,6 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
   return [{ discId: "calistenia", focusId: "todo", lvlIdx, reason: "Sigue sumando sesiones." }];
 }
 
-function dailyMessageForToday() {
-  const messages = {
-    1: "Nueva semana, nueva oportunidad 💪",
-    3: "Mitad de semana — no aflojes",
-    5: "Cierra la semana con todo 🔥",
-    6: "El fin de semana también es tuyo",
-    0: "Descanso activo o prepárate para mañana",
-  };
-  return messages[new Date().getDay()] || "Cada sesión suma";
-}
-
-function levelUpHint(sessions, lvlIdx) {
-  const workouts = sessions.filter((s) => s.kind === "entreno").slice(-3);
-  if (workouts.length < 3 || lvlIdx >= LEVELS.length - 1) return null;
-  const rates = workouts.map((s) => {
-    const sets = s.exercises.flatMap((e) => e.sets);
-    return sets.length ? sets.filter((st) => st.ok).length / sets.length : 0;
-  });
-  const avg = rates.reduce((a, b) => a + b, 0) / rates.length;
-  return avg > 0.8 ? LEVELS[lvlIdx + 1].name : null;
-}
-
 /* ─── Biblioteca de programas prediseñados ─── */
 const PROGRAMS = [
   {
@@ -6354,7 +6267,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
   const [showTapTest, setShowTapTest] = useState(false);
   const [showMatchDebrief, setShowMatchDebrief] = useState(false);
   const [showCombine, setShowCombine] = useState(false);
-  const [showBodyPain, setShowBodyPain] = useState(false);
   const [previewTip, setPreviewTip] = useState(null);
   const freezesUsedInfo = store.get("freezes_used", null);
   const freezesUsedThisMonth = (() => {
@@ -6374,8 +6286,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
 
   /* Plan del día */
   const [dailyPlanState, setDailyPlanState] = useState(() => getDailyPlan(sessions));
-  const dailyLevelUp = useMemo(() => levelUpHint(sessions, dailyPlanState.plan.lvlIdx), [sessions, dailyPlanState.plan.lvlIdx]);
-  const dailyMsg = useMemo(() => dailyMessageForToday(), []);
   const rotatePlan = () => setDailyPlanState((st) => ({ ...rotateDailyPlan(st.candidates, st.index), candidates: st.candidates }));
 
   const startLongPress = (id) => {
@@ -6421,13 +6331,14 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
     <div className="screen home-bg" style={{ paddingTop: 0 }}>
       {!pro && (
         <div style={{ margin: "0 -16px 0", padding: "14px 16px 0", background: C.surface, borderBottom: `1px solid ${C.borderSubtle || C.border}` }}>
-          <p style={{ fontSize: 13, color: C.dim }}>{greetWord}, {name}</p>
+          <p style={{ fontSize: 13, color: C.dim }}>
+            {greetWord}, {name}
+            {isStreakRecordToday && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 800, color: "#FFD700" }}>🏆 Récord de racha — Día {streak}</span>}
+          </p>
         </div>
       )}
       {pro && <p style={{ fontSize: 18, fontWeight: 800 }}>Hola, <span style={{ color: C.cyan }}>{name}</span></p>}
-      {pro ? (
-        <p className="muted" style={{ marginTop: 2 }}>Resumen de tu entrenamiento.</p>
-      ) : (
+      {!pro && (
         (() => {
           const acwr = calcACWR(sessions);
           const line = acwr !== null && acwr > 1.3
@@ -6481,35 +6392,13 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <span style={{ fontSize: 32, lineHeight: 1 }}>{info.icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 11, color: C.dim, fontWeight: 700, letterSpacing: 1 }}>HOY TE SUGERIMOS</p>
-                <p style={{ fontSize: 11, color: info.color, fontWeight: 700, marginTop: 1 }}>{dailyMsg}</p>
-                <p style={{ fontSize: 15, fontWeight: 900, marginTop: 2 }}>
+                <p style={{ fontSize: 15, fontWeight: 900 }}>
                   {info.label}{info.focusLabel ? ` · ${info.focusLabel}` : ""}
                 </p>
-                {(() => {
-                  const ctx = goalContextCopy();
-                  return ctx ? <p style={{ fontSize: 11, color: C.dim, fontStyle: "italic", marginTop: 2 }}>{ctx}</p> : null;
-                })()}
                 <p style={{ fontSize: 12, fontWeight: 700, marginTop: 2, color: LEVELS[dp.lvlIdx]?.color }}>
                   {LEVELS[dp.lvlIdx]?.emoji} {LEVELS[dp.lvlIdx]?.name} · ~{duration} min
                 </p>
-                {(() => {
-                  const macros = store.get('macros', null);
-                  if (!macros) return null;
-                  const todayMacros = getTodayMacros(macros, dp.discId, store.get('match_day', null));
-                  if (!todayMacros) return null;
-                  return (
-                    <p style={{ fontSize: 11, fontWeight: 700, marginTop: 3, color: todayMacros.color }}>
-                      {todayMacros.label} · P: {todayMacros.protein}g · C: {todayMacros.carbs}g
-                    </p>
-                  );
-                })()}
                 <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>{dp.reason}</p>
-                {dailyLevelUp && (
-                  <p style={{ fontSize: 11, color: C.yellow, marginTop: 6, fontWeight: 700 }}>
-                    ¿Listo para subir? Prueba {dailyLevelUp} 🔥
-                  </p>
-                )}
               </div>
             </div>
             <button
@@ -6647,12 +6536,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
               );
             })()}
             {showCombine && <CombineScreen onClose={() => setShowCombine(false)} />}
-            <div style={{ textAlign: "center" }}>
-              <button onClick={() => setShowBodyPain(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
-                🩹 Reportar molestia
-              </button>
-            </div>
-            {showBodyPain && <BodyPainScreen onClose={() => setShowBodyPain(false)} />}
             {(() => {
               const zones = persistentPainZones();
               if (!zones.length) return null;
@@ -6796,20 +6679,13 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
       {/* Stats */}
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <StatBox label="Esta semana" value={week} accent={C.cyan} />
-        <StatBox label="Racha" value={`${streak} 🔥`} accent={C.orange} />
-        <StatBox label="Mejor racha" value={bestStreakEver} accent={C.green} />
+        <StatBox label="Este mes" value={sessions.filter((s) => s.ts >= monthStart.getTime()).length} accent={C.orange} />
+        <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
       </div>
 
       <button onClick={onTrain} style={{ marginTop: 10, color: C.dim, fontSize: 12, fontWeight: 700, width: "100%", textAlign: "center", padding: "6px 0" }}>
         o elige entrenar diferente →
       </button>
-
-      {isStreakRecordToday && (
-        <div className="card pop" style={{ marginTop: 12, padding: "16px", textAlign: "center", background: "rgba(255,215,0,0.1)", borderColor: "#FFD700" }}>
-          <div style={{ fontSize: 30 }}>🏆</div>
-          <div style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", marginTop: 4 }}>RÉCORD DE RACHA — Día {streak}</div>
-        </div>
-      )}
 
       {/* Insight del día */}
       <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
@@ -12189,27 +12065,6 @@ function getActivityMult(sessions, daysConfig) {
   return 1.9;
 }
 
-/* ─── Periodización nutricional dinámica ─── */
-const NUTRITION_PROFILES = {
-  rsa_partido: { carbMult: 1.4, protMult: 1.0, label: "⚽ Alta carga de carbos", color: "#FFD600" },
-  gimnasio_fuerza: { carbMult: 1.0, protMult: 1.2, label: "💪 Proteína elevada", color: "#22FF88" },
-  descanso: { carbMult: 0.8, protMult: 1.0, label: "🔄 Día de recuperación", color: "#60A5FA" },
-  normal: { carbMult: 1.0, protMult: 1.0, label: "📊 Macros estándar", color: C.mut },
-};
-function getTodayMacros(macros, sessionType, matchDay) {
-  if (!macros) return null;
-  const today = new Date().getDay();
-  let profileKey = "normal";
-  if (matchDay !== null && matchDay === today) profileKey = "rsa_partido";
-  else if (sessionType === "gimnasio") profileKey = "gimnasio_fuerza";
-  else if (sessionType === "descanso" || sessionType === "cuerpo") profileKey = "descanso";
-  const profile = NUTRITION_PROFILES[profileKey];
-  return {
-    ...profile,
-    protein: Math.round(macros.protein * profile.protMult),
-    carbs: Math.round(macros.carbs * profile.carbMult),
-  };
-}
 
 /* ─── Calculadora de macros ─── */
 const MACRO_GOALS = [
