@@ -450,39 +450,6 @@ input[type='number'] {
   animation: iconBounce 1.4s ease-in-out infinite;
 }
 
-@keyframes bubble {
-  0% { transform: translateY(0); opacity: 0.9; }
-  100% { transform: translateY(-60px); opacity: 0; }
-}
-.water-bubble {
-  animation: bubble 1.4s ease-out forwards;
-}
-
-@keyframes waveMsg {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-4px); }
-}
-.water-wave-msg {
-  animation: waveMsg 1.6s ease-in-out infinite;
-}
-
-@keyframes waveSurface {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(-4px); }
-}
-.water-wave-surface {
-  animation: waveSurface 1.2s ease-in-out infinite;
-}
-
-@keyframes splashDrop {
-  0% { transform: translateY(0); opacity: 0.9; }
-  85% { opacity: 0.9; }
-  100% { transform: translateY(70px); opacity: 0; }
-}
-.water-splash-drop {
-  animation: splashDrop 600ms ease-in forwards;
-}
-
 @keyframes supercompPulse {
   0%, 100% { opacity: 1; text-shadow: 0 0 0 transparent; }
   50% { opacity: 0.75; text-shadow: 0 0 8px #22FF8888; }

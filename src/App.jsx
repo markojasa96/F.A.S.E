@@ -1072,19 +1072,6 @@ function IconProgress({ color }) {
     </svg>
   );
 }
-function IconPrograms({ color }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 200ms ease" }}>
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-      <line x1="8" y1="14" x2="10" y2="14" />
-      <line x1="8" y1="17" x2="13" y2="17" />
-    </svg>
-  );
-}
-
 /* ─── Ripple + glow táctil, aplicado por delegación a .card/.btn-xl/.chip/.tab ─── */
 function createRipple(target, clientX, clientY, color) {
   const rect = target.getBoundingClientRect();
@@ -2580,26 +2567,6 @@ const MUSCLE_GROUP_LABELS = {
   piernas: "Piernas", gluteos: "Glúteos", velocidad: "Velocidad",
 };
 
-const MOVEMENT_COLORS = {
-  empuje: "#22FF88", tiron: "#00E5FF", sentadilla: "#FF7A2F", pesomuerto: "#00E5FF", curl: "#22FF88",
-  core: "#FF3B5C", sprint: "#FFD600", salto: "#A855F7", tiro: "#FFD700", hipthrust: "#FF9EC4", generic: "#6B7280",
-};
-
-/* Opacidad de cada grupo (torso/brazos/piernas) según qué músculo trabaja el movimiento */
-const MOVEMENT_ACTIVE_PARTS = {
-  sentadilla: { torso: 0.5, arms: 0.35, legs: 1 },
-  pesomuerto: { torso: 0.6, arms: 0.4, legs: 1 },
-  hipthrust: { torso: 0.4, arms: 0.3, legs: 1 },
-  empuje: { torso: 1, arms: 1, legs: 0.35 },
-  tiron: { torso: 1, arms: 1, legs: 0.35 },
-  curl: { torso: 0.35, arms: 1, legs: 0.3 },
-  sprint: { torso: 0.6, arms: 0.7, legs: 1 },
-  salto: { torso: 0.6, arms: 0.6, legs: 1 },
-  core: { torso: 1, arms: 0.4, legs: 0.4 },
-  tiro: { torso: 0.6, arms: 1, legs: 0.6 },
-  generic: { torso: 0.7, arms: 0.7, legs: 0.7 },
-};
-
 /* Convierte "30-45s", "20 min", "300 m" en segundos objetivo (o null si no aplica) */
 function parseTargetSeconds(reps) {
   if (!reps) return null;
@@ -3529,7 +3496,8 @@ function levelFromCount(count, thresholds) {
 const REST_BY_LEVEL = [105, 82, 67, 52, 37, 20];
 
 function fixedItem(it) {
-  const isTime = /s$|min$/.test(String(it.reps).trim());
+  const val = String(it.reps).trim();
+  const isTime = /\bmin\b/.test(val) || /\d\s*s\b/.test(val);
   return { name: it.name, type: isTime ? "tiempo" : "reps", sets: it.sets, reps: it.reps, rest: undefined, tip: it.tip, tag: null };
 }
 
@@ -5115,204 +5083,8 @@ function NumPad({ onKey }) {
   );
 }
 
-/* Figuras de palo SVG animadas según la categoría de movimiento del ejercicio.
-   Evita depender de URLs externas (GIFs) que pueden fallar o tener CORS. */
-/* ─── Ilustraciones de ejercicio con figura humana en CSS (divs) ─── */
-/* Ángulos en radianes. torsoY en px, torsoAngle en radianes (inclinación del torso). */
-const SKELETON_POSES = {
-  sentadilla: {
-    cycle: 2000,
-    a: { leftArm: 0.4, leftForearm: 0.3, rightArm: -0.4, rightForearm: -0.3, leftLeg: 0.1, leftShin: -0.1, rightLeg: -0.1, rightShin: 0.1, torsoY: 0, torsoAngle: 0.1 },
-    b: { leftArm: 0.6, leftForearm: 0.5, rightArm: -0.6, rightForearm: -0.5, leftLeg: 0.55, leftShin: -0.8, rightLeg: -0.55, rightShin: 0.8, torsoY: 22, torsoAngle: 0.25 },
-  },
-  empuje: {
-    cycle: 2500,
-    a: { leftArm: -1.5, leftForearm: 0, rightArm: 1.5, rightForearm: 0, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
-    b: { leftArm: -0.9, leftForearm: -0.9, rightArm: 0.9, rightForearm: 0.9, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
-  },
-  tiron: {
-    cycle: 2000,
-    a: { leftArm: -2.9, leftForearm: 0, rightArm: 2.9, rightForearm: 0, leftLeg: 0.05, leftShin: 0, rightLeg: -0.05, rightShin: 0, torsoY: 0, torsoAngle: 0 },
-    b: { leftArm: -2.4, leftForearm: -0.5, rightArm: 2.4, rightForearm: 0.5, leftLeg: 0.05, leftShin: 0, rightLeg: -0.05, rightShin: 0, torsoY: -16, torsoAngle: 0 },
-  },
-  sprint: {
-    cycle: 350,
-    a: { leftArm: -0.7, leftForearm: 1.0, rightArm: 0.9, rightForearm: -0.7, leftLeg: 0.7, leftShin: -0.9, rightLeg: -0.6, rightShin: 0.4, torsoY: 0, torsoAngle: 0.38 },
-    b: { leftArm: 0.9, leftForearm: -0.7, rightArm: -0.7, rightForearm: 1.0, leftLeg: -0.6, leftShin: 0.4, rightLeg: 0.7, rightShin: -0.9, torsoY: 0, torsoAngle: 0.38 },
-  },
-  salto: {
-    cycleA: 400, cycleB: 600,
-    a: { leftArm: 1.6, leftForearm: 0.8, rightArm: -1.6, rightForearm: -0.8, leftLeg: 0.9, leftShin: -1.4, rightLeg: -0.9, rightShin: 1.4, torsoY: 14, torsoAngle: 0.15 },
-    b: { leftArm: -2.6, leftForearm: -0.3, rightArm: 2.6, rightForearm: 0.3, leftLeg: -0.15, leftShin: 0.1, rightLeg: 0.15, rightShin: -0.1, torsoY: -15, torsoAngle: 0 },
-  },
-  core: {
-    cycle: 3000,
-    a: { leftArm: -1.4, leftForearm: 0, rightArm: 1.4, rightForearm: 0, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0, scale: 1 },
-    b: { leftArm: -1.4, leftForearm: 0, rightArm: 1.4, rightForearm: 0, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0, scale: 1.015 },
-  },
-  tiro: {
-    cycle: 1500,
-    a: { leftArm: 0.2, leftForearm: 0.2, rightArm: -1.0, rightForearm: -1.6, leftLeg: 0.2, leftShin: -0.3, rightLeg: -0.2, rightShin: 0.4, torsoY: 8, torsoAngle: 0.15 },
-    b: { leftArm: 0.1, leftForearm: 0.1, rightArm: -2.8, rightForearm: -2.9, leftLeg: -0.1, leftShin: 0.15, rightLeg: 0.1, rightShin: -0.15, torsoY: -14, torsoAngle: -0.05 },
-  },
-  pesomuerto: {
-    cycle: 3000,
-    a: { leftArm: 0.15, leftForearm: 0, rightArm: -0.15, rightForearm: 0, leftLeg: 0.3, leftShin: -0.5, rightLeg: -0.3, rightShin: 0.5, torsoY: 0, torsoAngle: 0.9 },
-    b: { leftArm: 0.05, leftForearm: 0, rightArm: -0.05, rightForearm: 0, leftLeg: 0.05, leftShin: -0.05, rightLeg: -0.05, rightShin: 0.05, torsoY: -20, torsoAngle: 0 },
-  },
-  curl: {
-    cycle: 1800,
-    a: { leftArm: 0.1, leftForearm: 0, rightArm: 0.1, rightForearm: 2.9, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
-    b: { leftArm: 0.1, leftForearm: 0, rightArm: 0.1, rightForearm: 0.7, leftLeg: 0, leftShin: 0, rightLeg: 0, rightShin: 0, torsoY: 0, torsoAngle: 0 },
-  },
-  hipthrust: {
-    cycle: 2500,
-    a: { leftArm: 0, leftForearm: 0, rightArm: 0, rightForearm: 0, leftLeg: 0.9, leftShin: -1.3, rightLeg: -0.9, rightShin: 1.3, torsoY: 20, torsoAngle: 0 },
-    b: { leftArm: 0, leftForearm: 0, rightArm: 0, rightForearm: 0, leftLeg: 0.9, leftShin: -1.3, rightLeg: -0.9, rightShin: 1.3, torsoY: 0, torsoAngle: 0 },
-  },
-  generic: {
-    cycle: 1200,
-    a: { leftArm: 0.25, leftForearm: 0.1, rightArm: -0.25, rightForearm: -0.1, leftLeg: 0.1, leftShin: -0.05, rightLeg: -0.1, rightShin: 0.05, torsoY: 0, torsoAngle: 0 },
-    b: { leftArm: -0.25, leftForearm: -0.1, rightArm: 0.25, rightForearm: 0.1, leftLeg: -0.1, leftShin: 0.05, rightLeg: 0.1, rightShin: -0.05, torsoY: -4, torsoAngle: 0 },
-  },
-};
-
-/* Interpola suavemente hacia la pose objetivo alternando A/B, usando requestAnimationFrame */
-function useAnimatedPose(def) {
-  const [pose, setPose] = useState(def.a);
-  const targetRef = useRef(def.a);
-  const currentRef = useRef({ ...def.a });
-  useEffect(() => {
-    let toggle = false;
-    targetRef.current = def.a;
-    currentRef.current = { ...def.a };
-    const cycleA = def.cycleA || def.cycle;
-    const cycleB = def.cycleB || def.cycle;
-    let toggleTimer = setTimeout(function flip() {
-      toggle = !toggle;
-      targetRef.current = toggle ? def.b : def.a;
-      toggleTimer = setTimeout(flip, toggle ? cycleB : cycleA);
-    }, cycleA);
-    let raf;
-    const tick = () => {
-      const cur = currentRef.current;
-      const tgt = targetRef.current;
-      const next = {};
-      let changed = false;
-      for (const k in tgt) {
-        const c = cur[k] ?? tgt[k];
-        const d = tgt[k] - c;
-        if (Math.abs(d) > 0.001) changed = true;
-        next[k] = c + d * 0.18;
-      }
-      currentRef.current = next;
-      if (changed) setPose(next);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => { clearTimeout(toggleTimer); cancelAnimationFrame(raf); };
-  }, [def]);
-  return pose;
-}
-
-/* Punto final de un segmento (hombro→codo, codo→mano, etc.) dado ángulo y longitud */
-function limbPoint(x0, y0, angle, len) {
-  return { x: x0 + Math.sin(angle) * len, y: y0 + Math.cos(angle) * len };
-}
-
-function SkeletonFigure({ pose, color, activeParts }) {
-  const scale = pose.scale || 1;
-  const active = activeParts || { torso: 1, arms: 1, legs: 1 };
-  const shoulderL = { x: 36, y: 34 };
-  const shoulderR = { x: 64, y: 34 };
-  const hipL = { x: 43, y: 66 };
-  const hipR = { x: 57, y: 66 };
-  const elbowL = limbPoint(shoulderL.x, shoulderL.y, pose.leftArm, 18);
-  const handL = limbPoint(elbowL.x, elbowL.y, pose.leftArm + pose.leftForearm, 17);
-  const elbowR = limbPoint(shoulderR.x, shoulderR.y, pose.rightArm, 18);
-  const handR = limbPoint(elbowR.x, elbowR.y, pose.rightArm + pose.rightForearm, 17);
-  const kneeL = limbPoint(hipL.x, hipL.y, pose.leftLeg, 26);
-  const footL = limbPoint(kneeL.x, kneeL.y, pose.leftLeg + pose.leftShin, 22);
-  const kneeR = limbPoint(hipR.x, hipR.y, pose.rightLeg, 26);
-  const footR = limbPoint(kneeR.x, kneeR.y, pose.rightLeg + pose.rightShin, 22);
-  const footRot = (base) => `rotate(-10 ${base.x} ${base.y})`;
-  const lowestFootY = Math.max(footL.y, footR.y);
-
-  return (
-    <svg
-      viewBox="0 0 100 160" width="100" height="160" style={{ overflow: "visible", transform: `translateY(${pose.torsoY}px) rotate(${(pose.torsoAngle || 0) * (180 / Math.PI)}deg) scale(${scale})`, transformOrigin: "50px 50px", transition: "transform 0.15s linear" }}
-    >
-      <line x1="0" y1={lowestFootY + 6} x2="100" y2={lowestFootY + 6} stroke={C.border} strokeWidth="1.5" opacity="0.5" />
-      <circle cx="50" cy="15" r="11" fill={color} fillOpacity={active.torso * 0.9} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <line x1="50" y1="26" x2="50" y2="32" stroke={color} strokeOpacity={active.torso} strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M35,32 Q50,30 65,32 L62,65 Q50,68 38,65 Z" fill={color} fillOpacity={active.torso * 0.3} stroke={color} strokeOpacity={active.torso} strokeWidth="2.5" strokeLinejoin="round" />
-      <g opacity={active.arms}>
-        <line x1={shoulderL.x} y1={shoulderL.y} x2={elbowL.x} y2={elbowL.y} stroke={color} strokeWidth="4" strokeLinecap="round" />
-        <circle cx={elbowL.x} cy={elbowL.y} r="3" fill={color} />
-        <line x1={elbowL.x} y1={elbowL.y} x2={handL.x} y2={handL.y} stroke={color} strokeWidth="3" strokeLinecap="round" />
-        <line x1={shoulderR.x} y1={shoulderR.y} x2={elbowR.x} y2={elbowR.y} stroke={color} strokeWidth="4" strokeLinecap="round" />
-        <circle cx={elbowR.x} cy={elbowR.y} r="3" fill={color} />
-        <line x1={elbowR.x} y1={elbowR.y} x2={handR.x} y2={handR.y} stroke={color} strokeWidth="3" strokeLinecap="round" />
-      </g>
-      <g opacity={active.legs}>
-        <line x1={hipL.x} y1={hipL.y} x2={kneeL.x} y2={kneeL.y} stroke={color} strokeWidth="5" strokeLinecap="round" />
-        <circle cx={kneeL.x} cy={kneeL.y} r="3.5" fill={color} />
-        <line x1={kneeL.x} y1={kneeL.y} x2={footL.x} y2={footL.y} stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-        <rect x={footL.x - 2} y={footL.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footL)} />
-        <line x1={hipR.x} y1={hipR.y} x2={kneeR.x} y2={kneeR.y} stroke={color} strokeWidth="5" strokeLinecap="round" />
-        <circle cx={kneeR.x} cy={kneeR.y} r="3.5" fill={color} />
-        <line x1={kneeR.x} y1={kneeR.y} x2={footR.x} y2={footR.y} stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-        <rect x={footR.x - 2} y={footR.y - 2} width="14" height="6" rx="3" fill={color} transform={footRot(footR)} />
-      </g>
-    </svg>
-  );
-}
-
-function ExerciseIllustration({ category, color }) {
-  const def = SKELETON_POSES[category] || SKELETON_POSES.generic;
-  const pose = useAnimatedPose(def);
-  const activeParts = MOVEMENT_ACTIVE_PARTS[category] || MOVEMENT_ACTIVE_PARTS.generic;
-  const isHorizontal = category === "empuje" || category === "core" || category === "hipthrust";
-  return (
-    <div style={{ position: "relative", transform: isHorizontal ? "rotate(90deg)" : "none" }}>
-      {category === "tiron" && (
-        <div style={{ width: 110, height: 8, background: "#4E4E70", borderRadius: 4, boxShadow: "0 3px 6px rgba(0,0,0,0.4)", marginBottom: 4 }} />
-      )}
-      {category === "hipthrust" && (
-        <div style={{ position: "absolute", bottom: 4, left: "18%", width: "35%", height: 12, background: "#2A2A3E", borderRadius: 4 }} />
-      )}
-      {category === "pesomuerto" && (
-        <svg width="100" height="8" style={{ position: "absolute", top: pose.torsoY < -10 ? 92 : 60, left: 0 }}>
-          <line x1="20" y1="4" x2="80" y2="4" stroke="#6B7280" strokeWidth="5" strokeLinecap="round" />
-          <circle cx="20" cy="4" r="7" fill="none" stroke="#6B7280" strokeWidth="3" />
-          <circle cx="80" cy="4" r="7" fill="none" stroke="#6B7280" strokeWidth="3" />
-        </svg>
-      )}
-      {category === "sprint" && (
-        <div style={{ position: "absolute", left: -22, top: 55 }}>
-          {[0.6, 0.4, 0.2].map((op, i) => (
-            <div key={i} style={{ width: 15 - i * 4, height: 2, background: color, opacity: op, borderRadius: 1, marginTop: i === 0 ? 0 : 8 }} />
-          ))}
-        </div>
-      )}
-      <SkeletonFigure pose={pose} color={color} activeParts={activeParts} />
-      {category === "curl" && (
-        <div style={{ position: "absolute", width: 6, height: 18, background: color, borderRadius: 2, top: 60, right: 8 }} />
-      )}
-      {category === "tiro" && (
-        <div
-          style={{
-            position: "absolute", width: 10, height: 10, borderRadius: "50%", background: color, opacity: 0.85,
-            top: pose.torsoY < -8 ? 6 : 40, left: pose.torsoY < -8 ? 78 : 55, transition: "all 0.4s ease-in-out",
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
 /* GIFs/fotos reales de ejercicios (free-exercise-db, sin API key) para los más frecuentes.
-   Si la imagen falla (red, CORS, URL rota) se cae a la ilustración CSS existente. */
+   Si la imagen falla (red, CORS, URL rota) se usa ExercisePlaceholder. */
 const EXERCISE_GIFS = {
   "Press banca con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/0.jpg",
   "Sentadilla con barra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Full_Squat/0.jpg",
@@ -5347,11 +5119,27 @@ const EXERCISE_GIFS = {
   "Sentadilla búlgara con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg",
 };
 
+/* Placeholder limpio para ejercicios sin GIF mapeado (reemplaza el stickman CSS) */
+function ExercisePlaceholder({ name }) {
+  const emoji = getExerciseEmoji(name);
+  return (
+    <div
+      style={{
+        width: "100%", aspectRatio: "4/3", maxHeight: 160, borderRadius: 12,
+        background: "var(--surface)", border: "1px solid var(--border)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: 8, marginTop: 12,
+      }}
+    >
+      <span style={{ fontSize: 48 }}>{emoji}</span>
+      <span style={{ fontSize: 11, color: "var(--dim)" }}>{name}</span>
+    </div>
+  );
+}
+
 function ExerciseDemo({ exerciseName }) {
   const [imgError, setImgError] = useState(false);
   const gifUrl = EXERCISE_GIFS[exerciseName];
-  const category = movementCategory(exerciseName);
-  const color = MOVEMENT_COLORS[category];
 
   if (gifUrl && !imgError) {
     return (
@@ -5371,18 +5159,7 @@ function ExerciseDemo({ exerciseName }) {
     );
   }
 
-  return (
-    <div
-      className="exercise-demo"
-      style={{
-        width: "100%", maxHeight: 160, minHeight: 140,
-        borderRadius: 12, background: `${color}08`, border: `1px solid ${C.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, overflow: "hidden", position: "relative", padding: 16,
-      }}
-    >
-      <ExerciseIllustration category={category} color={color} />
-    </div>
-  );
+  return <ExercisePlaceholder name={exerciseName} />;
 }
 
 /* Cronómetro integrado para ejercicios de tipo "tiempo" */
@@ -5523,84 +5300,6 @@ function StatBox({ label, value, accent, sparkData }) {
         {sparkData && <Sparkline data={sparkData} color={accent} />}
       </div>
       <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{label}</div>
-    </div>
-  );
-}
-
-const WATER_LEVEL_INFO = [
-  { max: 0.25, color: "#FF4444", opacity: 0.6, label: "Deshidratado ⚠️" },
-  { max: 0.5, color: "#FF8800", opacity: 0.7, label: "Hidratación baja" },
-  { max: 0.75, color: "#0099FF", opacity: 0.8, label: "Bien hidratado" },
-  { max: 1.01, color: "#00CCFF", opacity: 1.0, label: "Excelente 💧" },
-];
-
-/* Color del número de vasos según el % de la meta — comunica el estado sin texto ni banners */
-function waterLevelColor(count, goal) {
-  const pct = goal > 0 ? count / goal : 0;
-  if (pct < 0.25) return "#FF4444";
-  if (pct < 0.5) return "#FF8800";
-  if (pct < 0.75) return "#0099FF";
-  return "#00E676";
-}
-
-function WaterGlass({ count, goal, bubbleKey, compact }) {
-  const pct = goal > 0 ? Math.min(1, count / goal) : 0;
-  const full = count >= goal;
-  const fillY = 114 - pct * 100;
-  const level = WATER_LEVEL_INFO.find((l) => pct <= l.max) || WATER_LEVEL_INFO[0];
-  const showWave = pct >= 0.1 && pct <= 0.9;
-  const bubbles = pct > 0 ? Array.from({ length: 4 }) : [];
-  const w = compact ? 55 : 80;
-  const h = compact ? 80 : 120;
-  return (
-    <div style={{ position: "relative", width: w, height: h, flexShrink: 0 }}>
-      <svg width={w} height={h} viewBox="0 0 80 120" style={{ overflow: "visible" }}>
-        <defs>
-          <clipPath id="glassClip">
-            <path d="M14 8 L66 8 L58 114 L22 114 Z" />
-          </clipPath>
-        </defs>
-        {/* Gotas de splash al tocar + */}
-        {bubbleKey > 0 && [0, 1, 2, 3].map((i) => (
-          <circle
-            key={`splash-${bubbleKey}-${i}`}
-            className="water-splash-drop"
-            cx={26 + i * 10} cy="0" r={2.5}
-            fill={level.color} opacity={0.9}
-            style={{ animationDelay: `${i * 60}ms` }}
-          />
-        ))}
-        <path d="M14 8 L66 8 L58 114 L22 114 Z" fill="none" stroke="#0099FF66" strokeWidth="2" strokeLinejoin="round" />
-        {[0.25, 0.5, 0.75].map((p) => (
-          <line key={p} x1="16" y1={114 - p * 100} x2="64" y2={114 - p * 100} stroke="#0099FF33" strokeWidth="1" strokeDasharray="2 2" />
-        ))}
-        <g clipPath="url(#glassClip)">
-          <rect
-            x="10" y={fillY} width="60" height={114 - fillY}
-            fill={level.color} opacity={level.opacity}
-            style={{ transition: "y 500ms ease, height 500ms ease, fill 500ms ease, opacity 500ms ease" }}
-          />
-          {showWave && (
-            <path
-              d={`M0,${fillY} C13,${fillY - 4} 27,${fillY + 4} 40,${fillY} C53,${fillY - 4} 67,${fillY + 4} 80,${fillY} L80,120 L0,120 Z`}
-              fill={level.color} opacity={level.opacity * 0.7} className="water-wave-surface"
-            />
-          )}
-          {bubbles.map((_, i) => (
-            <circle
-              key={`${bubbleKey}-${i}`}
-              className="water-bubble"
-              cx={28 + i * 8}
-              cy="108"
-              r={2 + (i % 2)}
-              fill="#ffffffaa"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </g>
-      </svg>
-      {full && <div className="water-wave-msg" style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", fontSize: 18 }}>🌊</div>}
-      {!compact && <p style={{ fontSize: 9, fontWeight: 700, color: level.color, textAlign: "center", marginTop: 4 }}>{level.label}</p>}
     </div>
   );
 }
@@ -5972,7 +5671,6 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
   const calGoal = goalId === "fat_loss" ? tdee - 400 : goalId === "muscle" ? tdee + 300 : goalId === "athletic" || goalId === "endurance" ? tdee + 200 : tdee;
   const calories = Math.round(calGoal);
   const protein = Math.round(weight * (goalId === "fat_loss" ? 2.2 : 2.0));
-  const waterVasos = Math.max(4, Math.round((weight * 0.035) / 0.25));
   const hero0 = HEROES[0];
   const hasIssues = healthIssues.length && !healthIssues.includes("ninguna");
   const weightDiff = Math.round((targetWeight - weight) * 10) / 10;
@@ -6005,10 +5703,6 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
         <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
           <div style={{ fontSize: 26, fontWeight: 900, color: C.red }}>{protein}g</div>
           <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🥩 proteína</div>
-        </div>
-        <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
-          <div style={{ fontSize: 26, fontWeight: 900, color: C.cyan }}>{waterVasos}</div>
-          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>💧 vasos/día</div>
         </div>
         <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
           <div style={{ fontSize: 26, fontWeight: 900, color: C.green }}>{days}x</div>
@@ -6119,8 +5813,6 @@ function Welcome({ onDone }) {
     store.set("profile", { goal, days });
     if (weight) saveWeightEntry(weight);
     const goalObj = TRAINING_GOALS.find((g) => g.id === goal);
-    const waterGoal = Math.max(4, Math.round((weight * 0.035) / 0.25));
-    store.set("water_goal", waterGoal);
     onDone(sanitize(value), mode);
     void goalObj;
   };
@@ -6171,7 +5863,6 @@ function Welcome({ onDone }) {
     const calGoal = goal === "fat_loss" ? tdee - 400 : goal === "muscle" ? tdee + 300 : goal === "athletic" || goal === "endurance" ? tdee + 200 : tdee;
     const calories = Math.round(calGoal);
     const protein = Math.round(w * (goal === "fat_loss" ? 2.2 : 2.0));
-    const waterVasos = Math.max(4, Math.round((w * 0.035) / 0.25));
     const hero0 = HEROES[0];
     const lvlIdxStart = fitnessLevel?.lvlIdx ?? 0;
     const estMinutes = 30 + lvlIdxStart * 5;
@@ -6206,10 +5897,6 @@ function Welcome({ onDone }) {
           <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
             <div style={{ fontSize: 26, fontWeight: 900, color: C.red }}>{protein}g</div>
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🥩 proteína</div>
-          </div>
-          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: C.cyan }}>{waterVasos}</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>💧 vasos/día</div>
           </div>
           <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
             <div style={{ fontSize: 26, fontWeight: 900, color: C.green }}>{days}x</div>
@@ -6654,7 +6341,7 @@ function FullHistory({ sessions, onDelete, onBack }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, broken, canFreeze, onFreeze, challenge, onDeleteSession, onSaveMatch }) {
+function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch }) {
   const [menuId, setMenuId] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
@@ -6691,19 +6378,6 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
   const dailyMsg = useMemo(() => dailyMessageForToday(), []);
   const rotatePlan = () => setDailyPlanState((st) => ({ ...rotateDailyPlan(st.candidates, st.index), candidates: st.candidates }));
 
-  /* Agua */
-  const [waterGoal, setWaterGoal] = useState(() => store.get("water_goal", 8));
-  const [waterCount, setWaterCount] = useState(() => store.get("water_" + todayKey(), 0));
-  const [showWaterGoal, setShowWaterGoal] = useState(false);
-  const [waterBubbleKey, setWaterBubbleKey] = useState(0);
-  const addWater = () => {
-    const next = Math.min(waterGoal, waterCount + 1);
-    setWaterCount(next);
-    store.set("water_" + todayKey(), next);
-    setWaterBubbleKey((k) => k + 1);
-    if (next >= waterGoal) awardBonusXpOnce("water_bonus_" + todayKey(), 25);
-  };
-
   const startLongPress = (id) => {
     longPressRef.current = setTimeout(() => setMenuId(id), 500);
   };
@@ -6713,19 +6387,11 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
   const pro = mode === "pro";
   const hero = heroForStreak(streak);
   const nextHero = HEROES.find((h) => h.days > streak);
-  const recent = sessions.slice(-5).reverse();
-  const lastEntreno = [...sessions].reverse().find((s) => s.kind === "entreno");
+  const recent = sessions.slice(-3).reverse();
   const insight = useMemo(() => computeInsight(sessions), [sessions]);
-  const challProg = useMemo(() => challengeProgress(challenge, sessions, streak), [challenge, sessions, streak]);
 
   /* Resumen semanal (desde el lunes) */
-  const weekList = sessions.filter((s) => s.ts >= startOfWeek());
-  const week = weekList.length;
-  const weekSets = weekList
-    .filter((s) => s.kind === "entreno")
-    .flatMap((s) => s.exercises.flatMap((e) => e.sets))
-    .filter((st) => st.ok);
-  const weekKg = Math.round(weekSets.reduce((a, st) => a + st.weight * st.reps, 0));
+  const week = sessions.filter((s) => s.ts >= startOfWeek()).length;
 
   /* Resumen limpio para modo Control total */
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
@@ -6739,16 +6405,9 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
   );
 
   /* Widget de acceso rápido: contexto según cuándo entrenaste por última vez */
-  const todaySessions = sessions.filter((s) => dayKey(s.ts) === todayKey());
-  const trainedToday = todaySessions.length > 0;
-  const lastAnyTs = sessions.length ? Math.max(...sessions.map((s) => s.ts)) : null;
-  const daysSince = lastAnyTs ? Math.floor((seedNow() - lastAnyTs) / 86400000) : null;
+  const trainedToday = sessions.some((s) => dayKey(s.ts) === todayKey());
   const bestStreakEver = Math.max(longestStreakEver(sessions), streak);
   const isStreakRecordToday = streak > 0 && streak === bestStreakEver && trainedToday;
-  const todayVolume = Math.round(
-    todaySessions.filter((s) => s.kind === "entreno").flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((st) => st.ok)
-      .reduce((a, st) => a + st.weight * st.reps, 0)
-  );
 
   if (detailSession) return <SessionDetail session={detailSession} onBack={() => setDetailSession(null)} />;
   if (showFullHistory) {
@@ -7137,139 +6796,27 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
       {/* Stats */}
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <StatBox label="Esta semana" value={week} accent={C.cyan} />
-        <StatBox label="Este mes" value={sessions.filter((s) => s.ts >= monthStart.getTime()).length} accent={C.orange} />
-        <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
+        <StatBox label="Racha" value={`${streak} 🔥`} accent={C.orange} />
+        <StatBox label="Mejor racha" value={bestStreakEver} accent={C.green} />
       </div>
 
-      {/* CTA */}
-      <button
-        className="btn-xl"
-        onClick={onTrain}
-        style={{
-          marginTop: 16,
-          background: `linear-gradient(90deg, ${C.green}, ${C.cyan})`,
-          color: "#07070C",
-          fontSize: 18,
-          boxShadow: "0 8px 30px rgba(34,255,136,0.25)",
-        }}
-      >
-        ENTRENAR AHORA 💪
+      <button onClick={onTrain} style={{ marginTop: 10, color: C.dim, fontSize: 12, fontWeight: 700, width: "100%", textAlign: "center", padding: "6px 0" }}>
+        o elige entrenar diferente →
       </button>
 
-      {lastEntreno && (
-        <button
-          className="btn-xl"
-          onClick={() => onRepeat(lastEntreno)}
-          style={{ marginTop: 8, background: "transparent", border: `1px solid ${C.border}`, color: C.mut, fontSize: 13 }}
-        >
-          🔄 Repetir: {DISCIPLINES[lastEntreno.disc]?.label || lastEntreno.discLabel || "sesión"} · {LEVELS[lastEntreno.levelIdx]?.name}
-        </button>
-      )}
-
-      {sessions.length > 0 ? (
-        <>
-          {isStreakRecordToday ? (
-            <div className="card pop" style={{ marginTop: 12, padding: "16px", textAlign: "center", background: "rgba(255,215,0,0.1)", borderColor: "#FFD700" }}>
-              <div style={{ fontSize: 30 }}>🏆</div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", marginTop: 4 }}>RÉCORD DE RACHA — Día {streak}</div>
-              <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>💡 {insight}</p>
-            </div>
-          ) : trainedToday ? (
-            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>Ya entrenaste hoy 🔥 — Sesión completada</p>
-              <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{todaySessions.length} {todaySessions.length === 1 ? "sesión" : "sesiones"} hoy{todayVolume > 0 ? ` · ${todayVolume} kg` : ""}</p>
-              <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>💡 {insight}</p>
-            </div>
-          ) : daysSince !== null && daysSince >= 2 ? (
-            <div className="card" style={{ marginTop: 12, padding: "13px 14px", border: `1px solid ${C.cyan}33` }}>
-              <p style={{ fontSize: 13, fontWeight: 800 }}>{name}, ¡sigue así! 💪</p>
-              <p style={{ fontSize: 12, color: C.mut, marginTop: 4, lineHeight: 1.4 }}>💡 {insight}</p>
-              <button className="btn-xl btn-physics" onClick={onTrain} style={{ marginTop: 10, background: C.cyan, color: "#07070C", fontSize: 13 }}>
-                Entrenar hoy
-              </button>
-            </div>
-          ) : (
-            <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
-              <p style={{ fontSize: 13, fontWeight: 700 }}>Buenos días {name} ☀️ — ¿Entrenamos hoy?</p>
-              <p style={{ fontSize: 12, color: C.mut, marginTop: 4, lineHeight: 1.4 }}>💡 {insight}</p>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
-          <p style={{ fontSize: 13, fontWeight: 700 }}>💡 {insight}</p>
+      {isStreakRecordToday && (
+        <div className="card pop" style={{ marginTop: 12, padding: "16px", textAlign: "center", background: "rgba(255,215,0,0.1)", borderColor: "#FFD700" }}>
+          <div style={{ fontSize: 30 }}>🏆</div>
+          <div style={{ fontSize: 14, fontWeight: 900, color: "#FFD700", marginTop: 4 }}>RÉCORD DE RACHA — Día {streak}</div>
         </div>
       )}
 
-      {challProg && (
-        <div className="card" style={{ marginTop: 10, padding: "13px 14px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: 13, fontWeight: 800 }}>🏆 {challProg.label}</span>
-            <span style={{ fontSize: 11, color: C.dim }}>{challProg.daysLeft}d restantes</span>
-          </div>
-          <div style={{ height: 8, background: C.surface, borderRadius: 99, overflow: "hidden", border: `1px solid ${C.border}`, marginTop: 8 }}>
-            <div style={{
-              height: "100%", width: `${challProg.pct * 100}%`, borderRadius: 99, transition: "width .5s ease",
-              background: `linear-gradient(90deg, ${C.red}, ${challProg.pct > 0.5 ? C.yellow : C.red}, ${C.green})`,
-            }} />
-          </div>
-          <p style={{ fontSize: 11, color: C.mut, marginTop: 6 }}>
-            {challProg.current ?? "—"} / {challProg.target} {challProg.unit} {challProg.done ? "· ¡Completado! 🎉" : ""}
-          </p>
-        </div>
-      )}
-
-      {/* Contador de agua: compacto, sin banners — el color del número comunica el estado */}
-      <div className="card" style={{ marginTop: 16, padding: "10px 14px", maxHeight: 90, borderColor: waterCount >= waterGoal ? "#0099FF88" : undefined }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <WaterGlass count={waterCount} goal={waterGoal} bubbleKey={waterBubbleKey} compact />
-          <button
-            onClick={() => setShowWaterGoal((v) => !v)}
-            style={{ flex: 1, textAlign: "center", fontSize: 24, fontWeight: 900, color: waterLevelColor(waterCount, waterGoal) }}
-          >
-            {waterCount}<span style={{ color: C.mut, fontSize: 14, fontWeight: 700 }}>/{waterGoal} vasos</span>
-          </button>
-          <button
-            onClick={addWater}
-            disabled={waterCount >= waterGoal}
-            aria-label="Sumar vaso de agua"
-            style={{
-              width: 48, height: 48, borderRadius: "50%", fontSize: 22, fontWeight: 900, flexShrink: 0,
-              background: waterCount >= waterGoal ? C.surface : "#0099FF", color: waterCount >= waterGoal ? C.dim : "#07070C",
-            }}
-          >
-            +
-          </button>
-        </div>
-        {showWaterGoal && (
-          <div className="chip-wrap" style={{ marginTop: 8 }}>
-            {[6, 7, 8, 10, 12].map((n) => (
-              <button
-                key={n} className={`chip ${waterGoal === n ? "on" : ""}`}
-                style={waterGoal === n ? { background: "#0099FF" } : {}}
-                onClick={() => { setWaterGoal(n); store.set("water_goal", n); setShowWaterGoal(false); }}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Insight del día */}
+      <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
+        <p style={{ fontSize: 13, color: C.mut, lineHeight: 1.4 }}>💡 {insight}</p>
       </div>
 
-      {/* Resumen semanal */}
-      <div className="card" style={{ marginTop: 12, padding: "13px 16px" }}>
-        {week === 0 ? (
-          <p style={{ fontSize: 13, color: C.mut }}>
-            Esta semana aún no empiezas. <span style={{ color: C.text, fontWeight: 700 }}>¿Hoy? 👀</span>
-          </p>
-        ) : (
-          <p style={{ fontSize: 13, color: C.mut, lineHeight: 1.5 }}>
-            Esta semana: <span style={{ color: C.cyan, fontWeight: 800 }}>{week} {week === 1 ? "sesión" : "sesiones"}</span>
-            {" · "}<span style={{ color: C.green, fontWeight: 800 }}>{weekSets.length} series</span> completadas
-            {weekKg > 0 && <>{" · "}<span style={{ color: C.orange, fontWeight: 800 }}>{weekKg} kg</span> levantados</>}
-          </p>
-        )}
-      </div>
+      <Heatmap sessions={sessions} color={C.cyan} />
 
       {/* Historial reciente */}
       <div className="sec-title">Últimas sesiones</div>
@@ -11786,7 +11333,6 @@ function SettingsScreen({
   const [showTrainModePicker, setShowTrainModePicker] = useState(false);
   const [reminderOn, setReminderOn] = useState(() => store.get("reminder_enabled", false));
   const [reminderHour, setReminderHour] = useState(() => store.get("reminder_hour", 17));
-  const [waterReminderOn, setWaterReminderOn] = useState(() => store.get("water_reminder_enabled", false));
   const [nameInput, setNameInput] = useState(name);
   const [wipeStep, setWipeStep] = useState(0);
   const [wipeText, setWipeText] = useState("");
@@ -12050,12 +11596,6 @@ function SettingsScreen({
             ))}
           </div>
         )}
-        <SettingsRow label="Recordatorio de agua (cada 2h)">
-          <SettingsToggle
-            on={waterReminderOn} aria-label="Alternar recordatorio de agua"
-            onClick={() => { const n = !waterReminderOn; setWaterReminderOn(n); store.set("water_reminder_enabled", n); }}
-          />
-        </SettingsRow>
       </div>
 
       {installPrompt && !appInstalled && (
@@ -14238,7 +13778,6 @@ const TABS = [
   { id: "inicio", label: "Hoy", Icon: IconHome },
   { id: "entrenar", label: "Entrenar", Icon: IconTrain },
   { id: "yo", label: "Yo", Icon: IconProgress },
-  { id: "explorar", label: "Programas", Icon: IconPrograms },
 ];
 
 /* Hint de primera vez para una feature: seen_<key> en localStorage */
@@ -14336,7 +13875,7 @@ function FeatureTooltip({ visible, onDismiss, text }) {
 
 /* Función (no objeto estático) para que refleje el tema activo al vuelo */
 function getTabAccent(tabId) {
-  return { inicio: C.cyan, entrenar: C.green, yo: C.purple, explorar: C.orange }[tabId];
+  return { inicio: C.cyan, entrenar: C.green, yo: C.purple }[tabId];
 }
 
 /* ─── YO: perfil, progreso y cuerpo en un solo lugar (config vive solo en el header) ─── */
@@ -14524,15 +14063,6 @@ function ProgramsScreen() {
   );
 }
 
-/* ─── EXPLORAR: programas de entrenamiento ─── */
-function ExplorarScreen() {
-  return (
-    <div className="screen">
-      <ProgramsScreen />
-    </div>
-  );
-}
-
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(true);
@@ -14562,8 +14092,19 @@ export default function App() {
     const hour = new Date().getHours();
     const inWindow = (hour >= 6 && hour < 10) || (hour >= 16 && hour < 20);
     const dismissedToday = store.get("notif_prompt_seen", null) === todayKey();
-    return inWindow && !dismissedToday && !!window.Notification && Notification.permission === "default";
+    const dismissedForever = store.get("notif_dismissed", false);
+    const shownCount = store.get("notif_prompt_shown_count", 0);
+    const firstSessionTs = sessions.length ? Math.min(...sessions.map((s) => s.ts)) : null;
+    const daysSinceFirst = firstSessionTs ? (Date.now() - firstSessionTs) / 86400000 : 0;
+    return (
+      inWindow && !dismissedToday && !dismissedForever && shownCount < 3 &&
+      daysSinceFirst > 7 && !!window.Notification && Notification.permission === "default"
+    );
   });
+  useEffect(() => {
+    if (showNotifPrompt) store.set("notif_prompt_shown_count", store.get("notif_prompt_shown_count", 0) + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [storageFull, setStorageFull] = useState(false);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
   const [mentor, setMentor] = useState(null);
@@ -14750,7 +14291,6 @@ export default function App() {
     const remindersOn = store.get("reminder_enabled", false) || legacyHour !== undefined;
     if (!remindersOn || !window.Notification || Notification.permission !== "granted") return undefined;
     const targetHour = store.get("reminder_hour", legacyHour ?? 17);
-    const waterRemindersOn = store.get("water_reminder_enabled", false);
 
     const check = () => {
       const now = new Date();
@@ -14770,24 +14310,6 @@ export default function App() {
           /* silencioso */
         }
         store.set("notif_last_shown", today);
-      }
-
-      if (waterRemindersOn && now.getHours() >= 8 && now.getHours() <= 20 && now.getHours() % 2 === 0 && now.getMinutes() < 1) {
-        const waterNotifKey = `water_notif_${today}_${now.getHours()}`;
-        if (!store.get(waterNotifKey, false)) {
-          store.set(waterNotifKey, true);
-          const goal = store.get("water_goal", 8);
-          const count = store.get("water_" + today, 0);
-          const hoursIntoDay = Math.max(1, now.getHours() - 7);
-          const expected = Math.min(goal, Math.round((hoursIntoDay / 13) * goal));
-          if (count < expected) {
-            try {
-              new Notification("F.A.S.E. 💧", { body: `Llevas ${count} vasos hoy. Meta: ${goal} vasos`, icon: "/icon-192.png", badge: "/icon-192.png" });
-            } catch {
-              /* silencioso */
-            }
-          }
-        }
       }
     };
     check();
@@ -14995,7 +14517,7 @@ export default function App() {
             onClick={async () => {
               try { await Notification.requestPermission(); } catch { /* no disponible */ }
               store.set("reminder_enabled", true);
-              store.set("notif_prompt_seen", todayKey());
+              store.set("notif_dismissed", true);
               setShowNotifPrompt(false);
             }}
             style={{ fontSize: 11, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "4px 10px", borderRadius: 99 }}
@@ -15007,6 +14529,12 @@ export default function App() {
             style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}
           >
             Ahora no
+          </button>
+          <button
+            onClick={() => { store.set("notif_dismissed", true); setShowNotifPrompt(false); }}
+            style={{ fontSize: 11, color: C.dim, fontWeight: 700, textDecoration: "underline" }}
+          >
+            No me vuelvas a preguntar
           </button>
         </div>
       )}
@@ -15021,13 +14549,8 @@ export default function App() {
           {/* Centro: vacío (respiro visual) */}
           <div />
 
-          {/* Derecha: racha + configuración */}
+          {/* Derecha: configuración */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {streak > 0 && (
-              <span style={{ fontSize: 13, fontWeight: 800, color: C.orange, display: "flex", alignItems: "center", gap: 3 }}>
-                <span className="flame">🔥</span>{streak}
-              </span>
-            )}
             <button onClick={() => setShowSettings(true)} aria-label="Configuración" style={{ fontSize: 17, padding: 4 }}>⚙️</button>
           </div>
         </div>
@@ -15049,14 +14572,13 @@ export default function App() {
                   <Home
                     name={name} sessions={sessions} streak={streak}
                     onTrain={() => changeTab("entrenar")} mode={mode}
-                    onRepeat={(session) => { const plan = planFromSession(session); if (plan) setLive(plan); }}
                     onStartPlan={(discId, focusId, lvlIdx) => {
                       if (discId === "cuerpo") { setYoSection("cuerpo"); changeTab("yo"); return; }
                       const p = buildPlanFor(discId, focusId, lvlIdx);
                       if (p) setLive(p);
                     }}
                     broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
-                    challenge={challenge} onDeleteSession={deleteSession}
+                    onDeleteSession={deleteSession}
                     onSaveMatch={saveSession}
                   />
                 </div>
@@ -15076,7 +14598,6 @@ export default function App() {
                 onCompleteBody={completeBody}
               />
             )}
-            {tab === "explorar" && <ExplorarScreen />}
           </>
         )}
       </div>
