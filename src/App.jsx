@@ -4703,14 +4703,6 @@ function describeDailyPlan(plan) {
   return { label: disc.label, focusLabel: focus && focus.id !== "todo" ? focus.label : null, color: disc.color, icon: disc.icon };
 }
 
-function rotateDailyPlan(candidates, index) {
-  const today = todayKey();
-  const nextIndex = (index + 1) % candidates.length;
-  const plan = candidates[nextIndex];
-  store.set("daily_plan", { date: today, plan, index: nextIndex });
-  return { plan, index: nextIndex };
-}
-
 /* Principio de especificidad acumulada: las primeras semanas de cualquier objetivo empiezan con volumen moderado */
 /* ─── Estructura semanal coherente según días disponibles ─── */
 const WEEKLY_STRUCTURES = {
@@ -6254,7 +6246,7 @@ function FullHistory({ sessions, onDelete, onBack }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch }) {
+function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch }) {
   const [menuId, setMenuId] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
@@ -6264,7 +6256,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
   const [streakBounce, setStreakBounce] = useState(false);
   const [showFreezeConfirm, setShowFreezeConfirm] = useState(false);
   const [showRegimenPreview, setShowRegimenPreview] = useState(false);
-  const [showTapTest, setShowTapTest] = useState(false);
   const [showMatchDebrief, setShowMatchDebrief] = useState(false);
   const [showCombine, setShowCombine] = useState(false);
   const [previewTip, setPreviewTip] = useState(null);
@@ -6285,8 +6276,7 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
   }, [streak]);
 
   /* Plan del día */
-  const [dailyPlanState, setDailyPlanState] = useState(() => getDailyPlan(sessions));
-  const rotatePlan = () => setDailyPlanState((st) => ({ ...rotateDailyPlan(st.candidates, st.index), candidates: st.candidates }));
+  const [dailyPlanState] = useState(() => getDailyPlan(sessions));
 
   const startLongPress = (id) => {
     longPressRef.current = setTimeout(() => setMenuId(id), 500);
@@ -6296,8 +6286,8 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
   };
   const pro = mode === "pro";
   const hero = heroForStreak(streak);
-  const nextHero = HEROES.find((h) => h.days > streak);
   const recent = sessions.slice(-3).reverse();
+  const lastEntreno = [...sessions].reverse().find((s) => s.kind === "entreno");
   const insight = useMemo(() => computeInsight(sessions), [sessions]);
 
   /* Resumen semanal (desde el lunes) */
@@ -6330,48 +6320,23 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
   return (
     <div className="screen home-bg" style={{ paddingTop: 0 }}>
       {!pro && (
-        <div style={{ margin: "0 -16px 0", padding: "14px 16px 0", background: C.surface, borderBottom: `1px solid ${C.borderSubtle || C.border}` }}>
-          <p style={{ fontSize: 13, color: C.dim }}>
+        <div style={{ margin: "0 -16px 0", padding: "14px 16px 0", background: C.surface, borderBottom: `1px solid ${C.borderSubtle || C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 22, lineHeight: 1 }}>{hero.emoji}</span>
+          <p style={{ fontSize: 13, color: C.dim, flex: 1, minWidth: 0 }}>
             {greetWord}, {name}
-            {isStreakRecordToday && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 800, color: "#FFD700" }}>🏆 Récord de racha — Día {streak}</span>}
+            {streak > 0 && <span style={{ marginLeft: 8, fontWeight: 800, color: C.orange }}>🔥 {streak} {streak === 1 ? "día" : "días"}</span>}
+            {isStreakRecordToday && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 800, color: "#FFD700" }}>🏆 Récord</span>}
           </p>
         </div>
       )}
       {pro && <p style={{ fontSize: 18, fontWeight: 800 }}>Hola, <span style={{ color: C.cyan }}>{name}</span></p>}
-      {!pro && (
-        (() => {
-          const acwr = calcACWR(sessions);
-          const line = acwr !== null && acwr > 1.3
-            ? "Carga alta esta semana 📊"
-            : getRecoveryStatus().peakGroups.length
-              ? "⚡ Pico de adaptación"
-              : null;
-          return line ? <p className="muted" style={{ marginTop: 2 }}>{line}</p> : null;
-        })()
-      )}
 
-      {pro ? (
+      {pro && (
         /* Modo Control total: estadísticas limpias, sin héroes ni animaciones */
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <StatBox label="Sesiones" value={sessions.length} />
           <StatBox label="Volumen total" value={`${totalVolume} kg`} />
           <StatBox label="Días activos (mes)" value={activeDaysMonth} />
-        </div>
-      ) : (
-        /* Héroe: card compacta de una sola línea, sin expandir */
-        <div
-          className="card"
-          style={{ marginTop: 16, maxHeight: 60, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, overflow: "hidden", position: "relative" }}
-        >
-          <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{hero.emoji}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 800 }}>{hero.name}</span>
-            </div>
-            <div style={{ fontSize: 10, color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {nextHero ? `→ ${nextHero.name} en ${nextHero.days - streak} días más` : "365 días de consistencia ⚡"}
-            </div>
-          </div>
         </div>
       )}
 
@@ -6408,20 +6373,16 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
             >
               ▶ Empezar este plan
             </button>
-            {dailyPlanState.candidates.length > 1 && (
-              <button onClick={rotatePlan} style={{ marginTop: 8, color: C.mut, fontSize: 12, fontWeight: 700 }}>
-                Ver otro plan 🔄
-              </button>
-            )}
             <div style={{ textAlign: "center", display: "flex", justifyContent: "center", gap: 14 }}>
+              {lastEntreno && (
+                <button onClick={() => onRepeat?.(lastEntreno)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
+                  o repetir {DISCIPLINES[lastEntreno.disc]?.label || lastEntreno.discLabel || "sesión"} de ayer →
+                </button>
+              )}
               <button onClick={() => setShowRegimenPreview(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
-                Ver ejercicios de hoy →
-              </button>
-              <button onClick={() => setShowTapTest(true)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
-                🧠 Test SNC
+                ver ejercicios →
               </button>
             </div>
-            {showTapTest && <TapTestScreen onClose={() => setShowTapTest(false)} />}
             {showRegimenPreview && (() => {
               let previewExercises = [];
               try { previewExercises = genRoutine(dp.discId, dp.focusId, dp.lvlIdx) || []; } catch { previewExercises = []; }
@@ -6591,22 +6552,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
         );
       })()}
 
-      {(() => {
-        const history = store.get("jump_history", []);
-        const todayJump = history.find((j) => dayKey(j.date) === todayKey());
-        const baseline = jumpBaseline();
-        if (!todayJump || !baseline) return null;
-        if (todayJump.height >= baseline * 0.9) return null;
-        return (
-          <div className="card" style={{ marginTop: 12, padding: "10px 14px", borderColor: `${C.orange}55` }}>
-            <p style={{ fontSize: 12, color: C.orange, fontWeight: 700 }}>📉 Salto bajo tu promedio — posible fatiga neuromuscular. Evita sprints máximos hoy.</p>
-          </div>
-        );
-      })()}
-      <AcwrCard sessions={sessions} />
-      <PlanPeriodizationCard sessions={sessions} />
-      <DeloadBanner sessions={sessions} />
-
       {/* Racha (o mensaje motivacional si se rompió) */}
       {showFreezeConfirm && (
         <div
@@ -6683,9 +6628,21 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, mode, broken, canF
         <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
       </div>
 
-      <button onClick={onTrain} style={{ marginTop: 10, color: C.dim, fontSize: 12, fontWeight: 700, width: "100%", textAlign: "center", padding: "6px 0" }}>
-        o elige entrenar diferente →
-      </button>
+      {(() => {
+        const history = store.get("jump_history", []);
+        const todayJump = history.find((j) => dayKey(j.date) === todayKey());
+        const baseline = jumpBaseline();
+        if (!todayJump || !baseline) return null;
+        if (todayJump.height >= baseline * 0.9) return null;
+        return (
+          <div className="card" style={{ marginTop: 12, padding: "10px 14px", borderColor: `${C.orange}55` }}>
+            <p style={{ fontSize: 12, color: C.orange, fontWeight: 700 }}>📉 Salto bajo tu promedio — posible fatiga neuromuscular. Evita sprints máximos hoy.</p>
+          </div>
+        );
+      })()}
+      <AcwrCard sessions={sessions} />
+      <PlanPeriodizationCard sessions={sessions} />
+      <DeloadBanner sessions={sessions} />
 
       {/* Insight del día */}
       <div className="card" style={{ marginTop: 12, padding: "13px 14px" }}>
@@ -14432,6 +14389,7 @@ export default function App() {
                       const p = buildPlanFor(discId, focusId, lvlIdx);
                       if (p) setLive(p);
                     }}
+                    onRepeat={(session) => { const p = planFromSession(session); if (p) setLive(p); }}
                     broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
                     onDeleteSession={deleteSession}
                     onSaveMatch={saveSession}
