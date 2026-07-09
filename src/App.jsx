@@ -566,6 +566,8 @@ function TapTestScreen({ onClose }) {
           const tapRatio = tapAvg > 0 ? score / tapAvg : 1;
           if (tapRatio < 0.75) {
             store.set("snc_fatigued_today", { date: new Date().toDateString(), ratio: tapRatio });
+          } else {
+            store.set("snc_fatigued_today", null);
           }
           return score;
         });
@@ -3335,7 +3337,7 @@ const PLAN_TEMPLATES = {
   ],
   atletismo: [
     { discId: "atletismo", focusId: "1000m", label: "Atletismo — 1000 m" },
-    { discId: "gimnasio", focusId: "piernas", label: "Gimnasio — Piernas (fuerza)" },
+    { discId: "gimnasio", focusId: "legs", label: "Gimnasio — Piernas (fuerza)" },
     { discId: "atletismo", focusId: "100m", label: "Atletismo — 100 m" },
     { discId: "calistenia", focusId: "explosivo", label: "Calistenia — Explosivo" },
     { discId: "atletismo", focusId: "5km", label: "Atletismo — 5 km" },
@@ -4371,6 +4373,20 @@ function resolveGymFocusId(id) {
 }
 
 function dailyPlanCandidates(sessions) {
+  /* 0. Programa activo: fuente primaria, sin lógica genérica de por medio */
+  if (getActiveProgram()) {
+    const programCandidate = programDailyCandidate(sessions);
+    if (programCandidate) return [programCandidate];
+  }
+
+  /* 1. SNC (Tap Test): si está fatigado hoy, prioriza recuperación sobre cualquier otra sugerencia */
+  const sncFatigue = store.get("snc_fatigued_today", null);
+  const isSncFatiguedToday = sncFatigue && sncFatigue.date === new Date().toDateString();
+  if (isSncFatiguedToday) {
+    return [{ discId: "cuerpo", focusId: null, lvlIdx: mostFrequentLevel(sessions), reason: `🧠 SNC fatigado (${Math.round(sncFatigue.ratio * 100)}% de tu promedio). Movilidad o técnica hoy, no intensidad.` }];
+  }
+
+  /* 2. ACWR (carga aguda/crónica) */
   const acwr = calcACWR(sessions);
   if (acwr !== null && acwr > 1.5) {
     const altDiscId = leastUsedDiscipline(sessions);
@@ -4385,12 +4401,6 @@ function dailyPlanCandidates(sessions) {
 
   if (!workouts.length) {
     return [{ discId: "calistenia", focusId: "todo", lvlIdx: 0, reason: "Es tu primera vez. Empecemos con calistenia." }];
-  }
-
-  const sncFatigue = store.get("snc_fatigued_today", null);
-  const isSncFatiguedToday = sncFatigue && sncFatigue.date === new Date().toDateString();
-  if (isSncFatiguedToday) {
-    return [{ discId: "cuerpo", focusId: null, lvlIdx: 0, reason: `🧠 SNC fatigado (${Math.round(sncFatigue.ratio * 100)}% de tu promedio). Movilidad o técnica hoy, no intensidad.` }];
   }
 
   const streakDays = calcStreak(sessions, []);
@@ -4785,13 +4795,9 @@ function deprioritizeUnrecovered(candidates) {
 
 function getDailyPlan(sessions) {
   const today = todayKey();
-  const acwr = calcACWR(sessions);
-  if (acwr !== null && acwr > 1.5) {
-    const plan = { discId: "cuerpo", focusId: null, lvlIdx: mostFrequentLevel(sessions), reason: "Tu carga de entrenamiento está en zona de riesgo (ACWR alto). Hoy: movilidad y descanso activo." };
-    return { plan, index: 0, candidates: [plan] };
-  }
-  const programCandidate = programDailyCandidate(sessions);
-  const rawCandidates = programCandidate ? [programCandidate, ...dailyPlanCandidates(sessions)] : dailyPlanCandidates(sessions);
+  /* Si hay programa activo, dailyPlanCandidates ya devuelve únicamente su sesión del día */
+  const programCandidate = getActiveProgram() ? programDailyCandidate(sessions) : null;
+  const rawCandidates = dailyPlanCandidates(sessions);
   const candidates = deprioritizeUnrecovered(rawCandidates);
   const cached = store.get("daily_plan", null);
   if (cached && cached.date === today && cached.fromProgram === !!programCandidate) {
@@ -10035,6 +10041,35 @@ function NoEducationSkip({ onSkip }) {
   return null;
 }
 
+/* Card educativa pre-sesión; marca la disciplina+enfoque como vista en un efecto (no durante el render) */
+function EducationScreen({ plan, eduText, onDone }) {
+  useEffect(() => {
+    store.set(`seen_edu_${plan.discId}_${plan.focusId || "todo"}`, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div
+      className="screen fade-up"
+      style={{ textAlign: "center", paddingTop: 50, background: `linear-gradient(160deg, ${plan.discColor}33, ${C.bg} 70%)`, minHeight: "100vh" }}
+    >
+      <div style={{ fontSize: 56 }}>{plan.discIcon}</div>
+      <h2 style={{ fontSize: 18, fontWeight: 900, marginTop: 12, color: "#fff" }}>{plan.discLabel}{plan.focusLabel ? ` · ${plan.focusLabel}` : ""}</h2>
+      <p style={{ fontSize: 14, color: "#fff", marginTop: 14, lineHeight: 1.6, padding: "0 8px" }}>{eduText}</p>
+      <div style={{ display: "flex", gap: 10, marginTop: 28, justifyContent: "center" }}>
+        <button onClick={onDone} style={{ color: "#fff", fontSize: 13, fontWeight: 700, opacity: 0.7 }}>
+          Saltar →
+        </button>
+        <button
+          className="btn-xl" onClick={onDone}
+          style={{ background: plan.discColor || C.cyan, color: "#07070C" }}
+        >
+          Empezar sesión ▶
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats, name, onMentor }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
@@ -10583,30 +10618,11 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   /* Educación integrada: card breve antes de empezar (o saltar) */
   if (phase === "education") {
     const eduText = getSessionEducation(plan);
-    if (!eduText) {
+    const educationKey = `seen_edu_${plan.discId}_${plan.focusId || "todo"}`;
+    if (!eduText || store.get(educationKey, false)) {
       return <NoEducationSkip onSkip={() => setPhase("warmupPrompt")} />;
     }
-    return (
-      <div
-        className="screen fade-up"
-        style={{ textAlign: "center", paddingTop: 50, background: `linear-gradient(160deg, ${plan.discColor}33, ${C.bg} 70%)`, minHeight: "100vh" }}
-      >
-        <div style={{ fontSize: 56 }}>{plan.discIcon}</div>
-        <h2 style={{ fontSize: 18, fontWeight: 900, marginTop: 12, color: "#fff" }}>{plan.discLabel}{plan.focusLabel ? ` · ${plan.focusLabel}` : ""}</h2>
-        <p style={{ fontSize: 14, color: "#fff", marginTop: 14, lineHeight: 1.6, padding: "0 8px" }}>{eduText}</p>
-        <div style={{ display: "flex", gap: 10, marginTop: 28, justifyContent: "center" }}>
-          <button onClick={() => setPhase("warmupPrompt")} style={{ color: "#fff", fontSize: 13, fontWeight: 700, opacity: 0.7 }}>
-            Saltar →
-          </button>
-          <button
-            className="btn-xl" onClick={() => setPhase("warmupPrompt")}
-            style={{ background: plan.discColor || C.cyan, color: "#07070C" }}
-          >
-            Empezar sesión ▶
-          </button>
-        </div>
-      </div>
-    );
+    return <EducationScreen plan={plan} eduText={eduText} onDone={() => setPhase("warmupPrompt")} />;
   }
 
   /* Calentamiento opcional antes de la sesión (no se registra en el historial) */
