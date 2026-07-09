@@ -2552,15 +2552,28 @@ function weightSuggestion(sessions, exName) {
   const twoConsecutive10 = lastTwoMaxRpe.length === 2 && lastTwoMaxRpe.every((r) => r === 10);
 
   let result;
-  if (twoConsecutive10) result = { weight: Math.round(maxW * 0.95 * 2) / 2, up: false };
-  else if (avgRpe !== null && avgRpe < 7) result = { weight: maxW + 5, up: true };
-  else if (avgRpe !== null && avgRpe <= 8) result = { weight: maxW + 2.5, up: true };
-  else if (avgRpe !== null && avgRpe > 8.5) result = { weight: maxW, up: false };
-  else result = { weight: allOk ? maxW + 2.5 : maxW, up: allOk };
+  if (twoConsecutive10) {
+    const next = Math.round(maxW * 0.95 * 2) / 2;
+    result = { weight: next, up: false, reason: `↩ Bajamos a ${next}kg — las últimas 2 sesiones fueron al máximo esfuerzo` };
+  } else if (avgRpe !== null && avgRpe < 7) {
+    const next = maxW + 5;
+    result = { weight: next, up: true, reason: `💪 Esfuerzo bajo con ${maxW}kg → subimos a ${next}kg` };
+  } else if (avgRpe !== null && avgRpe <= 8) {
+    const next = maxW + 2.5;
+    result = { weight: next, up: true, reason: `💪 Buen esfuerzo con ${maxW}kg → subimos a ${next}kg` };
+  } else if (avgRpe !== null && avgRpe > 8.5) {
+    result = { weight: maxW, up: false, reason: `→ Mantén ${maxW}kg — la última vez el esfuerzo fue muy alto` };
+  } else if (allOk) {
+    const next = maxW + 2.5;
+    result = { weight: next, up: true, reason: `💪 Completaste todo con ${maxW}kg → subimos a ${next}kg` };
+  } else {
+    result = { weight: maxW, up: false, reason: `→ Mantén ${maxW}kg — la última vez fallaste alguna serie` };
+  }
 
   /* Feedback de técnica: si se marcó "reducir" para este ejercicio, bajar un poco el peso sugerido */
   if (store.get(`reduce_${exName}`, false)) {
-    result = { weight: Math.max(0, Math.round(result.weight * 0.9 * 2) / 2), up: false };
+    const reduced = Math.max(0, Math.round(result.weight * 0.9 * 2) / 2);
+    result = { weight: reduced, up: false, reason: `↩ Bajamos a ${reduced}kg — técnica a mejorar en este ejercicio` };
   }
   return result;
 }
@@ -6047,7 +6060,8 @@ function Welcome({ onDone }) {
 }
 
 /* ─── Detalle de una sesión del historial (stats + nota) ─── */
-function SessionDetail({ session, onBack }) {
+function SessionDetail({ session, onBack, onUpdateNote }) {
+  const [note, setNote] = useState(session.note || "");
   const isBody = session.kind === "cuerpo";
   const disc = isBody ? null : DISCIPLINES[session.disc];
   const allSets = isBody ? [] : session.exercises.flatMap((e) => e.sets);
@@ -6088,12 +6102,15 @@ function SessionDetail({ session, onBack }) {
         </>
       )}
 
-      <div className="sec-title">📝 Nota</div>
-      <div className="card">
-        <p style={{ fontSize: 13, color: session.note ? C.text : C.dim, fontStyle: session.note ? "normal" : "italic" }}>
-          {session.note || "No agregaste ninguna nota en esta sesión."}
-        </p>
-      </div>
+      <div className="sec-title">📝 Nota de esta sesión (opcional)</div>
+      <textarea
+        className="input"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        onBlur={() => onUpdateNote?.(session.id, sanitizeNote(note))}
+        placeholder="¿Cómo te sentiste? ¿Algo que mejorar?"
+        style={{ width: "100%", minHeight: 60, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, color: C.text, fontSize: 13, resize: "vertical" }}
+      />
     </div>
   );
 }
@@ -6133,7 +6150,7 @@ const HISTORY_SORTS = [
   { id: "duration", label: "Más duración" },
 ];
 
-function FullHistory({ sessions, onDelete, onBack }) {
+function FullHistory({ sessions, onDelete, onBack, onUpdateNote }) {
   const [filter, setFilter] = useState("todas");
   const [sortBy, setSortBy] = useState("recent");
   const [detail, setDetail] = useState(null);
@@ -6152,7 +6169,7 @@ function FullHistory({ sessions, onDelete, onBack }) {
     });
   }, [sessions, filter, sortBy]);
 
-  if (detail) return <SessionDetail session={detail} onBack={() => setDetail(null)} />;
+  if (detail) return <SessionDetail session={detail} onBack={() => setDetail(null)} onUpdateNote={onUpdateNote} />;
 
   return (
     <div className="screen">
@@ -6246,7 +6263,7 @@ function FullHistory({ sessions, onDelete, onBack }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch }) {
+function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch, onUpdateNote }) {
   const [menuId, setMenuId] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
@@ -6309,9 +6326,9 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
   const bestStreakEver = Math.max(longestStreakEver(sessions), streak);
   const isStreakRecordToday = streak > 0 && streak === bestStreakEver && trainedToday;
 
-  if (detailSession) return <SessionDetail session={detailSession} onBack={() => setDetailSession(null)} />;
+  if (detailSession) return <SessionDetail session={detailSession} onBack={() => setDetailSession(null)} onUpdateNote={onUpdateNote} />;
   if (showFullHistory) {
-    return <FullHistory sessions={sessions} onDelete={onDeleteSession} onBack={() => setShowFullHistory(false)} />;
+    return <FullHistory sessions={sessions} onDelete={onDeleteSession} onBack={() => setShowFullHistory(false)} onUpdateNote={onUpdateNote} />;
   }
 
   const greetHour = new Date().getHours();
@@ -6678,8 +6695,9 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
               >
                 <span style={{ fontSize: 24 }}>{isBody ? sec?.icon || "🧘" : disc?.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }}>
                     {isBody ? `Cuerpo · ${sec?.name || ""}` : disc?.label}
+                    {s.note && <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.cyan, flexShrink: 0 }} />}
                   </div>
                   <div style={{ fontSize: 12, color: C.mut }}>
                     {isBody ? "Acondicionamiento" : `${s.focusLabel} · ${LEVELS[s.levelIdx].emoji} ${LEVELS[s.levelIdx].name}`}
@@ -9456,6 +9474,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [phase, setPhase] = useState("education"); // education | warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
   const [restLeft, setRestLeft] = useState(0);
   const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
+  const [editingSet, setEditingSet] = useState(null);
+  const [showExerciseHistory, setShowExerciseHistory] = useState(false);
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
   const [leftW, setLeftW] = useState("");
@@ -10410,8 +10430,22 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             </div>
           </div>
           <p style={{ color: C.dim, fontSize: 12, marginTop: 8 }}>segundos</p>
+          <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+            <button
+              onClick={() => setRestLeft((r) => Math.max(0, r - 15))}
+              style={{ padding: "8px 20px", borderRadius: 99, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13, fontWeight: 700 }}
+            >
+              -15s
+            </button>
+            <button
+              onClick={() => setRestLeft((r) => r + 15)}
+              style={{ padding: "8px 20px", borderRadius: 99, background: C.surface, border: `1px solid ${C.border}`, color: C.mut, fontSize: 13, fontWeight: 700 }}
+            >
+              +15s
+            </button>
+          </div>
           {plan.exercises[exIdx + 1] && (
-            <p style={{ color: C.dim, fontSize: 12, marginTop: 4 }}>Siguiente: {plan.exercises[exIdx + 1].name}</p>
+            <p style={{ color: C.dim, fontSize: 12, marginTop: 12 }}>Siguiente: {plan.exercises[exIdx + 1].name}</p>
           )}
         </div>
         <div style={{ width: "100%", maxWidth: 430 }}>
@@ -10687,6 +10721,47 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           {ex.tip}
         </p>
         {showGuide && <TechniqueGuideSheet exerciseName={ex.name} tip={ex.tip} onClose={() => setShowGuide(false)} />}
+        <button onClick={() => setShowExerciseHistory(true)} style={{ marginTop: 4, color: C.dim, fontSize: 12, fontWeight: 700 }}>
+          📈 Ver historial →
+        </button>
+        {showExerciseHistory && (
+          <div
+            onClick={() => setShowExerciseHistory(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="card"
+              style={{ width: "100%", maxWidth: 430, maxHeight: "70vh", overflowY: "auto", padding: 20, borderRadius: "20px 20px 0 0" }}
+            >
+              <p style={{ fontSize: 15, fontWeight: 800 }}>{ex.name}</p>
+              {(() => {
+                const hist = exerciseHistory(sessions, ex.name).rows.slice(-5).reverse();
+                if (!hist.length) {
+                  return <p style={{ fontSize: 12, color: C.mut, marginTop: 10 }}>Todavía no tienes historial de este ejercicio.</p>;
+                }
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
+                    {hist.map((r, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "8px 0", borderBottom: i < hist.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                        <span style={{ color: C.mut }}>{timeAgo(r.ts)}</span>
+                        <span style={{ fontWeight: 700 }}>{r.weight > 0 ? `${r.weight}kg` : "—"}</span>
+                        <span style={{ fontWeight: 700 }}>{r.reps} reps</span>
+                        <span style={{ color: C.green, fontWeight: 800 }}>✓</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <button
+                className="btn-xl" onClick={() => setShowExerciseHistory(false)}
+                style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
         {(() => {
           const warnMsg = exerciseHealthWarning(ex.name, store.get("health_issues", []));
           return warnMsg ? (
@@ -10732,14 +10807,17 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           const log = doneSets[i];
           const isJustCompleted = justCompletedSet === i;
           const isNextActive = i === setNum && phase === "work" && log === undefined;
+          const editable = log && log.ok;
           return (
-            <div
+            <button
               key={i}
+              onClick={() => editable && setEditingSet({ exIdx, setIdx: i })}
+              disabled={!editable}
               style={{
                 minWidth: 48, minHeight: 48, padding: "5px 8px", borderRadius: 11, textAlign: "center",
                 display: "flex", flexDirection: "column", justifyContent: "center",
                 background: log ? (log.ok ? "rgba(34,255,136,0.10)" : "rgba(255,59,92,0.10)") : i === setNum && phase === "work" ? C.card2 : C.surface,
-                border: `1px solid ${log ? (log.ok ? "rgba(34,255,136,0.4)" : "rgba(255,59,92,0.4)") : i === setNum && phase === "work" ? plan.discColor : C.border}`,
+                border: `1px solid ${editingSet?.exIdx === exIdx && editingSet?.setIdx === i ? C.cyan : log ? (log.ok ? "rgba(34,255,136,0.4)" : "rgba(255,59,92,0.4)") : i === setNum && phase === "work" ? plan.discColor : C.border}`,
                 animation: isJustCompleted ? "setPulse 0.3s ease" : isNextActive ? "nextSetPulse 1.2s ease infinite" : "none",
               }}
             >
@@ -10752,10 +10830,56 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
               <div style={{ fontSize: 13, fontWeight: 800, color: log ? (log.ok ? C.green : C.red) : C.mut }}>
                 {log ? (log.ok ? `${log.reps || "✓"}` : "✗") : "—"}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
+
+      {editingSet?.exIdx === exIdx && logs[editingSet.exIdx][editingSet.setIdx] && (
+        <div style={{ marginTop: 8, padding: "10px 12px", background: C.surface, borderRadius: 10, border: `1px solid ${C.border}` }}>
+          <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginBottom: 8 }}>
+            Editar S{editingSet.setIdx + 1}
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            {ex.type === "peso" && (
+              <input
+                type="number"
+                defaultValue={logs[editingSet.exIdx][editingSet.setIdx].weight}
+                onChange={(e) => {
+                  const w = parseFloat(e.target.value) || 0;
+                  setLogs((prev) => {
+                    const next = prev.map((arr) => [...arr]);
+                    next[editingSet.exIdx][editingSet.setIdx] = { ...next[editingSet.exIdx][editingSet.setIdx], weight: w };
+                    return next;
+                  });
+                }}
+                style={{ flex: 1, padding: 8, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: 16, textAlign: "center" }}
+                placeholder="kg"
+              />
+            )}
+            <input
+              type="number"
+              defaultValue={logs[editingSet.exIdx][editingSet.setIdx].reps}
+              onChange={(e) => {
+                const r = parseInt(e.target.value, 10) || 0;
+                setLogs((prev) => {
+                  const next = prev.map((arr) => [...arr]);
+                  next[editingSet.exIdx][editingSet.setIdx] = { ...next[editingSet.exIdx][editingSet.setIdx], reps: r };
+                  return next;
+                });
+              }}
+              style={{ flex: 1, padding: 8, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: 16, textAlign: "center" }}
+              placeholder="reps"
+            />
+          </div>
+          <button
+            onClick={() => setEditingSet(null)}
+            style={{ marginTop: 8, fontSize: 12, color: C.cyan, fontWeight: 700 }}
+          >
+            ✓ Guardar
+          </button>
+        </div>
+      )}
 
       {setBadge && (
         <div className="set-badge-pop" style={{ textAlign: "center", marginTop: 10 }}>
@@ -10866,11 +10990,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           </div>
           {ex.type === "peso" && (
             <p style={{ fontSize: 12, color: C.mut, marginTop: 8, textAlign: "center" }}>
-              {sug
-                ? sug.up
-                  ? `💪 Completaste todo la última vez: sugerido ${sug.weight} kg (+2.5)`
-                  : `Último peso: ${sug.weight} kg — mantén o baja un poco`
-                : "Primera vez — empieza ligero"}
+              {sug ? sug.reason : "🌱 Primera vez — empieza con un peso cómodo"}
             </p>
           )}
           {ex.type === "peso" && isUnilateral(ex.name) && (
@@ -14393,6 +14513,7 @@ export default function App() {
                     broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
                     onDeleteSession={deleteSession}
                     onSaveMatch={saveSession}
+                    onUpdateNote={updateSessionNote}
                   />
                 </div>
               </div>
