@@ -4545,7 +4545,7 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
 /* ─── Biblioteca de programas prediseñados ─── */
 const PROGRAMS = [
   {
-    id: "ppl", name: "PPL (Push Pull Legs)", emoji: "🏋️", color: C.cyan,
+    id: "ppl", name: "PPL Híbrido — Fuerza + Masa", emoji: "🏋️", color: C.cyan,
     durationWeeks: 8, daysPerWeek: 6, minLevelIdx: 1, goalTags: ["musculo"],
     desc: "El programa más probado para ganar músculo. Divide el cuerpo en empuje, jalón y piernas. Alta frecuencia, alto volumen.",
     structure: [
@@ -4572,7 +4572,7 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "futbol_premier", name: "Fútbol Físico Premier", emoji: "⚽", color: C.orange,
+    id: "futbol_premier", name: "Fútbol Élite — Físico y Campo", emoji: "⚽", color: C.orange,
     durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 0, goalTags: ["rendimiento"],
     desc: "Velocidad, potencia, resistencia y fuerza funcional. Diseñado para que tu físico no sea tu limitante en el campo.",
     structure: [
@@ -4585,7 +4585,7 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "calistenia_cero", name: "Calistenia desde Cero", emoji: "🤸", color: C.green,
+    id: "calistenia_cero", name: "Calistenia — Desde Cero", emoji: "🤸", color: C.green,
     durationWeeks: 12, daysPerWeek: 4, minLevelIdx: 0, goalTags: ["musculo", "condicion"],
     desc: "De cero al muscle-up. Progresión estricta de fuerza relativa usando solo el peso corporal.",
     structure: [
@@ -4598,7 +4598,7 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "atletismo_velocidad", name: "Atletismo Velocidad", emoji: "🏃", color: C.purple,
+    id: "atletismo_velocidad", name: "Velocidad — Atletismo de Pista", emoji: "🏃", color: C.purple,
     durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 0, goalTags: ["rendimiento"],
     desc: "Basado en los principios de velocidad de atletismo de élite. Pliometría, sprints y técnica.",
     structure: [
@@ -4637,7 +4637,7 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "recomp_8w", name: "Recomposición 8 semanas", emoji: "⚖️", color: C.cyan,
+    id: "recomp_8w", name: "Recomposición — Corte Atlético", emoji: "⚖️", color: C.cyan,
     durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["recomposition"],
     desc: "Perder grasa y ganar músculo simultáneamente con estructura Upper/Lower y cardio al final. Requiere disciplina nutricional además del entrenamiento.",
     structure: [
@@ -4650,7 +4650,7 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "glutes_6w", name: "Glúteos y piernas", emoji: "🍑", color: "#FF9EC4",
+    id: "glutes_6w", name: "Piernas y Glúteos — Potencia", emoji: "🍑", color: "#FF9EC4",
     durationWeeks: 6, daysPerWeek: 3, minLevelIdx: 0, goalTags: ["aesthetics"],
     desc: "Programa dedicado al desarrollo de glúteos y forma de piernas: hip thrust, sentadilla búlgara, abducción y peso muerto rumano. Funciona para cualquier género.",
     structure: [
@@ -4663,7 +4663,7 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "football_athlete", name: "Atleta de fútbol", emoji: "⚽", color: C.orange,
+    id: "football_athlete", name: "Atleta de Fútbol — 12 Semanas", emoji: "⚽", color: C.orange,
     durationWeeks: 12, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["athletic"],
     desc: "Fuerza, velocidad y resistencia específicas para fútbol: 2 sesiones de gimnasio y 2 de parque por semana.",
     structure: [
@@ -4676,7 +4676,7 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "v_shape_8w", name: "Forma en V", emoji: "🔺", color: C.cyan,
+    id: "v_shape_8w", name: "Tren Superior — Amplitud y Fuerza", emoji: "🔺", color: C.cyan,
     durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["aesthetics"],
     desc: "Espalda ancha, hombros grandes, cintura marcada. El clásico físico de superhéroe: jalón agarre ancho, remo, press militar y elevaciones laterales.",
     structure: [
@@ -4744,8 +4744,19 @@ function programDailyCandidate(sessions) {
   if (!active) return null;
   const dayIdx = (new Date().getDay() + 6) % 7; // 0 = lunes
   const today = active.program.structure[dayIdx];
-  if (!today) return null;
   const lvlIdx = Math.max(active.program.minLevelIdx, mostFrequentLevel(sessions));
+  if (!today) {
+    const tomorrow = active.program.structure[(dayIdx + 1) % 7];
+    if (tomorrow) {
+      const focusId = tomorrow.discId === "gimnasio" ? resolveGymFocusId(tomorrow.focusId) : tomorrow.focusId;
+      return {
+        discId: tomorrow.discId, focusId, lvlIdx,
+        reason: `Mañana toca ${tomorrow.label} — ¿Adelantarlo hoy?`,
+        isEarlySession: true,
+      };
+    }
+    return null;
+  }
   const focusId = today.discId === "gimnasio" ? resolveGymFocusId(today.focusId) : today.focusId;
   return { discId: today.discId, focusId, lvlIdx, reason: `Semana ${active.week} — ${active.program.name}: ${today.label}` };
 }
@@ -5238,7 +5249,15 @@ function Stopwatch({ target, onStop }) {
   );
 }
 
-function Heatmap({ sessions, color, freezes = [] }) {
+const getProgramDayLabel = (date, active) => {
+  if (!active) return null;
+  const dayIdx = (date.getDay() + 6) % 7; // 0=lunes
+  const session = active.program.structure[dayIdx];
+  if (!session) return "rest";
+  return session.discId;
+};
+
+function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
   const [tapped, setTapped] = useState(null);
   const days = useMemo(() => {
     const set = new Set(sessions.map((s) => dayKey(s.ts)));
@@ -5253,7 +5272,7 @@ function Heatmap({ sessions, color, freezes = [] }) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const k = dayKey(d.getTime());
-      arr.push({ key: k, active: set.has(k), frozen: freezeSet.has(k), isToday: k === todayKey(), future: d.getTime() > today.getTime() });
+      arr.push({ key: k, date: d, active: set.has(k), frozen: freezeSet.has(k), isToday: k === todayKey(), future: d.getTime() > today.getTime() });
     }
     return arr;
   }, [sessions, freezes]);
@@ -5265,25 +5284,41 @@ function Heatmap({ sessions, color, freezes = [] }) {
         <span style={{ fontSize: 12, color: C.mut, textTransform: "capitalize" }}>{month}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginTop: 10 }}>
-        {days.map((d) => (
-          <button
-            key={d.key}
-            aria-label={d.future ? "Día futuro" : d.active ? "Entrenaste aquí" : d.frozen ? "Racha congelada este día" : "Sin entrenamiento"}
-            onClick={() => !d.future && setTapped(d.frozen ? "Racha congelada este día ❄️" : d.active ? "Entrenaste aquí 💪" : "Sin entrenamiento")}
-            style={{
-              aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
-              background: d.future ? "transparent" : d.active ? color : "#1A1A2E",
-              border: d.isToday ? "1.5px solid #FFFFFFcc" : `1px solid ${d.active ? color : C.border}`,
-              opacity: d.future ? 0.2 : 1,
-              transition: "background .3s ease",
-            }}
-          >
-            {d.frozen && !d.active ? "❄️" : ""}
-          </button>
-        ))}
+        {days.map((d) => {
+          const programDay = d.future && activeProgram ? getProgramDayLabel(d.date, activeProgram) : null;
+          return (
+            <button
+              key={d.key}
+              aria-label={d.future ? "Día futuro" : d.active ? "Entrenaste aquí" : d.frozen ? "Racha congelada este día" : "Sin entrenamiento"}
+              onClick={() => !d.future && setTapped(d.frozen ? "Racha congelada este día ❄️" : d.active ? "Entrenaste aquí 💪" : "Sin entrenamiento")}
+              style={{
+                aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
+                background: d.future
+                  ? (programDay === "rest" ? "transparent" : programDay ? `${DISCIPLINES[programDay]?.color || C.cyan}22` : "transparent")
+                  : d.active ? color : "#1A1A2E",
+                border: d.isToday
+                  ? "1.5px solid #FFFFFFcc"
+                  : d.future && programDay && programDay !== "rest"
+                    ? `1px dashed ${DISCIPLINES[programDay]?.color || C.cyan}66`
+                    : `1px solid ${d.active ? color : C.border}`,
+                opacity: 1,
+                transition: "background .3s ease",
+              }}
+            >
+              {d.frozen && !d.active ? "❄️" : ""}
+            </button>
+          );
+        })}
       </div>
       {tapped && <div style={{ fontSize: 11, color: C.mut, marginTop: 8, textAlign: "center" }}>{tapped}</div>}
       <div style={{ fontSize: 11, color: C.dim, marginTop: 8, textAlign: "right" }}>Últimas 5 semanas · lunes a domingo</div>
+      {activeProgram && (
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 6, display: "flex", gap: 8 }}>
+          <span>░ Planificado</span>
+          <span>■ Completado</span>
+          <span>— Descanso</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -6491,6 +6526,11 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
                 <p style={{ fontSize: 12, fontWeight: 700, marginTop: 2, color: LEVELS[dp.lvlIdx]?.color }}>
                   {LEVELS[dp.lvlIdx]?.emoji} {LEVELS[dp.lvlIdx]?.name} · ~{duration} min
                 </p>
+                {dp.isEarlySession && (
+                  <span style={{ display: "inline-block", fontSize: 9, fontWeight: 800, color: info.color, background: `${info.color}22`, padding: "2px 6px", borderRadius: 99, marginTop: 6 }}>
+                    📅 Sesión adelantada
+                  </span>
+                )}
                 <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.4 }}>{dp.reason}</p>
               </div>
             </div>
@@ -6756,7 +6796,7 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
         <p style={{ fontSize: 13, color: C.mut, lineHeight: 1.4 }}>💡 {insight}</p>
       </div>
 
-      <Heatmap sessions={sessions} color={C.cyan} />
+      <Heatmap sessions={sessions} color={C.cyan} activeProgram={getActiveProgram()} />
 
       {/* Historial reciente */}
       <div className="sec-title">Últimas sesiones</div>
@@ -8333,7 +8373,8 @@ function TravelMode({ onFinish, onSave }) {
   );
 }
 
-function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge }) {
+function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge, onCompleteBody }) {
+  const [showBody, setShowBody] = useState(false);
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
   const [lvlIdx, setLvlIdx] = useState(null);
@@ -8429,6 +8470,15 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     if (showTutorial) store.set("tutorial_done", true);
     onStart(planToStart);
   };
+
+  if (showBody) {
+    return (
+      <div className="screen">
+        <button onClick={() => setShowBody(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Entrenar</button>
+        <Body onComplete={onCompleteBody} />
+      </div>
+    );
+  }
 
   /* ── Modo de entrenamiento: preguntar una sola vez, o mostrar el flujo simplificado según lo elegido ── */
   if (trainStyle === null) {
@@ -8787,6 +8837,21 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                   <span style={{ marginLeft: "auto", color: d.color, fontSize: 20 }}>›</span>
                 </button>
               ))}
+              <button
+                className="card fade-up"
+                onClick={() => setShowBody(true)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 14, textAlign: "left",
+                  borderLeft: `4px solid ${C.blue}`, transition: "transform .15s ease",
+                }}
+              >
+                <span style={{ fontSize: 30 }}>🧘</span>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800 }}>Movilidad</div>
+                  <div style={{ fontSize: 12, color: C.mut, marginTop: 2 }}>Estiramientos y recuperación activa</div>
+                </div>
+                <span style={{ marginLeft: "auto", color: C.blue, fontSize: 20 }}>›</span>
+              </button>
             </div>
 
             <div className="sec-title">Modo especial</div>
@@ -12719,6 +12784,7 @@ function weekComparisonStats(sessions) {
   return { thisWeek: statsFor(thisWeekList), lastWeek: statsFor(lastWeekList), hasLastWeekData: lastWeekList.length > 0 };
 }
 
+// eslint-disable-next-line no-unused-vars -- ya no se usa en Progreso; se deja disponible para otro contexto
 function WeekComparisonCard({ sessions }) {
   const { thisWeek, lastWeek, hasLastWeekData } = useMemo(() => weekComparisonStats(sessions), [sessions]);
   if (!hasLastWeekData) {
@@ -13302,7 +13368,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           );
         })()}
         <PlateauCard sessions={sessions} />
-        <WeekComparisonCard sessions={sessions} />
         <WeakPointCard
           sessions={sessions}
           onTrain={(discId, focusId) => {
@@ -13948,15 +14013,6 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart,
           </div>
           <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
         </button>
-
-        <button onClick={() => onSection("cuerpo")} className="card" style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", padding: 16 }}>
-          <span style={{ fontSize: 28 }}>🧘</span>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800 }}>Movilidad y cuerpo</div>
-            <div style={{ fontSize: 12, color: C.mut }}>Estiramientos, movilidad articular y recuperación activa</div>
-          </div>
-          <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
-        </button>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
@@ -13967,11 +14023,6 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart,
     </div>
   );
 }
-
-const textForBg = (bgColor) => {
-  const lightColors = [C.cyan, C.green, C.yellow, "#FF9EC4", "#FFD700"];
-  return lightColors.includes(bgColor) ? "#07070C" : "#fff";
-};
 
 function ProgramsScreen() {
   const [detail, setDetail] = useState(null);
@@ -14031,7 +14082,6 @@ function ProgramsScreen() {
   return (
     <div className="screen">
       <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📚 Programas de entrenamiento</h2>
-      <p className="muted" style={{ marginTop: 2 }}>Planes de 4-12 semanas con estructura semanal completa</p>
       {active && (
         <div className="card" style={{ marginTop: 12, padding: "14px 16px", borderLeft: `4px solid ${active.program.color}` }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: active.program.color }}>▶ Programa en curso: {active.program.name}</p>
@@ -14043,29 +14093,45 @@ function ProgramsScreen() {
           </button>
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
         {PROGRAMS.map((p) => {
           const recommended = profile.goal && p.goalTags.includes(profile.goal);
           const isActive = active?.programId === p.id;
           return (
             <button
-              key={p.id} className="card" onClick={() => setDetail(p)}
-              style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${p.color}` }}
+              key={p.id} className="card"
+              onClick={() => setDetail(p)}
+              style={{
+                textAlign: "left",
+                padding: "10px 10px",
+                borderTop: `3px solid ${p.color}`,
+                position: "relative",
+                minHeight: 80,
+              }}
             >
-              <span style={{ fontSize: 26 }}>{p.emoji}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800 }}>{p.name}</span>
-                  {recommended && !isActive && (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: textForBg(C.green), background: C.green, padding: "2px 6px", borderRadius: 99 }}>RECOMENDADO</span>
-                  )}
-                  {isActive && (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: textForBg(p.color), background: p.color, padding: "2px 6px", borderRadius: 99 }}>ACTIVO</span>
-                  )}
-                </div>
-                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{p.durationWeeks} sem · {p.daysPerWeek} días/sem · Nivel mín. {LEVELS[p.minLevelIdx]?.name}</div>
+              {(recommended || isActive) && (
+                <span style={{
+                  position: "absolute", top: 6, right: 6,
+                  fontSize: 8, fontWeight: 800,
+                  color: "#07070C",
+                  background: isActive ? p.color : C.green,
+                  padding: "2px 5px", borderRadius: 99,
+                }}>
+                  {isActive ? "ACTIVO" : "✓"}
+                </span>
+              )}
+              <div style={{ fontSize: 22 }}>{p.emoji}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, marginTop: 4, lineHeight: 1.2 }}>
+                {p.name}
               </div>
-              <span style={{ color: C.dim }}>›</span>
+              <div style={{
+                fontSize: 10, color: C.mut, marginTop: 4,
+                display: "flex", gap: 4, flexWrap: "wrap",
+              }}>
+                <span>🗓️ {p.durationWeeks}s</span>
+                <span>⚡ {p.daysPerWeek}d</span>
+                <span>🛡️ {LEVELS[p.minLevelIdx]?.name}</span>
+              </div>
             </button>
           );
         })}
@@ -14618,6 +14684,7 @@ export default function App() {
                 onStart={setLive} onAccent={(c) => setAccent(c || getTabAccent("entrenar"))} totalSessions={sessions.length}
                 noEquipment={noEquipment} onSaveSpecial={saveSession} name={name}
                 sessions={sessions} streak={streak} challenge={challenge} onSaveChallenge={saveChallenge}
+                onCompleteBody={completeBody}
               />
             )}
             {tab === "yo" && (
