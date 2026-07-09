@@ -809,11 +809,37 @@ function JumpTestCard() {
   );
 }
 
+function acwrRecommendation(ratio) {
+  if (ratio > 1.5) {
+    return {
+      action: "Sesión ligera o descanso activo hoy",
+      detail: "Tu carga de esta semana supera mucho tu promedio. Entrenar duro hoy aumenta el riesgo de lesión. Considera movilidad o descanso.",
+    };
+  }
+  if (ratio > 1.3) {
+    return {
+      action: "Reduce intensidad un 20% hoy",
+      detail: "Carga alta pero manejable. Mismo entrenamiento, menos peso o menos series.",
+    };
+  }
+  if (ratio < 0.8) {
+    return {
+      action: "Puedes aumentar la carga esta semana",
+      detail: "Tu cuerpo está entrenando menos de lo habitual. Buen momento para añadir una sesión o subir la intensidad.",
+    };
+  }
+  return {
+    action: "Carga óptima — sigue igual",
+    detail: "Estás en la zona de progreso sin riesgo de sobreentrenamiento.",
+  };
+}
+
 function AcwrCard({ sessions }) {
   const [expanded, setExpanded] = useState(false);
   const ratio = useMemo(() => calcACWR(sessions), [sessions]);
   if (ratio === null) return null;
   const info = acwrInfo(ratio);
+  const rec = acwrRecommendation(ratio);
   return (
     <button
       onClick={() => setExpanded((v) => !v)}
@@ -821,20 +847,20 @@ function AcwrCard({ sessions }) {
       style={{
         marginTop: 12, width: "100%", textAlign: "left", padding: "12px 14px",
         border: `1px solid ${info.color}55`,
-        animation: info.level === "danger" ? "flame 1.6s ease-in-out infinite" : "none",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>📊 Carga de entrenamiento (ACWR)</span>
-        <span style={{ fontSize: 16, fontWeight: 900, color: info.color }}>{ratio.toFixed(2)}</span>
+        <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>📊 Carga semanal</span>
+        <span style={{ fontSize: 13, fontWeight: 900, color: info.color }}>{info.label}</span>
       </div>
-      <p style={{ fontSize: 12, color: info.color, fontWeight: 700, marginTop: 4 }}>{info.label}</p>
+      <p style={{ fontSize: 12, color: C.text, fontWeight: 700, marginTop: 6 }}>→ {rec.action}</p>
       {expanded && (
-        <p style={{ fontSize: 11, color: C.dim, marginTop: 8, lineHeight: 1.5 }}>
-          El ACWR compara tu carga de los últimos 7 días (aguda) contra el promedio de las últimas 4 semanas (crónica).
-          Valores entre 0.8 y 1.3 se asocian con menor riesgo de lesión. Ratios sobre 1.5 indican un aumento brusco
-          de carga que tu cuerpo puede no estar listo para absorber.
-        </p>
+        <div style={{ marginTop: 8 }}>
+          <p style={{ fontSize: 11, color: C.dim, lineHeight: 1.5 }}>{rec.detail}</p>
+          <p style={{ fontSize: 10, color: C.dim, marginTop: 6, fontStyle: "italic" }}>
+            ACWR {ratio.toFixed(2)} · Zona óptima: 0.8 — 1.3
+          </p>
+        </div>
       )}
     </button>
   );
@@ -3605,6 +3631,13 @@ const FUTBOL_POSITION_PARQUE = {
       { name: "Saque con pie", sets: 3, reps: "10", tip: "Contacto en el empeine, seguimiento del pie." },
       { name: "Agilidad en arco (conos)", sets: 3, reps: "45s", tip: "Salidas laterales desde centro del arco." },
     ],
+    medio: [
+      { name: "Caída lateral + levantada rápida", sets: 4, reps: "6 c/lado", tip: "De menos de 1.5s por repetición." },
+      { name: "Salto vertical al punto más alto", sets: 4, reps: "8", tip: "Extensión completa. Dedos extendidos al máximo." },
+      { name: "Saque con pie a distancia", sets: 3, reps: "10", tip: "Contacto en empeine. Rodilla flexionada al impactar." },
+      { name: "Agilidad en arco (slalom conos)", sets: 4, reps: "45s", tip: "Salidas laterales explosivas. Manos activas." },
+      { name: "Posicionamiento 1vs1", sets: 4, reps: "5", tip: "Achique progresivo. Hacerse grande sin tirarse." },
+    ],
     theOne: [
       { name: "Reacción explosiva: caída+levantada+tiro", sets: 5, reps: "6", tip: "Tiempo total < 2s por repetición." },
       { name: "Salto máximo con extensión", sets: 5, reps: "8", tip: "Dedos tocan la barra del arco." },
@@ -3619,6 +3652,14 @@ const FUTBOL_POSITION_PARQUE = {
       { name: "Plancha", sets: 3, reps: "30s", tip: "Estabilidad en disputas." },
       { name: "Cabezazo desde parado", sets: 3, reps: "10", tip: "Frente, ojos abiertos, cuello firme." },
       { name: "Salida al pase largo (simulada)", sets: 3, reps: "8", tip: "Anticipa, no esperes." },
+    ],
+    medio: [
+      { name: "Sentadilla con salto", sets: 4, reps: "8", tip: "Explosividad para duelos aéreos." },
+      { name: "Cabezazo desde salto", sets: 4, reps: "10", tip: "Frente al balón, cuello firme, domina el área." },
+      { name: "Carrera de anticipación 10m", sets: 5, reps: "10m", tip: "Leer el pase antes de que salga. Reacción." },
+      { name: "Plancha lateral dinámica", sets: 3, reps: "30s c/lado", tip: "Estabilidad en los duelos de 50/50." },
+      { name: "Cambio de dirección defensivo", sets: 4, reps: "1 ronda", tip: "Pivot + sprint 5m. Simula seguir al delantero." },
+      { name: "Curl nórdico", sets: 3, reps: "5", tip: "Prevención de isquios. Obligatorio en defensas." },
     ],
     theOne: [
       { name: "Sentadilla pesada 90% 1RM", sets: 5, reps: "3", tip: "Duelos aéreos se ganan con piernas." },
@@ -3635,6 +3676,13 @@ const FUTBOL_POSITION_PARQUE = {
       { name: "Centro desde banda (simulado)", sets: 3, reps: "10", tip: "Contacto en el interior del pie." },
       { name: "Salto lateral", sets: 3, reps: "10", tip: "Caída estable, listo para continuar." },
     ],
+    medio: [
+      { name: "Sprint 30m repetido", sets: 6, reps: "30m", tip: "Descanso 40s. Simula subidas de banda." },
+      { name: "Centro desde banda corriendo", sets: 4, reps: "10", tip: "No pierdas velocidad al centrar." },
+      { name: "Salto lateral con aterrizaje", sets: 4, reps: "8", tip: "Aterrizaje controlado, listo para continuar." },
+      { name: "Defensa lateral sliding", sets: 3, reps: "20m", tip: "Sin cruzar pies. Mantén el stance defensivo." },
+      { name: "Resistencia de velocidad 100m", sets: 5, reps: "100m", tip: "Al 80%. El lateral recorre 30-40 bandas por partido." },
+    ],
     theOne: [
       { name: "Sprint 40m repetido", sets: 8, reps: "40m", tip: "Simula subidas de banda en partido. Descanso 45s entre sprints." },
       { name: "Cambio dirección 5-10-5", sets: 6, reps: "1 ronda", tip: "Pies activos, cadera baja en los giros." },
@@ -3649,6 +3697,13 @@ const FUTBOL_POSITION_PARQUE = {
       { name: "Plancha lateral", sets: 3, reps: "20s c/lado", tip: "Estabilidad en disputas." },
       { name: "Carrera de presión simulada", sets: 4, reps: "10m", tip: "Aceleración corta, cerrar al rival." },
       { name: "Control de pase en movimiento", sets: 3, reps: "10", tip: "Control orientado siempre." },
+    ],
+    medio: [
+      { name: "Carrera de recuperación 20m", sets: 6, reps: "20m", tip: "Sprint de regreso. El pivote corre 12km por partido." },
+      { name: "Pase corto bajo presión", sets: 4, reps: "20", tip: "Decisión rápida. 1-2 toques máximo." },
+      { name: "Pressing + recuperación", sets: 5, reps: "30m", tip: "Sprint al rival + regreso trotando. Ritmo partido." },
+      { name: "Plancha anti-rotación", sets: 3, reps: "30s c/lado", tip: "El pivote necesita el core más fuerte del equipo." },
+      { name: "Cambio de ritmo con balón", sets: 4, reps: "40m", tip: "Protege el balón en los cambios de dirección." },
     ],
     theOne: [
       { name: "Sentadilla pesada (duelos)", sets: 5, reps: "4", tip: "El pivote gana duelos con piernas." },
@@ -3665,6 +3720,14 @@ const FUTBOL_POSITION_PARQUE = {
       { name: "Control y conducción 20m", sets: 3, reps: "8", tip: "Balón pegado al pie." },
       { name: "Cambio de ritmo suave", sets: 4, reps: "40m", tip: "Caminar → trote → sprint → trote." },
     ],
+    medio: [
+      { name: "Repeated sprint 30m", sets: 6, reps: "30m", tip: "Descanso 30s entre sprints. Mantén el ritmo." },
+      { name: "Cambio de ritmo", sets: 5, reps: "1 min", tip: "40s suave + 20s máximo. Sin parar." },
+      { name: "Conducción con cambio de dirección", sets: 4, reps: "30m", tip: "Cabeza arriba en cada cambio. Visión periférica." },
+      { name: "Pase largo con precisión", sets: 3, reps: "10", tip: "Interior-exterior del pie según la distancia." },
+      { name: "Pressing simulado", sets: 4, reps: "20m", tip: "Sprint al rival + frenar en posición defensiva." },
+      { name: "Resistencia aeróbica 2km", sets: 1, reps: "2km", tip: "Ritmo cómodo. El medio tiene que llegar al 90." },
+    ],
     theOne: [
       { name: "Repeated sprint 30m", sets: 10, reps: "30m", tip: "Mantener velocidad en rep 10 igual que rep 1. Descanso 25s entre sprints." },
       { name: "Cambio de ritmo partido", sets: 8, reps: "1.5 min", tip: "1 min suave + 30s máximo. Sin parar." },
@@ -3679,6 +3742,13 @@ const FUTBOL_POSITION_PARQUE = {
       { name: "Conducción y centro", sets: 3, reps: "8", tip: "Máxima velocidad en los últimos 5m." },
       { name: "Salto lateral explosivo", sets: 3, reps: "8", tip: "Simula recorte al interior." },
       { name: "Regate básico (recorte)", sets: 3, reps: "10", tip: "Fintar con el cuerpo, no el balón." },
+    ],
+    medio: [
+      { name: "Aceleración 0-20m", sets: 6, reps: "20m", tip: "Inclinación 45° en los primeros 5 pasos." },
+      { name: "1vs1 con regate y centro", sets: 4, reps: "8", tip: "Amaga con el cuerpo, explota hacia el interior." },
+      { name: "Cambio de ritmo con balón", sets: 5, reps: "30m", tip: "Lento-rápido-lento. Desorienta al defensor." },
+      { name: "Centro al área en carrera", sets: 3, reps: "10", tip: "Máxima velocidad en los últimos 3 metros." },
+      { name: "Resistencia de velocidad 40m", sets: 5, reps: "40m", tip: "Al 85%. Sostener velocidad hasta el final." },
     ],
     theOne: [
       { name: "Aceleración 0-30m máxima", sets: 8, reps: "30m", tip: "Descanso completo entre sprints. Calidad sobre cantidad." },
@@ -3695,6 +3765,15 @@ const FUTBOL_POSITION_PARQUE = {
       { name: "Cabezazo desde parado", sets: 3, reps: "10", tip: "Frente, ojos abiertos, cuello firme." },
       { name: "Movimiento de ruptura", sets: 4, reps: "8", tip: "Arranque en diagonal, enganchar al defensor." },
     ],
+    medio: [
+      { name: "Sprint en espacio corto 15m", sets: 6, reps: "15m", tip: "Reacción + explosión. Simula recepción en profundidad." },
+      { name: "Recepción y definición 1 toque", sets: 4, reps: "10", tip: "Control orientado + disparo. Sin balones muertos." },
+      { name: "Movimiento de ruptura", sets: 5, reps: "8", tip: "Arrastra al defensor con el cuerpo, rompe en diagonal." },
+      { name: "Cabezazo en carrera", sets: 3, reps: "8", tip: "El timing del salto importa más que la altura." },
+      { name: "Disparo de media distancia", sets: 3, reps: "10", tip: "Empeine. Pie de apoyo junto al balón. Sigue el tiro." },
+      { name: "Arranque 0-10m con balón", sets: 5, reps: "10m", tip: "Primer toque y explosión. El delantero vive de esto." },
+      { name: "Rondo 1vs1 simulado", sets: 4, reps: "5 min", tip: "Protege el balón con el cuerpo. Giro y salida." },
+    ],
     theOne: [
       { name: "Sprint en espacio corto 15m", sets: 10, reps: "15m", tip: "Reacción + explosión. Sin señal previa." },
       { name: "Recepción y definición 1 toque", sets: 5, reps: "10", tip: "0 balones muertos. Todo en movimiento." },
@@ -3710,7 +3789,10 @@ const LEVEL_SETS_FRACTION = [0.55, 0.7, 0.85, 1, 1.1, 1.2];
 function genFutbolPositionRoutine(positionId, lvlIdx, deloadActive) {
   const pos = FUTBOL_POSITION_PARQUE[positionId];
   const effLvlIdx = Math.max(0, Math.min(5, deloadActive ? lvlIdx - 1 : lvlIdx));
-  const base = effLvlIdx <= 1 ? pos.iniciado : pos.theOne;
+  let base;
+  if (effLvlIdx <= 1) base = pos.iniciado;
+  else if (effLvlIdx <= 3) base = pos.medio || pos.theOne;
+  else base = pos.theOne;
   const frac = LEVEL_SETS_FRACTION[effLvlIdx];
   let rest = REST_BY_LEVEL[effLvlIdx];
   return sortExercises(base.map((it) => {
@@ -4126,21 +4208,48 @@ function getRecoveryStatus() {
   const recentIntenseSessions = Object.values(recovery).filter((r) => now - r.lastSession < 3 * 86400000).length;
   let level = "green";
   let message = "Listo para entrenar fuerte";
-  let chipLabel = "🟢 Listo para entrenar";
+  let chipLabel = "💪 Cuerpo listo para entrenar";
   if (peakGroups.length) {
-    level = "green";
+    level = "cyan";
     message = `${peakGroups.map((g) => g.group).join(" y ")} ${peakGroups.length > 1 ? "están" : "está"} en su pico de adaptación hoy. Es el mejor momento para entrenarlos.`;
-    chipLabel = `⚡ Pico: ${peakGroups.map((g) => g.group).join(", ")}`;
+    chipLabel = `⚡ Pico de adaptación: ${peakGroups.map((g) => g.group).join(", ")}`;
   } else if (worst && worst.hoursLeft > 24) {
     level = "red";
     message = "Sesión ligera recomendada";
-    chipLabel = "🔴 Descanso o movilidad";
-  } else if ((worst && worst.hoursLeft > 0) || recentIntenseSessions >= 3) {
+    chipLabel = `⛔ Descansa: ${worst.group} (recuperando)`;
+  } else if (worst && worst.hoursLeft > 0) {
     level = "yellow";
-    message = worst ? `Puedes entrenar, evita ${worst.group}` : "Puedes entrenar, con moderación";
-    chipLabel = worst ? `🟡 Evita ${worst.group.toLowerCase()} hoy` : "🟡 Entrena con moderación";
+    message = `Puedes entrenar, evita ${worst.group}`;
+    chipLabel = `⏳ Recuperando: ${worst.group} (${worst.hoursLeft}h)`;
+  } else if (recentIntenseSessions >= 3) {
+    level = "yellow";
+    message = "Puedes entrenar, con moderación";
+    chipLabel = "🟡 Entrena con moderación";
   }
   return { level, message, chipLabel, groups: groups.sort((a, b) => a.hoursLeft - b.hoursLeft), worst, peakGroups };
+}
+
+/* Advierte (sin bloquear) si el mismo grupo muscular se eligió 3+ veces en los últimos 5 días */
+function checkOvertraining(focusLabel, sessions) {
+  const muscleGroup = focusGroupOf(focusLabel);
+  if (!muscleGroup || muscleGroup === "otro") return null;
+
+  const last5Days = sessions.filter((s) => {
+    const daysAgo = (Date.now() - s.ts) / 86400000;
+    return daysAgo <= 5 && s.kind === "entreno";
+  });
+
+  const sameGroupCount = last5Days.filter((s) => focusGroupOf(s.focusLabel) === muscleGroup).length;
+
+  if (sameGroupCount >= 3) {
+    return {
+      group: muscleGroup,
+      count: sameGroupCount,
+      message: `Llevas ${sameGroupCount} sesiones de ${muscleGroup} en 5 días.`,
+      suggestion: "Este grupo muscular necesita 48h de recuperación para crecer. Considera entrenar otro grupo hoy.",
+    };
+  }
+  return null;
 }
 
 /* Devuelve una lista de sugerencias (la primera es la principal; "ver otro plan" rota entre el resto) */
@@ -6689,36 +6798,44 @@ function Home({ name, sessions, streak, onTrain, onRepeat, onStartPlan, mode, br
             })()}
             {!pro && (() => {
               const status = getRecoveryStatus();
-              const color = status.level === "green" ? C.green : status.level === "yellow" ? C.yellow : C.red;
+              if (!status.groups.length) return null;
+              const color = status.level === "green" ? C.green : status.level === "cyan" ? C.cyan : status.level === "yellow" ? C.yellow : C.red;
               return (
-                <div style={{ marginTop: 10 }}>
-                  <button
-                    onClick={() => setShowRecovery((v) => !v)}
-                    style={{ fontSize: 11, fontWeight: 700, color, textAlign: "left" }}
-                  >
-                    {status.chipLabel}
-                  </button>
+                <button
+                  onClick={() => setShowRecovery((v) => !v)}
+                  className="card"
+                  style={{ marginTop: 10, width: "100%", textAlign: "left", padding: "10px 14px", border: `1px solid ${color}55` }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 700, color }}>{status.chipLabel}</span>
                   {showRecovery && (
-                    <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(0,0,0,0.15)" }}>
-                      <p style={{ fontSize: 12, color: C.mut, lineHeight: 1.4 }}>{status.message}</p>
-                      {status.groups.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
-                          {status.groups.map((g) => (
-                            <div key={g.group} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                              <span style={{ color: C.mut }}>{g.group}</span>
-                              <span
-                                className={g.phase === "supercompensation" ? "supercomp-pulse" : ""}
-                                style={{ fontWeight: 700, color: g.color }}
-                              >
-                                {g.phase === "supercompensation" ? g.label : g.phase === "fatigue" ? `🔴 ${g.label}` : g.phase === "recovery" ? `🟡 ${g.label}` : `🟢 Listo`}
-                              </span>
-                            </div>
-                          ))}
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.dim, fontWeight: 700 }}>
+                          <span style={{ flex: 1 }}>GRUPO</span>
+                          <span style={{ flex: 1, textAlign: "center" }}>ESTADO</span>
+                          <span style={{ flex: 1, textAlign: "right" }}>TIEMPO</span>
                         </div>
-                      )}
+                        {status.groups.map((g) => (
+                          <div key={g.group} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                            <span style={{ flex: 1, color: C.text, fontWeight: 600 }}>{g.group}</span>
+                            <span
+                              className={g.phase === "supercompensation" ? "supercomp-pulse" : ""}
+                              style={{ flex: 1, textAlign: "center", fontWeight: 700, color: g.color }}
+                            >
+                              {g.phase === "supercompensation" ? "⚡ Pico ahora" : g.phase === "fatigue" ? "Recuperando" : g.phase === "recovery" ? "Recuperando" : "✓ Listo"}
+                            </span>
+                            <span style={{ flex: 1, textAlign: "right", color: C.mut }}>
+                              {g.phase === "supercompensation" ? "Entrena hoy" : g.recovered ? "—" : `${g.hoursLeft}h más`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: 10, color: C.dim, marginTop: 10, fontStyle: "italic" }}>
+                        Estimación basada en la intensidad de tus sesiones recientes. Escucha siempre a tu cuerpo.
+                      </p>
                     </div>
                   )}
-                </div>
+                </button>
               );
             })()}
           </div>
@@ -9370,6 +9487,18 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
               </div>
             ))}
           </div>
+          {(() => {
+            const focusLabel = disc.focuses.find((f) => f.id === focusId)?.label;
+            const overtraining = checkOvertraining(focusLabel, sessions);
+            if (!overtraining) return null;
+            return (
+              <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.yellow}55`, background: "rgba(255,214,0,0.06)" }}>
+                <p style={{ fontSize: 12, fontWeight: 800, color: C.yellow }}>⚠️ {overtraining.message}</p>
+                <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>{overtraining.suggestion}</p>
+                <p style={{ fontSize: 10, color: C.dim, marginTop: 4, fontStyle: "italic" }}>Esta es solo una referencia — escucha tu cuerpo.</p>
+              </div>
+            );
+          })()}
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <button
               className="btn-xl"
