@@ -11270,12 +11270,56 @@ function SettingsRow({ label, children }) {
   );
 }
 
+/* ─── Sección colapsable de Configuración ─── */
+function AccordionSection({ icon, title, defaultOpen = false, children, danger = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: open ? 12 : 0 }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", color: danger ? C.red : C.text }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 700 }}>{icon} {title}</span>
+        <span style={{ fontSize: 18, color: C.dim, transform: open ? "rotate(90deg)" : "none", transition: "transform 0.2s ease" }}>›</span>
+      </button>
+      {open && <div style={{ paddingBottom: 8 }}>{children}</div>}
+    </div>
+  );
+}
+
+/* ─── Bottom sheet que envuelve la Configuración ─── */
+function SettingsSheet({ visible, onClose, children }) {
+  if (!visible) return null;
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 430, maxHeight: "90vh", margin: "0 auto", background: C.card,
+          borderRadius: "20px 20px 0 0", overflowY: "auto", paddingBottom: "env(safe-area-inset-bottom)",
+          animation: "sheetUp 0.3s ease-out",
+        }}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 99, background: C.border, margin: "12px auto 0" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px 8px" }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800 }}>⚙️ Configuración</h2>
+          <button onClick={onClose} aria-label="Cerrar configuración" style={{ fontSize: 22, color: C.mut, padding: "4px 8px", minHeight: 44 }}>×</button>
+        </div>
+        <div style={{ padding: "0 20px 20px" }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsScreen({
   name, onRename, mode, onSetMode,
   noEquipment, onToggleEquipment,
   voiceOn, onToggleVoice, darkMode, onToggleDarkMode,
   installPrompt, appInstalled, onInstallApp,
-  sessions, onCleanOld, onWipeAll, onBack, onShowSummary,
+  sessions, onCleanOld, onWipeAll, onShowSummary, showConfirm,
 }) {
   const [, setTick] = useState(0);
   const refresh = () => setTick((n) => n + 1);
@@ -11294,9 +11338,6 @@ function SettingsScreen({
   const currentWeight = weightLog.length ? weightLog[weightLog.length - 1].weight : null;
   const [toast, setToast] = useState(null);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
-  const [pendingRestore, setPendingRestore] = useState(null);
-  const [confirmDeactivatePlan, setConfirmDeactivatePlan] = useState(false);
-  const [confirmCleanOld, setConfirmCleanOld] = useState(false);
 
   const handleRestoreFile = (e) => {
     const file = e.target.files?.[0];
@@ -11307,7 +11348,13 @@ function SettingsScreen({
       try {
         const parsed = JSON.parse(String(reader.result));
         if (!isValidBackup(parsed)) throw new Error("formato inválido");
-        setPendingRestore(parsed);
+        showConfirm({
+          title: "¿Restaurar backup?",
+          message: "Esto reemplazará todos tus datos actuales.",
+          confirmLabel: "Sí, restaurar",
+          confirmColor: C.orange,
+          onConfirm: () => { applyBackup(parsed); window.location.reload(); },
+        });
       } catch {
         showToast("Archivo de backup inválido o corrupto.");
       }
@@ -11316,11 +11363,8 @@ function SettingsScreen({
   };
 
   return (
-    <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>⚙️ Configuración</h2>
-
-      <div className="sec-title">🎯 Mi entrenamiento</div>
+    <div>
+      <AccordionSection icon="🎯" title="Mi entrenamiento" defaultOpen>
       <div className="card" style={{ marginBottom: 10 }}>
         <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>MODO DE ENTRENAMIENTO</p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
@@ -11459,8 +11503,9 @@ function SettingsScreen({
           })}
         </div>
       </div>
+      </AccordionSection>
 
-      <div className="sec-title">Perfil</div>
+      <AccordionSection icon="👤" title="Mi perfil">
       <div className="card">
         <label style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>NOMBRE</label>
         <input className="input" value={nameInput} maxLength={24} onChange={(e) => setNameInput(e.target.value)} style={{ marginTop: 4 }} />
@@ -11493,8 +11538,9 @@ function SettingsScreen({
           style={{ marginTop: 4 }}
         />
       </div>
+      </AccordionSection>
 
-      <div className="sec-title">Preferencias</div>
+      <AccordionSection icon="⚡" title="Preferencias de sesión">
       <div className="card">
         <SettingsRow label={darkMode ? "🌙 Modo oscuro" : "☀️ Modo claro"}>
           <SettingsToggle on={darkMode} onClick={onToggleDarkMode} aria-label="Alternar modo oscuro/claro" />
@@ -11520,9 +11566,20 @@ function SettingsScreen({
             onClick={() => { const n = !breathingPref; setBreathingPref(n); store.set("breathing_pref", n); }}
           />
         </SettingsRow>
+        <SettingsRow label="Superseries automáticas">
+          <SettingsToggle
+            on={store.get("supersets_enabled", false)}
+            aria-label="Alternar superseries automáticas"
+            onClick={() => { store.set("supersets_enabled", !store.get("supersets_enabled", false)); refresh(); }}
+          />
+        </SettingsRow>
+        <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
+          Agrupa ejercicios antagonistas claros (ej. press/jalón) sin descanso entre ellos. Solo aplica desde nivel Campeón.
+        </p>
       </div>
+      </AccordionSection>
 
-      <div className="sec-title">Recordatorios</div>
+      <AccordionSection icon="🔔" title="Recordatorios">
       <div className="card">
         <SettingsRow label="Recordatorio diario de entrenar">
           <SettingsToggle
@@ -11550,24 +11607,22 @@ function SettingsScreen({
           </div>
         )}
       </div>
+      </AccordionSection>
 
       {installPrompt && !appInstalled && (
-        <>
-          <div className="sec-title">Instalación</div>
-          <div className="card">
-            <SettingsRow label="Instalar F.A.S.E. en tu dispositivo 📲">
-              <button
-                onClick={onInstallApp}
-                style={{ background: C.cyan, color: "#07070C", fontSize: 12, fontWeight: 800, padding: "6px 14px", borderRadius: 99 }}
-              >
-                Instalar
-              </button>
-            </SettingsRow>
-          </div>
-        </>
+        <div className="card" style={{ marginTop: 10 }}>
+          <SettingsRow label="Instalar F.A.S.E. en tu dispositivo 📲">
+            <button
+              onClick={onInstallApp}
+              style={{ background: C.cyan, color: "#07070C", fontSize: 12, fontWeight: 800, padding: "6px 14px", borderRadius: 99 }}
+            >
+              Instalar
+            </button>
+          </SettingsRow>
+        </div>
       )}
 
-      <div className="sec-title">Plan de entrenamiento</div>
+      <AccordionSection icon="📊" title="Plan de 12 semanas">
       <div className="card">
         <SettingsRow label="Periodización de 12 semanas">
           <SettingsToggle
@@ -11575,7 +11630,12 @@ function SettingsScreen({
             aria-label="Alternar plan de 12 semanas"
             onClick={() => {
               if (store.get("plan_start", null)) {
-                setConfirmDeactivatePlan(true);
+                showConfirm({
+                  title: "¿Desactivar el plan de 12 semanas?",
+                  confirmLabel: "Desactivar",
+                  confirmColor: C.orange,
+                  onConfirm: () => { store.set("plan_start", null); refresh(); },
+                });
               } else {
                 store.set("plan_start", new Date().toISOString());
                 store.set("plan_last_phase", null);
@@ -11587,22 +11647,10 @@ function SettingsScreen({
         <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
           Ajusta automáticamente series y descansos en 4 fases (base, acumulación, intensificación, deload) durante 12 semanas.
         </p>
-        <SettingsRow label="Superseries automáticas">
-          <SettingsToggle
-            on={store.get("supersets_enabled", false)}
-            aria-label="Alternar superseries automáticas"
-            onClick={() => {
-              store.set("supersets_enabled", !store.get("supersets_enabled", false));
-              refresh();
-            }}
-          />
-        </SettingsRow>
-        <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
-          Agrupa ejercicios antagonistas claros (ej. press/jalón) sin descanso entre ellos. Solo aplica desde nivel Campeón.
-        </p>
       </div>
+      </AccordionSection>
 
-      <div className="sec-title">Datos</div>
+      <AccordionSection icon="💾" title="Datos y backup">
       <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <button className="btn-xl" onClick={() => exportCSV(sessions)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 12 }}>
           📥 Exportar todo (CSV)
@@ -11614,9 +11662,20 @@ function SettingsScreen({
           📂 Restaurar backup
         </button>
         <input ref={fileRef} type="file" accept="application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
+      </div>
+      </AccordionSection>
+
+      <AccordionSection icon="☠️" title="Zona de peligro" danger>
+      <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8, borderColor: `${C.red}55` }}>
         <button
           className="btn-xl"
-          onClick={() => setConfirmCleanOld(true)}
+          onClick={() => showConfirm({
+            title: "¿Limpiar historial antiguo?",
+            message: "Se eliminarán sesiones de más de 6 meses.",
+            confirmLabel: "Limpiar",
+            confirmColor: C.red,
+            onConfirm: onCleanOld,
+          })}
           style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.red, fontSize: 12 }}
         >
           🗑️ Limpiar sesiones antiguas (+6 meses)
@@ -11652,39 +11711,15 @@ function SettingsScreen({
           </div>
         )}
       </div>
+      </AccordionSection>
 
-      <div className="sec-title">Acerca de</div>
-      <div className="card" style={{ textAlign: "center" }}>
+      <div className="card" style={{ textAlign: "center", marginTop: 10 }}>
         <p style={{ fontSize: 13, fontWeight: 800 }}>F.A.S.E. v3.0</p>
         <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Formación Atlética y Sistemas de Entrenamiento</p>
         <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>Desarrollado con 💪 para atletas serios</p>
         <p style={{ fontSize: 11, color: C.cyan, marginTop: 6 }}>f-a-s-e.vercel.app</p>
       </div>
 
-      <ConfirmSheet
-        visible={!!pendingRestore}
-        title="¿Restaurar backup?"
-        message="Esto reemplazará todos tus datos actuales."
-        confirmLabel="Sí, restaurar"
-        onConfirm={() => { applyBackup(pendingRestore); window.location.reload(); }}
-        onCancel={() => setPendingRestore(null)}
-      />
-      <ConfirmSheet
-        visible={confirmDeactivatePlan}
-        title="¿Desactivar el plan?"
-        confirmLabel="Desactivar"
-        confirmColor={C.orange}
-        onConfirm={() => { store.set("plan_start", null); refresh(); setConfirmDeactivatePlan(false); }}
-        onCancel={() => setConfirmDeactivatePlan(false)}
-      />
-      <ConfirmSheet
-        visible={confirmCleanOld}
-        title="¿Limpiar historial antiguo?"
-        message="Se eliminarán sesiones de hace más de 6 meses. No se puede deshacer."
-        confirmLabel="Limpiar"
-        onConfirm={() => { onCleanOld(); setConfirmCleanOld(false); }}
-        onCancel={() => setConfirmCleanOld(false)}
-      />
       <MiniToast message={toast} />
     </div>
   );
@@ -14082,6 +14117,9 @@ export default function App() {
   const [showProfileCard, setShowProfileCard] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+  const showConfirm = (config) => setConfirmConfig(config);
+  const hideConfirm = () => setConfirmConfig(null);
 
   const saveChallenge = (c) => {
     setChallenge(c);
@@ -14356,17 +14394,30 @@ export default function App() {
 
   if (showSettings) {
     return (
-      <SettingsScreen
-        name={name} onRename={renameUser}
-        mode={mode} onSetMode={(m) => { setMode(m); store.set("mode", m); }}
-        noEquipment={noEquipment} onToggleEquipment={toggleEquipment}
-        voiceOn={voiceOn} onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
-        darkMode={darkMode} onToggleDarkMode={toggleDarkMode}
-        installPrompt={installPrompt} appInstalled={appInstalled} onInstallApp={installApp}
-        sessions={sessions} onCleanOld={cleanOldSessions} onWipeAll={wipeAllData}
-        onShowSummary={() => setShowSummary(true)}
-        onBack={() => setShowSettings(false)}
-      />
+      <>
+        <SettingsSheet visible onClose={() => setShowSettings(false)}>
+          <SettingsScreen
+            name={name} onRename={renameUser}
+            mode={mode} onSetMode={(m) => { setMode(m); store.set("mode", m); }}
+            noEquipment={noEquipment} onToggleEquipment={toggleEquipment}
+            voiceOn={voiceOn} onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
+            darkMode={darkMode} onToggleDarkMode={toggleDarkMode}
+            installPrompt={installPrompt} appInstalled={appInstalled} onInstallApp={installApp}
+            sessions={sessions} onCleanOld={cleanOldSessions} onWipeAll={wipeAllData}
+            onShowSummary={() => setShowSummary(true)}
+            showConfirm={showConfirm}
+          />
+        </SettingsSheet>
+        <ConfirmSheet
+          visible={!!confirmConfig}
+          title={confirmConfig?.title}
+          message={confirmConfig?.message}
+          confirmLabel={confirmConfig?.confirmLabel}
+          confirmColor={confirmConfig?.confirmColor}
+          onConfirm={() => { confirmConfig?.onConfirm?.(); hideConfirm(); }}
+          onCancel={hideConfirm}
+        />
+      </>
     );
   }
 
