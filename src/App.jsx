@@ -4547,19 +4547,19 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
     const grp = yesterday.muscleGroup || focusGroupOf(yesterday.focusLabel);
     if (grp === "empuje") {
       return [
-        { discId: "gimnasio", focusId: resolveGymFocusId("espalda"), lvlIdx, reason: "Ayer trabajaste pecho/hombros/brazos, hoy toca espalda." },
+        { discId: "gimnasio", focusId: "pull", lvlIdx, reason: "Ayer trabajaste empuje, hoy toca Pull." },
         { discId: "calistenia", focusId: "tiron", lvlIdx, reason: "Alternativa: tirón en calistenia." },
       ];
     }
     if (grp === "tiron") {
       return [
-        { discId: "gimnasio", focusId: resolveGymFocusId("piernas"), lvlIdx, reason: "Ayer trabajaste espalda/bíceps, hoy toca piernas." },
+        { discId: "gimnasio", focusId: "legs", lvlIdx, reason: "Ayer trabajaste Pull, hoy toca Legs." },
         { discId: "calistenia", focusId: "piernas", lvlIdx, reason: "Alternativa: piernas en calistenia." },
       ];
     }
     if (grp === "piernas") {
       return [
-        { discId: "gimnasio", focusId: "upper", lvlIdx, reason: "Ayer trabajaste piernas, hoy toca parte superior." },
+        { discId: "gimnasio", focusId: "upper", lvlIdx, reason: "Ayer trabajaste Legs, hoy toca Upper." },
         { discId: "futbolGym", focusId: "todo", lvlIdx, reason: "Alternativa: fútbol." },
       ];
     }
