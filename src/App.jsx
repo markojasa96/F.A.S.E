@@ -5492,13 +5492,13 @@ const HEALTH_ISSUE_OPTIONS = [
 
 /* Mapa corporal anatómico interactivo: SVG con zonas iluminables + lista de checks a la derecha */
 const BODY_MAP_ZONES = [
-  { id: "hombros", label: "Hombros", color: C.cyan },
+  { id: "hombros", label: "Hombros", color: "#00E5FF" },
   { id: "pecho", label: "Pecho", color: "#FF6B2B" },
-  { id: "brazos", label: "Brazos", color: "#00AACC" },
+  { id: "brazos", label: "Brazos", color: "#22FF88" },
   { id: "abdomen", label: "Abdomen", color: "#FFD600" },
   { id: "gluteos", label: "Glúteos", color: "#FF9EC4" },
   { id: "piernas", label: "Piernas", color: "#A855F7" },
-  { id: "espalda", label: "Espalda", color: C.cyan },
+  { id: "espalda", label: "Espalda", color: "#3B82F6" },
 ];
 
 function BodyMapSVG({ selected, onChange }) {
@@ -5506,38 +5506,76 @@ function BodyMapSVG({ selected, onChange }) {
   const toggle = (id) => onChange(id);
   const colorFor = (id) => BODY_MAP_ZONES.find((z) => z.id === id)?.color || C.cyan;
 
+  const strokeFor = (id) => (isSelected(id) ? colorFor(id) : C.border);
+
   return (
-    <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-      <svg viewBox="0 0 200 400" style={{ width: "48%", maxWidth: 180, flexShrink: 0 }}>
-        <ellipse cx="100" cy="30" rx="22" ry="28" fill="#1E1E2E" stroke={C.border} strokeWidth="1" />
-        <rect x="90" y="56" width="20" height="14" fill="#1E1E2E" stroke={C.border} strokeWidth="1" />
+    <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+      <svg viewBox="0 0 120 260" width="120" height="260" style={{ flexShrink: 0, display: "block" }}>
+        {/* CABEZA */}
+        <ellipse cx="60" cy="22" rx="16" ry="20" fill={C.card} stroke={C.border} strokeWidth="1.5" />
+        <ellipse cx="60" cy="20" rx="11" ry="13" fill={C.surface} stroke={C.border} strokeWidth="1" />
 
-        <ellipse cx="64" cy="82" rx="22" ry="14" fill={isSelected("hombros") ? colorFor("hombros") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("hombros")} style={{ cursor: "pointer" }} />
-        <ellipse cx="136" cy="82" rx="22" ry="14" fill={isSelected("hombros") ? colorFor("hombros") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("hombros")} style={{ cursor: "pointer" }} />
+        {/* CUELLO */}
+        <rect x="54" y="40" width="12" height="10" rx="4" fill={C.card} stroke={C.border} strokeWidth="1" />
 
-        <path d="M78,70 Q100,68 122,70 L125,110 Q100,118 75,110 Z" fill={isSelected("pecho") ? colorFor("pecho") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("pecho")} style={{ cursor: "pointer" }} />
+        {/* HOMBROS */}
+        <ellipse cx="32" cy="60" rx="16" ry="10" fill={isSelected("hombros") ? colorFor("hombros") : C.surface} stroke={strokeFor("hombros")} strokeWidth="1.5" onClick={() => toggle("hombros")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
+        <ellipse cx="88" cy="60" rx="16" ry="10" fill={isSelected("hombros") ? colorFor("hombros") : C.surface} stroke={strokeFor("hombros")} strokeWidth="1.5" onClick={() => toggle("hombros")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
 
-        <ellipse cx="52" cy="112" rx="12" ry="26" fill={isSelected("brazos") ? colorFor("brazos") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
-        <ellipse cx="148" cy="112" rx="12" ry="26" fill={isSelected("brazos") ? colorFor("brazos") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
-        <ellipse cx="48" cy="156" rx="10" ry="22" fill={isSelected("brazos") ? colorFor("brazos") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
-        <ellipse cx="152" cy="156" rx="10" ry="22" fill={isSelected("brazos") ? colorFor("brazos") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
+        {/* PECHO */}
+        <path d="M44,52 Q60,48 76,52 L78,85 Q60,90 42,85 Z" fill={isSelected("pecho") ? colorFor("pecho") : C.surface} stroke={strokeFor("pecho")} strokeWidth="1.5" onClick={() => toggle("pecho")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
+        <line x1="60" y1="52" x2="60" y2="86" stroke={isSelected("pecho") ? "#00000033" : C.border} strokeWidth="0.5" />
 
-        <path d="M78,110 Q100,118 122,110 L120,158 Q100,162 80,158 Z" fill={isSelected("abdomen") ? colorFor("abdomen") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("abdomen")} style={{ cursor: "pointer" }} />
+        {/* BRAZOS SUPERIORES */}
+        <ellipse cx="26" cy="88" rx="11" ry="24" fill={isSelected("brazos") ? colorFor("brazos") : C.surface} stroke={strokeFor("brazos")} strokeWidth="1.5" onClick={() => toggle("brazos")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
+        <ellipse cx="94" cy="88" rx="11" ry="24" fill={isSelected("brazos") ? colorFor("brazos") : C.surface} stroke={strokeFor("brazos")} strokeWidth="1.5" onClick={() => toggle("brazos")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
 
-        <path d="M80,158 Q100,162 120,158 L124,185 Q100,192 76,185 Z" fill={isSelected("gluteos") ? colorFor("gluteos") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("gluteos")} style={{ cursor: "pointer" }} />
+        {/* ANTEBRAZOS */}
+        <ellipse cx="22" cy="128" rx="9" ry="20" fill={isSelected("brazos") ? `${colorFor("brazos")}66` : C.card} stroke={strokeFor("brazos")} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
+        <ellipse cx="98" cy="128" rx="9" ry="20" fill={isSelected("brazos") ? `${colorFor("brazos")}66` : C.card} stroke={strokeFor("brazos")} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
 
-        <ellipse cx="88" cy="218" rx="18" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
-        <ellipse cx="112" cy="218" rx="18" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : "#2A2A3E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
-        <ellipse cx="88" cy="258" rx="13" ry="10" fill="#1A1A28" stroke={C.border} strokeWidth="1" />
-        <ellipse cx="112" cy="258" rx="13" ry="10" fill="#1A1A28" stroke={C.border} strokeWidth="1" />
-        <ellipse cx="88" cy="298" rx="13" ry="28" fill={isSelected("piernas") ? colorFor("piernas") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
-        <ellipse cx="112" cy="298" rx="13" ry="28" fill={isSelected("piernas") ? colorFor("piernas") : "#1E1E2E"} stroke={C.border} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
+        {/* ABDOMEN */}
+        <path d="M42,85 Q60,90 78,85 L76,118 Q60,122 44,118 Z" fill={isSelected("abdomen") ? colorFor("abdomen") : C.surface} stroke={strokeFor("abdomen")} strokeWidth="1.5" onClick={() => toggle("abdomen")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
+        {[95, 105].map((y) => (
+          <line key={y} x1="49" y1={y} x2="71" y2={y} stroke={isSelected("abdomen") ? "#00000022" : "transparent"} strokeWidth="0.8" />
+        ))}
+        <line x1="60" y1="86" x2="60" y2="118" stroke={isSelected("abdomen") ? "#00000022" : "transparent"} strokeWidth="0.5" />
 
-        <text x="100" y="85" textAnchor="middle" fontSize="7" fill={C.dim}>HOMBROS</text>
-        <text x="100" y="95" textAnchor="middle" fontSize="7" fill={C.dim}>PECHO</text>
-        <text x="100" y="138" textAnchor="middle" fontSize="7" fill={C.dim}>ABDOMEN</text>
-        <text x="100" y="176" textAnchor="middle" fontSize="7" fill={C.dim}>GLÚTEOS</text>
-        <text x="100" y="222" textAnchor="middle" fontSize="7" fill={C.dim}>PIERNAS</text>
+        {/* GLÚTEOS / CADERA */}
+        <path d="M44,118 Q60,122 76,118 L80,148 Q60,155 40,148 Z" fill={isSelected("gluteos") ? colorFor("gluteos") : C.surface} stroke={strokeFor("gluteos")} strokeWidth="1.5" onClick={() => toggle("gluteos")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
+
+        {/* MUSLOS / CUÁDRICEPS */}
+        <ellipse cx="48" cy="180" rx="16" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : C.surface} stroke={strokeFor("piernas")} strokeWidth="1.5" onClick={() => toggle("piernas")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
+        <ellipse cx="72" cy="180" rx="16" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : C.surface} stroke={strokeFor("piernas")} strokeWidth="1.5" onClick={() => toggle("piernas")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
+
+        {/* RODILLAS */}
+        <ellipse cx="48" cy="218" rx="11" ry="8" fill={C.card} stroke={strokeFor("piernas")} strokeWidth="1" />
+        <ellipse cx="72" cy="218" rx="11" ry="8" fill={C.card} stroke={strokeFor("piernas")} strokeWidth="1" />
+
+        {/* PANTORRILLAS */}
+        <ellipse cx="48" cy="242" rx="11" ry="20" fill={isSelected("piernas") ? `${colorFor("piernas")}66` : C.card} stroke={strokeFor("piernas")} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
+        <ellipse cx="72" cy="242" rx="11" ry="20" fill={isSelected("piernas") ? `${colorFor("piernas")}66` : C.card} stroke={strokeFor("piernas")} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
+
+        {/* ESPALDA (indicadores laterales) */}
+        {isSelected("espalda") && (
+          <>
+            <rect x="14" y="55" width="8" height="55" rx="4" fill={colorFor("espalda")} opacity="0.7" />
+            <rect x="98" y="55" width="8" height="55" rx="4" fill={colorFor("espalda")} opacity="0.7" />
+          </>
+        )}
+
+        {/* LABELS en las zonas */}
+        {[
+          { id: "hombros", x: 60, y: 58, label: "HOMBROS" },
+          { id: "pecho", x: 60, y: 72, label: "PECHO" },
+          { id: "abdomen", x: 60, y: 103, label: "ABDOMEN" },
+          { id: "gluteos", x: 60, y: 136, label: "GLÚTEOS" },
+          { id: "piernas", x: 60, y: 182, label: "PIERNAS" },
+        ].map(({ id, x, y, label }) => isSelected(id) && (
+          <text key={id} x={x} y={y} textAnchor="middle" fontSize="5.5" fill="#07070C" fontWeight="800" opacity="0.7">
+            {label}
+          </text>
+        ))}
       </svg>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -5549,12 +5587,13 @@ function BodyMapSVG({ selected, onChange }) {
               onClick={() => toggle(z.id)}
               style={{
                 display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                minHeight: 44, padding: "4px 8px", borderRadius: 8,
-                background: on ? `${z.color}18` : "transparent",
+                padding: "8px 12px", borderRadius: 10,
+                border: `2px solid ${on ? z.color : C.border}`,
+                background: on ? `${z.color}18` : C.card,
               }}
             >
-              <span style={{ fontSize: 14 }}>{on ? "☑" : "☐"}</span>
-              <span style={{ fontSize: 12, fontWeight: on ? 800 : 600, color: on ? z.color : C.mut }}>{z.label}</span>
+              <span style={{ fontSize: 10 }}>{on ? "☑" : "☐"}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: on ? z.color : C.text }}>{z.label}</span>
             </button>
           );
         })}
