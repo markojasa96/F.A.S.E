@@ -613,6 +613,7 @@ function JumpTestCard() {
   const [justRecord, setJustRecord] = useState(false);
   const [, setTick] = useState(0);
   const history = store.get("jump_history", []);
+  if (history.length === 0) return null;
   const baseline = jumpBaseline();
   const best = bestJump();
 
@@ -643,6 +644,12 @@ function JumpTestCard() {
           Registrar salto de hoy
         </button>
       )}
+      <details style={{ marginTop: 6 }}>
+        <summary style={{ fontSize: 11, color: C.mut, cursor: "pointer", fontWeight: 600 }}>¿Cómo medir mi salto? →</summary>
+        <p style={{ fontSize: 11, color: C.dim, marginTop: 6, lineHeight: 1.5 }}>
+          Párate junto a una pared. Marca el punto más alto que alcanzas con el brazo extendido. Salta y marca el punto más alto que tocas. La diferencia entre ambas marcas es tu salto.
+        </p>
+      </details>
     </div>
   );
 }
@@ -2841,6 +2848,18 @@ const ACHIEVEMENTS = [
     check: (st) => st.reachedTheOne },
   { id: "indestructible", emoji: "🛡️", name: "Indestructible", desc: "Usa el streak freeze y al día siguiente entrenas igual", secret: true,
     check: (st) => st.usedFreezeAndTrained },
+  { id: "triple", emoji: "🔥", name: "Tres en raya", desc: "Completa 3 sesiones en una semana", secret: false,
+    check: (st) => st.sessionsThisWeekMax >= 3 },
+  { id: "comeback", emoji: "💫", name: "El regreso", desc: "Vuelve a entrenar después de 7 días sin", secret: false,
+    check: (st) => st.hadComebackMoment },
+  { id: "diverse", emoji: "🌈", name: "Versátil", desc: "Entrena 3 disciplinas diferentes", secret: false,
+    check: (st) => st.uniqueDisciplines >= 3 },
+  { id: "fifty", emoji: "⚡", name: "Medio camino", desc: "50 sesiones totales", secret: false,
+    check: (st) => st.totalSessions >= 50 },
+  { id: "recordbreaker", emoji: "📈", name: "Rompemarcas", desc: "Bate un récord personal", secret: false,
+    check: (st) => st.hasAnyPR },
+  { id: "consistent", emoji: "🎯", name: "Consistente", desc: "Entrena 3 semanas seguidas (al menos 1 vez/semana)", secret: false,
+    check: (st) => st.consecutiveWeeks >= 3 },
 ];
 
 /* Calcula las estadísticas base usadas para evaluar todos los logros */
@@ -2880,9 +2899,38 @@ function computeAchievementStats(sessions, freezes) {
     return dayKey(new Date(y, m - 1, d + 1).getTime());
   };
   const usedFreezeAndTrained = freezes.length > 0 && freezes.some((f) => sessions.some((s) => dayKey(s.ts) === nextDayKey(f)));
+
+  const weekSessionCounts = Object.values(
+    workouts.reduce((acc, s) => {
+      const wk = Math.floor(s.ts / (7 * 86400000));
+      acc[wk] = (acc[wk] || 0) + 1;
+      return acc;
+    }, {})
+  );
+  const sessionsThisWeekMax = Math.max(0, ...weekSessionCounts);
+
+  let hadComebackMoment = false;
+  for (let i = 1; i < workouts.length; i++) {
+    const gap = workouts[i].ts - workouts[i - 1].ts;
+    if (gap >= 7 * 86400000) { hadComebackMoment = true; break; }
+  }
+
+  const uniqueDisciplines = new Set(workouts.map((s) => (s.disc?.startsWith("futbol") ? "futbol" : s.disc))).size;
+
+  const hasAnyPR = computeRecords(sessions).length > 0;
+
+  let consecutiveWeeks = 0;
+  const allWeeks = [...new Set(workouts.map((s) => Math.floor(s.ts / (7 * 86400000))))].sort((a, b) => b - a);
+  let prevWeek = allWeeks[0];
+  for (const wk of allWeeks) {
+    if (prevWeek - wk <= 1) { consecutiveWeeks++; prevWeek = wk; }
+    else break;
+  }
+
   return {
     totalSessions, totalVolume, bestStreak, hasEarlySession, hasLateSession, hasMonAndFriSameWeek,
     hasSprint100, hasMarathonSession, allDisciplinesOneWeek, specialModesUsed, reachedTheOne, reachedLeyenda, usedFreezeAndTrained,
+    sessionsThisWeekMax, hadComebackMoment, uniqueDisciplines, hasAnyPR, consecutiveWeeks,
   };
 }
 
@@ -4960,6 +5008,8 @@ const EXERCISE_GIFS = {
   "Press francés con barra Z": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Skullcrusher/0.jpg",
   "Extensión de tríceps sobre la cabeza": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Overhead_Barbell_Triceps_Extension/0.jpg",
   "Encogimientos con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/0.jpg",
+  "Abducción en máquina": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Thigh_Abductor/0.jpg",
+  "Hip thrust con peso corporal": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/0.jpg",
 };
 
 /* Placeholder limpio para ejercicios sin GIF mapeado (reemplaza el stickman CSS) */
@@ -6223,7 +6273,7 @@ function FullHistory({ sessions, onDelete, onBack, onUpdateNote }) {
 }
 
 /* ─── INICIO ─── */
-function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch, onUpdateNote }) {
+function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch, onUpdateNote, onOpenSettings }) {
   const [menuId, setMenuId] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
@@ -6236,6 +6286,8 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
   const [showMatchDebrief, setShowMatchDebrief] = useState(false);
   const [showCombine, setShowCombine] = useState(false);
   const [previewTip, setPreviewTip] = useState(null);
+  const [showProHint] = useState(() => store.get("pro_hint_seen_day", null) !== todayKey());
+  useEffect(() => { store.set("pro_hint_seen_day", todayKey()); }, []);
   const freezesUsedInfo = store.get("freezes_used", null);
   const freezesUsedThisMonth = (() => {
     const now = new Date();
@@ -6596,6 +6648,15 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
         />
         <StatBox label="Total" value={sessions.filter((s) => s.kind === "entreno").length} accent={C.green} />
       </div>
+
+      {!pro && showProHint && (
+        <button
+          onClick={() => onOpenSettings?.()}
+          style={{ marginTop: 12, fontSize: 10, color: C.dim, fontWeight: 600, textAlign: "center", width: "100%", background: "none", border: "none" }}
+        >
+          ¿Prefieres solo datos? Activa Modo Pro en ⚙️
+        </button>
+      )}
 
       {(() => {
         const history = store.get("jump_history", []);
@@ -12374,7 +12435,7 @@ function techniqueQualityPct(sessions) {
     .filter((s) => s.kind === "entreno")
     .flatMap((s) => s.exercises.map((e) => e.technique))
     .filter(Boolean);
-  if (!ratings.length) return null;
+  if (ratings.length < 5) return null;
   const good = ratings.filter((r) => r === "perfecta" || r === "bien").length;
   return Math.round((good / ratings.length) * 100);
 }
@@ -12416,6 +12477,8 @@ function findWeakPoint(sessions) {
 
 function WeakPointCard({ sessions, onTrain }) {
   const weak = useMemo(() => findWeakPoint(sessions), [sessions]);
+  const workouts = sessions.filter((s) => s.kind === "entreno");
+  if (workouts.length < 10) return null;
   if (!weak) return null;
   return (
     <div className="card" style={{ marginTop: 10 }}>
@@ -14224,6 +14287,7 @@ export default function App() {
                     onDeleteSession={deleteSession}
                     onSaveMatch={saveSession}
                     onUpdateNote={updateSessionNote}
+                    onOpenSettings={() => setShowSettings(true)}
                   />
                 </div>
               </div>
