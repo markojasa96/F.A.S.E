@@ -4553,16 +4553,20 @@ const TRAIN_MODES = [
   },
 ];
 
-/* Objetivo rápido → programa recomendado (para elegir piloto automático o programa por primera vez) */
-const OBJECTIVE_TO_PROGRAM = [
-  { id: "musculo", emoji: "💪", label: "Ganar músculo", programId: "ppl" },
-  { id: "definicion", emoji: "🔥", label: "Definirme", programId: "recomp_8w" },
-  { id: "gluteos", emoji: "🍑", label: "Glúteos y piernas", programId: "glutes_6w" },
-  { id: "futbol", emoji: "⚽", label: "Fútbol", programId: "football_athlete" },
-  { id: "atletismo", emoji: "🏃", label: "Atletismo", programId: "atletismo_velocidad" },
-  { id: "salud", emoji: "🌱", label: "Salud general", programId: "calistenia_cero" },
-  { id: "v_shape", emoji: "🔺", label: "Forma en V", programId: "v_shape_8w" },
-];
+/* Objetivo del perfil (onboarding) → programa recomendado, sin volver a preguntar */
+const GOAL_TO_PROGRAM = {
+  rendimiento: "football_athlete",
+  musculo: "ppl",
+  grasa: "recomp_8w",
+  general: "calistenia_cero",
+  bienestar: "calistenia_cero",
+};
+
+function getRecommendedProgram() {
+  const goal = store.get("profile", {})?.goal;
+  const programId = GOAL_TO_PROGRAM[goal] || "ppl";
+  return PROGRAMS.find((p) => p.id === programId) || PROGRAMS[0];
+}
 
 function getActiveProgram() {
   const active = store.get("active_program", null);
@@ -6762,7 +6766,13 @@ const TRAIN_CARDS = [
 function orderedTrainCards() {
   const profile = store.get("profile", null);
   if (!profile?.goal) return TRAIN_CARDS;
-  const priority = { rendimiento: ["futbol", "atletismo"], musculo: ["gimnasio"], grasa: ["gimnasio", "calistenia"] }[profile.goal];
+  const priority = {
+    rendimiento: ["futbol", "atletismo", "calistenia", "gimnasio"],
+    musculo: ["gimnasio", "calistenia"],
+    grasa: ["gimnasio", "calistenia"],
+    general: ["calistenia", "gimnasio", "atletismo", "futbol"],
+    bienestar: ["calistenia", "atletismo"],
+  }[profile.goal];
   if (!priority) return TRAIN_CARDS;
   return [...TRAIN_CARDS].sort((a, b) => {
     const ia = priority.indexOf(a.id);
@@ -8277,6 +8287,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
   const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "partido"
+  const [, setTick] = useState(0);
   const activeProgram = getActiveProgram();
   const [trainMode, setTrainMode] = useState(() => (activeProgram ? "programa" : "musculo"));
   const lastSession = useMemo(() => [...sessions].reverse().find((s) => s.kind === "entreno"), [sessions]);
@@ -8292,7 +8303,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   });
   /* Modo de entrenamiento global (auto/programa/manual) — solo se pregunta la primera vez */
   const [trainStyle, setTrainStyle] = useState(() => store.get("train_mode", null));
-  const [objectiveChoice, setObjectiveChoice] = useState(null);
 
   const GYM_LEVEL_IDS = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
   const isCampeonPlusGym = ["campeon", "elite", "leyenda", "the_one"].includes(GYM_LEVEL_IDS[mostFrequentLevel(sessions)]);
@@ -8389,51 +8399,34 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     );
   }
 
-  if ((trainStyle === "auto" || trainStyle === "program") && !getActiveProgram() && !objectiveChoice) {
+  if ((trainStyle === "auto" || trainStyle === "program") && !getActiveProgram()) {
+    const rec = getRecommendedProgram();
     return (
       <div className="screen fade-up" style={{ paddingTop: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, textAlign: "center" }}>¿Cuál es tu objetivo ahora mismo?</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
-          {OBJECTIVE_TO_PROGRAM.map((o) => (
-            <button
-              key={o.id} className="card" onClick={() => setObjectiveChoice(o)}
-              style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px" }}
-            >
-              <span style={{ fontSize: 22 }}>{o.emoji}</span>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{o.label}</span>
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setTrainStyle("manual")} style={{ marginTop: 16, color: C.dim, fontSize: 12, fontWeight: 700, textAlign: "center", width: "100%" }}>
-          Prefiero elegir yo mismo →
-        </button>
-      </div>
-    );
-  }
-
-  if ((trainStyle === "auto" || trainStyle === "program") && !getActiveProgram() && objectiveChoice) {
-    const rec = PROGRAMS.find((p) => p.id === objectiveChoice.programId);
-    return (
-      <div className="screen fade-up" style={{ paddingTop: 20 }}>
-        <button onClick={() => setObjectiveChoice(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
+        <p style={{ fontSize: 12, color: C.mut, fontWeight: 700, textAlign: "center" }}>BASADO EN TU OBJETIVO</p>
         <div style={{ textAlign: "center", marginTop: 10 }}>
           <div style={{ fontSize: 40 }}>{rec.emoji}</div>
           <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>{rec.name}</h2>
           <p style={{ fontSize: 12, color: C.mut, marginTop: 6, lineHeight: 1.5 }}>{rec.desc}</p>
-          <p style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>{rec.durationWeeks} semanas · {rec.daysPerWeek} días/semana</p>
+          <p style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>{rec.durationWeeks} semanas · {rec.daysPerWeek} días/semana</p>
         </div>
-        <p className="muted" style={{ textAlign: "center", marginTop: 16 }}>¿Empezar este programa?</p>
         <button
-          className="btn-xl" onClick={() => { startProgram(rec.id); setObjectiveChoice(null); }}
-          style={{ marginTop: 10, background: rec.color, color: "#07070C" }}
+          className="btn-xl" onClick={() => { startProgram(rec.id); setTick((n) => n + 1); }}
+          style={{ marginTop: 16, background: rec.color, color: "#07070C", fontSize: 16 }}
         >
-          Sí, empezar
+          ▶ Empezar {rec.name}
         </button>
         <button
           className="btn-xl" onClick={() => setTrainStyle("__programs_screen")}
-          style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}
+          style={{ marginTop: 8, background: C.surface, border: `1px solid ${C.border}`, color: C.mut }}
         >
           Ver todos los programas
+        </button>
+        <button
+          onClick={() => setTrainStyle("manual")}
+          style={{ marginTop: 12, fontSize: 12, color: C.dim, fontWeight: 700, textAlign: "center", width: "100%", background: "none", border: "none" }}
+        >
+          Prefiero elegir yo mismo →
         </button>
       </div>
     );
@@ -8442,7 +8435,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   if (trainStyle === "__programs_screen") {
     return (
       <div className="screen">
-        <button onClick={() => { setTrainStyle("program"); setObjectiveChoice(null); }} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
+        <button onClick={() => setTrainStyle("program")} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Atrás</button>
         <ProgramsScreen />
       </div>
     );
@@ -8477,21 +8470,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   if (trainStyle === "auto") {
     const dp = getDailyPlan(sessions).plan;
     const info = describeDailyPlan(dp);
-    if (!energy) {
-      return (
-        <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800 }}>¿Cuánta energía tienes?</h2>
-          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-            {ENERGY_OPTIONS.map((o) => (
-              <button key={o.id} onClick={() => chooseEnergy(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
-                <div style={{ fontSize: 26 }}>{o.emoji}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>{o.label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
     return (
       <div className="screen fade-up" style={{ paddingTop: 20 }}>
         <div className="card" style={{ padding: 16, borderLeft: `4px solid ${info.color}` }}>
@@ -8739,36 +8717,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
               </button>
             </div>
 
-            <div className="sec-title">Modo especial</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button className="card" onClick={() => setSpecial("amrap")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-                <div style={{ fontSize: 22 }}>⏱</div>
-                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>AMRAP</div>
-              </button>
-              <button className="card" onClick={() => setSpecial("emom")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-                <div style={{ fontSize: 22 }}>🔔</div>
-                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>EMOM</div>
-              </button>
-              <button className="card" onClick={() => setSpecial("intervalos")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-                <div style={{ fontSize: 22 }}>📊</div>
-                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Intervalos</div>
-              </button>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button className="card" onClick={() => setSpecial("heavyduty")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-                <div style={{ fontSize: 22 }}>💀</div>
-                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Heavy Duty</div>
-              </button>
-              <button className="card" onClick={() => setSpecial("gvt")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-                <div style={{ fontSize: 22 }}>🔟</div>
-                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>GVT 10×10</div>
-              </button>
-              <button className="card" onClick={() => setSpecial("century")} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-                <div style={{ fontSize: 22 }}>💯</div>
-                <div style={{ fontSize: 11, fontWeight: 800, marginTop: 4 }}>Century</div>
-              </button>
-            </div>
-            <button className="card" onClick={() => setSpecial("reto")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.yellow}` }}>
+            <button className="card" onClick={() => setSpecial("reto")} style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.yellow}` }}>
               <span style={{ fontSize: 24 }}>🏆</span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800 }}>Reto Personal</div>
@@ -9165,6 +9114,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         msg: "Requiere 1RM registrado en los 4 ejercicios básicos. Ve a Progreso → Calculadora 1RM para registrarlos.",
         progress: `${WENDLER_EXERCISES.length - wendlerMissing.length}/${WENDLER_EXERCISES.length} 1RM registrados`,
       },
+      amrap: { ok: true },
+      emom: { ok: true },
+      intervalos: { ok: true },
     };
 
     const METHODOLOGIES = [
@@ -9174,6 +9126,9 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
       { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio", stats: "Series: 10 · Reps: 10 · Rest: 60s exactos" },
       { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones contra el reloj", stats: "Series: 1 · Reps: 100 · Rest: Cuando necesites" },
       { id: "wendler", emoji: "📈", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes", stats: "Series: 3 · Reps: 5/3/1+ · Rest: 3-5 min" },
+      { id: "amrap", emoji: "⏱", name: "AMRAP", desc: "Máximas rondas en tiempo límite", stats: "Tiempo: variable · Al máximo" },
+      { id: "emom", emoji: "🔔", name: "EMOM", desc: "Un ejercicio al inicio de cada minuto", stats: "Reps: 10-15 · Cada 60s" },
+      { id: "intervalos", emoji: "📊", name: "Intervalos / RSA", desc: "Alta intensidad con descansos controlados", stats: "Trabajo: 20-30s · Descanso: 40-60s" },
     ];
     return (
       <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
