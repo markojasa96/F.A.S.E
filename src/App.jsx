@@ -772,6 +772,7 @@ function acwrRecommendation(ratio) {
   };
 }
 
+// eslint-disable-next-line no-unused-vars -- ya no se usa en Home; se deja disponible para Progreso
 function AcwrCard({ sessions }) {
   const [expanded, setExpanded] = useState(false);
   const ratio = useMemo(() => calcACWR(sessions), [sessions]);
@@ -4182,6 +4183,65 @@ function focusGroupOf(label) {
   return "otro";
 }
 
+function hoursSinceTs(ts) {
+  return (Date.now() - ts) / 3600000;
+}
+
+function MuscleRecoveryCard({ sessions }) {
+  const recoveryData = useMemo(() => {
+    const groups = [
+      { key: "empuje", label: "Pecho/Hombros", hours: 48, icon: "💪" },
+      { key: "tiron", label: "Espalda/Bíceps", hours: 48, icon: "🏋️" },
+      { key: "piernas", label: "Piernas/Glúteos", hours: 72, icon: "🦵" },
+      { key: "core", label: "Core", hours: 24, icon: "🔥" },
+    ];
+
+    return groups.map(({ key, label, hours, icon }) => {
+      const lastSession = [...sessions]
+        .filter((s) => s.kind === "entreno" && (s.muscleGroup === key || focusGroupOf(s.focusLabel) === key))
+        .sort((a, b) => b.ts - a.ts)[0];
+
+      if (!lastSession) {
+        return { label, icon, pct: 100, ready: true };
+      }
+
+      const hoursSince = hoursSinceTs(lastSession.ts);
+      const pct = Math.min(100, Math.round((hoursSince / hours) * 100));
+      return {
+        label, icon, pct,
+        ready: pct >= 80,
+        hoursLeft: Math.max(0, Math.round(hours - hoursSince)),
+      };
+    });
+  }, [sessions]);
+
+  if (!sessions.some((s) => s.kind === "entreno")) return null;
+
+  return (
+    <div className="card" style={{ marginTop: 12 }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: C.mut, marginBottom: 10 }}>
+        💪 Recuperación muscular
+      </p>
+      {recoveryData.map(({ label, icon, pct, ready, hoursLeft }) => (
+        <div key={label} style={{ marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+            <span style={{ fontSize: 11, color: C.mut }}>{icon} {label}</span>
+            <span style={{ fontSize: 10, color: ready ? C.green : C.orange, fontWeight: 700 }}>
+              {ready ? "✓ Listo" : `${hoursLeft}h`}
+            </span>
+          </div>
+          <div style={{ height: 4, background: C.surface, borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${pct}%`, background: ready ? C.green : C.orange, borderRadius: 99, transition: "width 0.5s ease" }} />
+          </div>
+        </div>
+      ))}
+      <p style={{ fontSize: 9, color: C.dim, marginTop: 8, fontStyle: "italic" }}>
+        Estimado según intensidad registrada. Escucha siempre tu cuerpo.
+      </p>
+    </div>
+  );
+}
+
 /* Nivel del usuario centralizado: específico de disciplina → global → calculado del historial */
 function getUserLevel(discId) {
   const discLevel = store.get(`level_${discId}`, null);
@@ -5156,6 +5216,9 @@ const EXERCISE_GIFS = {
   "Peso muerto sumo": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Sumo_Deadlift/0.jpg",
   "Plancha frontal": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/0.jpg",
   "Sentadilla búlgara con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg",
+  "Cruce de poleas alto a bajo": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg",
+  "Extensión de cuádriceps": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/0.jpg",
+  "Curl femoral": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/0.jpg",
 };
 
 /* Placeholder limpio para ejercicios sin GIF mapeado (reemplaza el stickman CSS) */
@@ -6771,8 +6834,16 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
       {/* Stats */}
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <StatBox label="Esta semana" value={week} accent={C.cyan} />
-        <StatBox label="Este mes" value={sessions.filter((s) => s.ts >= monthStart.getTime()).length} accent={C.orange} />
-        <StatBox label="Total sesiones" value={sessions.length} accent={C.green} />
+        <StatBox
+          label="Este mes"
+          value={sessions.filter((s) => {
+            const d = new Date(s.ts);
+            const now = new Date();
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && s.kind === "entreno";
+          }).length}
+          accent={C.purple}
+        />
+        <StatBox label="Total" value={sessions.filter((s) => s.kind === "entreno").length} accent={C.green} />
       </div>
 
       {(() => {
@@ -6787,7 +6858,7 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
           </div>
         );
       })()}
-      <AcwrCard sessions={sessions} />
+      <MuscleRecoveryCard sessions={sessions} />
       <PlanPeriodizationCard sessions={sessions} />
       <DeloadBanner sessions={sessions} />
 
@@ -9629,7 +9700,7 @@ function EducationScreen({ plan, eduText, onDone }) {
   );
 }
 
-function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, onToggleVoice, onViewStats, name, onMentor }) {
+function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, name, onMentor }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
   const [phase, setPhase] = useState("education"); // education | warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
@@ -9643,14 +9714,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [rightW, setRightW] = useState("");
   const [field, setField] = useState(() => (plan.exercises[0].type === "peso" ? "weight" : "reps"));
   const [repsError, setRepsError] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [flashDone, setFlashDone] = useState(false);
   const [sessionSecs, setSessionSecs] = useState(0);
   const [confetti, setConfetti] = useState(false);
   const [flashWhite, setFlashWhite] = useState(false);
   const [photoFinish, setPhotoFinish] = useState(false);
   const recordCelebratedRef = useRef(false);
-  const [liveMode, setLiveMode] = useState(false);
   const [justWarmedUp, setJustWarmedUp] = useState(false);
   const [pendingLogs, setPendingLogs] = useState(null);
   const [lastRecord, setLastRecord] = useState(null);
@@ -9752,24 +9821,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       store.set(streakKey, 0);
     }
   };
-  const wakeLockRef = useRef(null);
-
-  const toggleLiveMode = async () => {
-    const next = !liveMode;
-    setLiveMode(next);
-    try {
-      if (next && navigator.wakeLock) {
-        wakeLockRef.current = await navigator.wakeLock.request("screen");
-      } else if (wakeLockRef.current) {
-        wakeLockRef.current.release();
-        wakeLockRef.current = null;
-      }
-    } catch {
-      /* Wake Lock no soportado: continúa sin bloquear pantalla */
-    }
-  };
-
-  useEffect(() => () => { if (wakeLockRef.current) wakeLockRef.current.release(); }, []);
   /* Cancela cualquier voz pendiente al salir de la sesión */
   useEffect(() => () => { if (window.speechSynthesis) window.speechSynthesis.cancel(); }, []);
 
@@ -10153,7 +10204,10 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   };
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const quit = () => setShowExitConfirm(true);
+  const quit = () => {
+    document.activeElement?.blur();
+    setTimeout(() => setShowExitConfirm(true), 150);
+  };
 
   const completedExCount = logs.filter((arr) => arr.some((s) => s.ok)).length;
   const completedSetCount = logs.reduce((a, arr) => a + arr.filter((s) => s.ok).length, 0);
@@ -10481,23 +10535,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         <button
           className="btn-xl slide-up-fade"
           onClick={async () => {
-            const lvlName = LEVELS[plan.lvlIdx]?.name || "";
-            const text = `Completé ${okSets} series en ${plan.discLabel} nivel ${lvlName} con F.A.S.E. 💪 f-a-s-e.vercel.app`;
-            try {
-              await navigator.clipboard.writeText(text);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            } catch {
-              /* portapapeles no disponible */
-            }
-          }}
-          style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14, animationDelay: "300ms" }}
-        >
-          {copied ? "¡Copiado!" : "📤 Compartir"}
-        </button>
-        <button
-          className="btn-xl"
-          onClick={async () => {
             const d = new Date();
             const dateStr = d.toLocaleDateString("es", { day: "numeric", month: "long" });
             const timeStr = d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
@@ -10534,7 +10571,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
               /* portapapeles no disponible */
             }
           }}
-          style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
+          style={{ marginTop: 14, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14, animationDelay: "300ms" }}
         >
           📋 Copiar resumen
         </button>
@@ -10544,15 +10581,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
               <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>¡Resumen copiado! Compártelo donde quieras 📤</p>
             </div>
           </div>
-        )}
-        {onViewStats && (
-          <button
-            className="btn-xl"
-            onClick={onViewStats}
-            style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text, fontSize: 14 }}
-          >
-            📊 Ver estadísticas
-          </button>
         )}
         <button
           className="btn-xl"
@@ -10674,7 +10702,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const doneSets = logs[exIdx];
   const showQuickBreath = exIdx === 0 && setNum === 0 && phase === "work" && !quickBreathDone && store.get("breathing_pref", true);
   return (
-    <div className={`screen session-rise ${liveMode ? "live-mode" : ""}`} style={{ paddingBottom: 30, position: "relative" }}>
+    <div className="screen session-rise" style={{ paddingBottom: 30, position: "relative" }}>
       {showQuickBreath && <QuickBreath onDone={() => setQuickBreathDone(true)} />}
       {showFullBreathing && (
         <div style={{ position: "fixed", inset: 0, zIndex: 260 }}>
@@ -10695,7 +10723,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <div
             onClick={(e) => e.stopPropagation()}
             className="card"
-            style={{ width: "100%", maxWidth: 430, textAlign: "center", padding: "20px 20px calc(20px + env(safe-area-inset-bottom))", borderRadius: "20px 20px 0 0", animation: "sheetUp 0.3s ease-out" }}
+            style={{ width: "100%", maxWidth: 430, textAlign: "center", padding: "20px 20px calc(40px + env(safe-area-inset-bottom))", borderRadius: "20px 20px 0 0", animation: "sheetUp 0.3s ease-out" }}
           >
             <p style={{ fontSize: 16, fontWeight: 800 }}>¿Salir de la sesión?</p>
             <p style={{ fontSize: 13, color: C.mut, marginTop: 6 }}>
@@ -10791,12 +10819,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           })()}
           <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center" }}>
             <button onClick={() => setShowQuickNote((v) => !v)} aria-label="Nota rápida" style={{ fontSize: 18, padding: 4 }}>📝</button>
-            <button onClick={onToggleVoice} aria-label="Alternar voz" style={{ fontSize: 18, padding: 4 }}>
-              {voiceOn ? "🔊" : "🔈"}
-            </button>
-            <button onClick={toggleLiveMode} aria-label="Modo pantalla activa" style={{ fontSize: 18, padding: 4 }}>
-              {liveMode ? "👁️‍🗨️" : "👁️"}
-            </button>
             <button onClick={() => setShowFullBreathing(true)} aria-label="Respiración guiada" style={{ fontSize: 18, padding: 4 }}>🫁</button>
           </div>
           {showQuickNote && (
@@ -14540,11 +14562,9 @@ export default function App() {
         onSave={saveSession}
         onSaveNote={updateSessionNote}
         onClose={() => { setLive(null); setTab("inicio"); }}
-        onViewStats={() => { setLive(null); setTab("yo"); setYoSection("progreso"); }}
         name={name}
         onMentor={triggerMentor}
         voiceOn={voiceOn}
-        onToggleVoice={() => setVoiceOn((v) => { const next = !v; store.set("voice", next); return next; })}
       />
     );
   }
