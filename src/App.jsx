@@ -1328,6 +1328,7 @@ const GOAL_CONTEXT_COPY = {
   aesthetics: "Contracción consciente. Forma. 🎨",
   recomposition: "Músculo en, grasa fuera. ⚖️",
 };
+// eslint-disable-next-line no-unused-vars -- ya no se usa en ActiveSession (banner eliminado); se deja disponible para uso futuro
 function goalContextCopy() {
   const goal = getTrainingGoal();
   if (!goal) return null;
@@ -4866,15 +4867,17 @@ function DeloadBanner({ sessions }) {
 const ALL_ZONES = ["pecho", "espalda", "hombros", "brazos", "core", "piernas", "gluteos"];
 const FOCUS_ZONES = {
   gimnasio: {
+    push: ["pecho", "hombros", "brazos"],
+    pull: ["espalda", "brazos"],
+    legs: ["piernas", "gluteos"],
+    upper: ["pecho", "espalda", "hombros", "brazos"],
+    lower: ["piernas", "gluteos"],
+    full_body: ALL_ZONES,
+    glutes_focus: ["gluteos", "piernas"],
+    v_shape: ["espalda", "hombros"],
+    core: ["core"],
+    arms: ["brazos"],
     todo: ALL_ZONES,
-    pecho: ["pecho"],
-    espalda: ["espalda"],
-    hombros: ["hombros"],
-    brazos: ["brazos"],
-    piernas: ["piernas"],
-    gluteos: ["gluteos"],
-    sup: ["pecho", "espalda", "hombros", "brazos"],
-    inf: ["piernas", "gluteos"],
   },
   calistenia: {
     todo: ALL_ZONES,
@@ -8299,7 +8302,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   /* La energía elegida se recuerda durante el día */
   const [energy, setEnergy] = useState(() => {
     const saved = store.get("energy", null);
-    return saved && saved.day === todayKey() ? saved.value : null;
+    return saved && saved.day === todayKey() ? saved.value : "mid";
   });
   /* Modo de entrenamiento global (auto/programa/manual) — solo se pregunta la primera vez */
   const [trainStyle, setTrainStyle] = useState(() => store.get("train_mode", null));
@@ -8968,28 +8971,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     );
   }
 
-  /* ── Pregunta rápida de energía antes de los selectores ── */
-  if (!energy) {
-    return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 40 }}>
-        <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
-          ‹ Disciplinas
-        </button>
-        <div style={{ fontSize: 44, marginTop: 20 }}>{disc.icon}</div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 12 }}>¿Cómo tienes la energía hoy?</h2>
-        <p className="muted" style={{ marginTop: 6 }}>La sesión se ajusta a tu día</p>
-        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          {ENERGY_OPTIONS.map((o) => (
-            <button key={o.id} onClick={() => chooseEnergy(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
-              <div style={{ fontSize: 30 }}>{o.emoji}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, marginTop: 8 }}>{o.label}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   /* ── Calistenia: preguntar Parque o Casa antes del enfoque ── */
   if (discId === "calistenia" && !calLocation) {
     return (
@@ -9462,6 +9443,15 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         ))}
       </div>
 
+      <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, textAlign: "center" }}>¿Cuánta energía tienes hoy?</p>
+      <div className="chip-wrap" style={{ marginTop: 4, justifyContent: "center" }}>
+        {ENERGY_OPTIONS.map((o) => (
+          <button key={o.id} className={`chip ${energy === o.id ? "on" : ""}`} onClick={() => chooseEnergy(o.id)}>
+            {o.emoji} {o.label}
+          </button>
+        ))}
+      </div>
+
       {dupType && (
         <div style={{ marginTop: 12, textAlign: "center" }}>
           <span style={{
@@ -9692,28 +9682,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     return () => clearTimeout(t);
   }, [justWarmedUp]);
 
-  const [showGestureOverlay, setShowGestureOverlay] = useState(() => store.get("session_count", 0) === 0);
-  const [showStep4, setShowStep4] = useState(() => store.get("session_count", 0) === 0 && !store.get("tutorial_done", false));
-  const [showGoalBanner, setShowGoalBanner] = useState(() => !!goalContextCopy());
   const restRef = useRef(0);
   const touchYRef = useRef(null);
 
   useEffect(() => {
     store.set("session_count", store.get("session_count", 0) + 1);
     store.set("tutorial_done", true);
-    if (showStep4) {
-      const t = setTimeout(() => setShowStep4(false), 3000);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!showGoalBanner) return undefined;
-    const t = setTimeout(() => setShowGoalBanner(false), 3000);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* El cronómetro real arranca cuando empieza el trabajo (no cuenta el calentamiento) */
   const [startTs, setStartTs] = useState(null);
@@ -10611,32 +10585,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
               Salir sin guardar
             </button>
           </div>
-        </div>
-      )}
-      {showGestureOverlay && (
-        <button
-          onClick={() => setShowGestureOverlay(false)}
-          aria-label="Cerrar guía de gestos"
-          style={{
-            position: "fixed", inset: 0, zIndex: 260, background: "rgba(0,0,0,0.75)",
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center", padding: 24,
-          }}
-        >
-          <p style={{ fontSize: 34 }}>↑</p>
-          <p style={{ fontSize: 15, color: "#fff", fontWeight: 700 }}>Desliza arriba para completar serie</p>
-          <p style={{ fontSize: 34, marginTop: 10 }}>↓</p>
-          <p style={{ fontSize: 15, color: "#fff", fontWeight: 700 }}>Desliza abajo si no pudiste</p>
-          <p style={{ fontSize: 12, color: C.mut, marginTop: 16 }}>Toca en cualquier lugar para continuar</p>
-        </button>
-      )}
-      {showStep4 && (
-        <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, textAlign: "center", padding: 14, borderColor: `${C.green}66` }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: C.green }}>¡Perfecto! La sesión empieza ahora</p>
-        </div>
-      )}
-      {showGoalBanner && goalContextCopy() && (
-        <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, textAlign: "center", padding: 14, borderColor: `${plan.discColor || C.cyan}66` }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: plan.discColor || C.cyan }}>{goalContextCopy()}</p>
         </div>
       )}
       {justWarmedUp && (
