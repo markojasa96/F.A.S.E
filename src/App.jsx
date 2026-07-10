@@ -1559,7 +1559,7 @@ const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 /* ─── Héroes por racha (escala histórica, 12 niveles desde 0 días) ─── */
 const HEROES = [
   { id: "recluta", days: 0, emoji: "🌱", name: "Recluta", quote: "El primer paso es el más difícil. Ya lo diste.", color: C.mut },
-  { id: "atleta", days: 7, emoji: "🏃", name: "Atleta", quote: "Una semana de consistencia. El hábito empieza aquí.", color: C.green },
+  { id: "atleta", days: 7, emoji: "🏃", name: "Atleta", quote: "Una semana seguida. El hábito empieza aquí.", color: C.green },
   { id: "competidor", days: 21, emoji: "💪", name: "Competidor", quote: "21 días. Tu cuerpo ya cambió aunque no lo veas.", color: C.cyan },
   { id: "avanzado", days: 45, emoji: "⚡", name: "Avanzado", quote: "45 días. Lo que era esfuerzo ahora es rutina.", color: C.yellow },
   { id: "elite", days: 90, emoji: "🔥", name: "Élite", quote: "3 meses. Estás en el 5% que sí lo hace.", color: C.orange },
