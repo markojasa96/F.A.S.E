@@ -783,18 +783,6 @@ function EmptyHistoryIllustration() {
   );
 }
 
-function EmptyRecordsIllustration() {
-  return (
-    <svg width="80" height="100" viewBox="0 0 80 100">
-      <path d="M20,10 h40 v30 a20,20 0 0,1 -40,0 z" fill="none" stroke="#4E4E70" strokeWidth="2" />
-      <line x1="40" y1="60" x2="40" y2="75" stroke="#4E4E70" strokeWidth="2" />
-      <rect x="25" y="75" width="30" height="8" rx="4" fill="#4E4E70" />
-      <rect x="32" y="30" width="16" height="12" rx="3" fill="#FFD600" opacity="0.8" />
-      <path d="M35,30 a5,5 0 0,1 10,0" fill="none" stroke="#FFD600" strokeWidth="2" opacity="0.8" />
-    </svg>
-  );
-}
-
 function EmptyProgressIllustration() {
   return (
     <svg width="140" height="90" viewBox="0 0 140 90">
@@ -1100,13 +1088,6 @@ function QuickBreath({ onDone }) {
 
 /* ─── Selector rápido de RPE tras cada serie exitosa ─── */
 const RPE_COLORS = { 6: C.green, 7: "#8BC34A", 8: C.yellow, 9: C.orange, 10: C.red };
-
-// eslint-disable-next-line no-unused-vars -- ya no se usa en RpeOverlay; se deja disponible para uso interno
-const TECHNIQUE_CHIPS = [
-  { id: 3, emoji: "✅", label: "Perfecta", color: C.green },
-  { id: 2, emoji: "⚡", label: "Bien", color: C.cyan },
-  { id: 1, emoji: "⚠️", label: "Fallo", color: C.yellow },
-];
 
 function RpeOverlay({ rpeFor, onPick }) {
   if (!rpeFor) return null;
@@ -8490,9 +8471,11 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             <p style={{ fontSize: 13, color: C.mut }}>Hoy toca descanso 🧘 — Semana {active.week} de {active.program.name}</p>
           </div>
         )}
-        <div style={{ marginTop: 14 }}>
-          <ProgramsScreen />
-        </div>
+        {!active && (
+          <div style={{ marginTop: 14 }}>
+            <ProgramsScreen />
+          </div>
+        )}
         <button onClick={() => setTrainStyle(null)} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 700 }}>Cambiar modo de entrenamiento</button>
       </div>
     );
@@ -12895,6 +12878,39 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           </div>
         )}
 
+        {records.length > 0 && (
+          <>
+            <div className="sec-title">🏆 Mis récords</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {records.slice(0, 3).map((r) => {
+                const isNew = now - r.ts <= 14 * 86400000;
+                const d = DISCIPLINES[r.disc];
+                return (
+                  <button
+                    key={r.name}
+                    className="card"
+                    onClick={() => setRecordDetail(r.name)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left" }}
+                  >
+                    <span style={{ fontSize: 20 }}>{d?.icon || "🏅"}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
+                      <div style={{ fontSize: 11, color: C.mut }}>
+                        {r.weight > 0 ? `${r.weight} kg × ${r.reps} reps` : `${r.reps} reps`} · {timeAgo(r.ts)}
+                      </div>
+                    </div>
+                    {isNew && (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: C.orange, background: "rgba(255,122,47,0.15)", padding: "3px 7px", borderRadius: 99, flexShrink: 0 }}>
+                        NUEVO 🔥
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
         <div className="card" style={{ marginTop: 10, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>⭐ Puntos de esfuerzo</span>
           <span style={{ fontSize: 15, fontWeight: 900, color: C.cyan }}>{xpInfo.xp}</span>
@@ -13020,46 +13036,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
             </>
           );
         })()}
-
-        <div className="sec-title">🏆 Mis récords</div>
-        {records.length === 0 ? (
-          <div className="card">
-            <EmptyState
-              icon={<EmptyRecordsIllustration />}
-              title="Sin récords todavía"
-              subtitle="Completa tu primera sesión para empezar a registrarlos."
-              color={C.yellow}
-            />
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {records.map((r) => {
-              const isNew = now - r.ts <= 14 * 86400000;
-              const d = DISCIPLINES[r.disc];
-              return (
-                <button
-                  key={r.name}
-                  className="card"
-                  onClick={() => setRecordDetail(r.name)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left" }}
-                >
-                  <span style={{ fontSize: 20 }}>{d?.icon || "🏅"}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
-                    <div style={{ fontSize: 11, color: C.mut }}>
-                      {r.weight > 0 ? `${r.weight} kg × ${r.reps} reps` : `${r.reps} reps`} · {timeAgo(r.ts)}
-                    </div>
-                  </div>
-                  {isNew && (
-                    <span style={{ fontSize: 10, fontWeight: 800, color: C.orange, background: "rgba(255,122,47,0.15)", padding: "3px 7px", borderRadius: 99, flexShrink: 0 }}>
-                      NUEVO 🔥
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
 
         <div className="sec-title">Escalera de niveles</div>
         <div className="card" style={{ display: "flex", justifyContent: "space-between", padding: "14px 12px" }}>
@@ -13579,6 +13555,18 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart,
           <div>
             <div style={{ fontSize: 15, fontWeight: 800 }}>Mi progreso</div>
             <div style={{ fontSize: 12, color: C.mut }}>Récords, estadísticas, DNA atlético, logros y más</div>
+          </div>
+          <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
+        </button>
+        <button
+          onClick={() => onSection("cuerpo")}
+          className="card"
+          style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", padding: 16, marginTop: 8 }}
+        >
+          <span style={{ fontSize: 28 }}>🧘</span>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>Movilidad y recuperación</div>
+            <div style={{ fontSize: 12, color: C.mut }}>Estiramientos, movilidad articular y recuperación activa</div>
           </div>
           <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
         </button>
@@ -14227,7 +14215,11 @@ export default function App() {
                       const p = buildPlanFor(discId, focusId, lvlIdx);
                       if (p) setLive(p);
                     }}
-                    onRepeat={(session) => { const p = planFromSession(session); if (p) setLive(p); }}
+                    onRepeat={(session) => {
+                      if (session.disc === "cuerpo") { setYoSection("cuerpo"); changeTab("yo"); return; }
+                      const p = planFromSession(session);
+                      if (p) setLive(p);
+                    }}
                     broken={freezeInfo.broken} canFreeze={freezeInfo.canFreeze} onFreeze={useFreeze}
                     onDeleteSession={deleteSession}
                     onSaveMatch={saveSession}
