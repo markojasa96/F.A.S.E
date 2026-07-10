@@ -1253,13 +1253,14 @@ function QuickBreath({ onDone }) {
 /* ─── Selector rápido de RPE tras cada serie exitosa ─── */
 const RPE_COLORS = { 6: C.green, 7: "#8BC34A", 8: C.yellow, 9: C.orange, 10: C.red };
 
+// eslint-disable-next-line no-unused-vars -- ya no se usa en RpeOverlay; se deja disponible para uso interno
 const TECHNIQUE_CHIPS = [
   { id: 3, emoji: "✅", label: "Perfecta", color: C.green },
   { id: 2, emoji: "⚡", label: "Bien", color: C.cyan },
   { id: 1, emoji: "⚠️", label: "Fallo", color: C.yellow },
 ];
 
-function RpeOverlay({ rpeFor, onPick, onPickTechnique, techniqueSelected }) {
+function RpeOverlay({ rpeFor, onPick }) {
   if (!rpeFor) return null;
   return (
     <div className="card fade-up" style={{ position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 150, maxWidth: 430, margin: "0 auto" }}>
@@ -1271,21 +1272,6 @@ function RpeOverlay({ rpeFor, onPick, onPickTechnique, techniqueSelected }) {
             style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontWeight: 800, fontSize: 13, background: RPE_COLORS[v], color: "#07070C" }}
           >
             {v}
-          </button>
-        ))}
-      </div>
-      <p style={{ fontSize: 11, fontWeight: 700, color: C.mut, textAlign: "center", marginTop: 8 }}>Técnica</p>
-      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-        {TECHNIQUE_CHIPS.map((t) => (
-          <button
-            key={t.id} onClick={() => onPickTechnique(rpeFor.exIdx, rpeFor.setIdx, t.id)}
-            style={{
-              flex: 1, padding: "6px 0", borderRadius: 10, fontWeight: 700, fontSize: 11,
-              background: techniqueSelected === t.id ? `${t.color}33` : C.surface,
-              border: `1px solid ${techniqueSelected === t.id ? t.color : C.border}`, color: C.text,
-            }}
-          >
-            {t.emoji} {t.label}
           </button>
         ))}
       </div>
@@ -1944,7 +1930,7 @@ const EXDB = {
     { n: "Plancha con toque de hombro", t: "reps", f: ["core"], lv: [2, 3], s: 3, r: "16", rest: 45, tip: "Caderas no rotan al tocar. Eso es lo que activa el core profundo." },
     { n: "Ab wheel completo", t: "reps", f: ["core"], lv: [2, 3], s: 3, r: "8", rest: 60, tip: "El ejercicio de core más efectivo. Extiende hasta casi el suelo. Lumbar neutral." },
     { n: "Hanging knee raise", t: "reps", f: ["core"], lv: [2, 3], s: 3, r: "12", rest: 60, tip: "Colgado de la barra. Rodillas al pecho sin balancearse. Baja lento." },
-    { n: "Pallof press", t: "peso", f: ["core"], lv: [2, 3], s: 3, r: "12 c/lado", rest: 45, tip: "Anti-rotación. Extiende los brazos y resiste que la polea te gire." },
+    { n: "Pallof press", t: "peso", f: ["core"], lv: [2, 3], s: 3, r: "12 c/lado", rest: 45, tip: "Anti-rotación. Extiende los brazos y resiste que la polea te gire.", desc: "Resistencia antirotacional con polea o banda. Los brazos se extienden, el core no debe girar." },
     { n: "Hanging leg raise (piernas rectas)", t: "reps", f: ["core"], lv: [3, 4], s: 4, r: "10", rest: 60, tip: "Piernas rectas al frente hasta 90°. Sin balanceo. Control total en la bajada." },
     { n: "Plancha con peso", t: "reps", f: ["core"], lv: [3, 4], s: 4, r: "40s", rest: 60, tip: "Plato en la espalda baja. Mantén la posición perfecta bajo carga." },
     { n: "L-sit en paralelas o suelo", t: "reps", f: ["core"], lv: [4, 5], s: 5, r: "10s", rest: 60, tip: "Piernas horizontales con brazos rectos. Compresión máxima de core." },
@@ -2041,7 +2027,7 @@ const EXDB = {
     { n: "Elevación de talones con peso", t: "peso", f: ["fuerza", "salto"], lv: [0, 5], s: 4, r: "12-15", rest: 60, tip: "Pantorrillas fuertes = más sprint y más salto." },
     { n: "Plancha lateral con elevación de pierna", t: "tiempo", f: ["estabilidad"], lv: [0, 3], s: 3, r: "20s c/lado", rest: 45, tip: "Cadera alta y pierna superior elevada." },
     { n: "Peso muerto a una pierna con mancuerna", t: "peso", f: ["estabilidad", "fuerza"], lv: [1, 4], s: 3, r: "8 c/pierna", rest: 90, tip: "Cadera cuadrada: equilibrio antes que peso." },
-    { n: "Pallof press en polea", t: "peso", f: ["estabilidad"], lv: [1, 4], s: 3, r: "10 c/lado", rest: 60, tip: "Resiste la rotación con los brazos extendidos al frente." },
+    { n: "Pallof press en polea", t: "peso", f: ["estabilidad"], lv: [1, 4], s: 3, r: "10 c/lado", rest: 60, tip: "Resiste la rotación con los brazos extendidos al frente.", desc: "De pie de lado a la polea. Extiende los brazos al frente resistiendo que te giren. Core antirotacional." },
     { n: "Sentadilla a una pierna al banco", t: "reps", f: ["estabilidad", "fuerza"], lv: [0, 3], s: 3, r: "8 c/pierna", rest: 90, tip: "Baja al banco sin dejarte caer, rodilla alineada." },
     { n: "Plancha con arrastre de mancuerna", t: "reps", f: ["estabilidad"], lv: [1, 4], s: 3, r: "10", rest: 60, tip: "La cadera no gira mientras cruzas la mancuerna." },
     { n: "Bicicleta estática (intervalos)", t: "tiempo", f: ["resistencia"], lv: [0, 5], s: 4, r: "30s fuerte / 60s suave", rest: 60, tip: "Piernas rápidas y respiración con ritmo." },
@@ -3979,7 +3965,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     }
     const scheme = e.t === "peso" && sets >= 3 && !deloadActive ? schemeForExercise(effLvlIdx, i, chosen.length) : "standard";
     const name = deloadActive ? (DELOAD_SUBSTITUTES[e.n] || e.n) : e.n;
-    return { name, type: e.t, sets, reps: e.r, rest, tip: e.tip, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
+    return { name, type: e.t, sets, reps: e.r, rest, tip: e.tip, desc: e.desc, tag: e.f ? e.f[0] : null, intensity: scaling.intensityLabel, scheme };
   });
   let sorted = sortExercises(built);
   if (discId !== "gimnasio") return sorted;
@@ -4551,7 +4537,7 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
     if (grp === "piernas") {
       return [
         { discId: "gimnasio", focusId: "upper", lvlIdx, reason: "Ayer trabajaste Legs, hoy toca Upper." },
-        { discId: "futbolGym", focusId: "todo", lvlIdx, reason: "Alternativa: fútbol." },
+        { discId: store.get("last_futbol_location", "futbolParque"), focusId: "todo", lvlIdx, reason: "Alternativa: fútbol." },
       ];
     }
     if (grp === "fullbody") {
@@ -5213,24 +5199,25 @@ const EXERCISE_GIFS = {
 };
 
 /* Placeholder limpio para ejercicios sin GIF mapeado (reemplaza el stickman CSS) */
-function ExercisePlaceholder({ name }) {
+function ExercisePlaceholder({ name, tip, desc }) {
   const emoji = getExerciseEmoji(name);
   return (
     <div
       style={{
-        width: "100%", aspectRatio: "4/3", maxHeight: 160, borderRadius: 12,
+        width: "100%", borderRadius: 12,
         background: "var(--surface)", border: "1px solid var(--border)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        gap: 8, marginTop: 12,
+        padding: "16px 14px", marginTop: 12,
       }}
     >
-      <span style={{ fontSize: 48 }}>{emoji}</span>
-      <span style={{ fontSize: 11, color: "var(--dim)" }}>{name}</span>
+      <span style={{ fontSize: 40 }}>{emoji}</span>
+      <p style={{ fontSize: 14, fontWeight: 800, marginTop: 8, color: "var(--text)" }}>{name}</p>
+      {tip && <p style={{ fontSize: 12, color: "var(--mut)", marginTop: 6, lineHeight: 1.5 }}>{tip}</p>}
+      {desc && <p style={{ fontSize: 11, color: "var(--dim)", marginTop: 6, lineHeight: 1.5 }}>{desc}</p>}
     </div>
   );
 }
 
-function ExerciseDemo({ exerciseName }) {
+function ExerciseDemo({ exerciseName, tip, desc }) {
   const [imgError, setImgError] = useState(false);
   const gifUrl = EXERCISE_GIFS[exerciseName];
 
@@ -5252,7 +5239,7 @@ function ExerciseDemo({ exerciseName }) {
     );
   }
 
-  return <ExercisePlaceholder name={exerciseName} />;
+  return <ExercisePlaceholder name={exerciseName} tip={tip} desc={desc} />;
 }
 
 /* Cronómetro integrado para ejercicios de tipo "tiempo" */
@@ -9040,7 +9027,12 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         <p className="muted" style={{ marginTop: 6 }}>Elige tu entorno de hoy</p>
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
           {FUTBOL_LOCATIONS.map((o) => (
-            <button key={o.id} onClick={() => setDiscId(o.id)} className="card" style={{ flex: 1, padding: "18px 8px" }}>
+            <button
+              key={o.id}
+              onClick={() => { setDiscId(o.id); store.set("last_futbol_location", o.id); }}
+              className="card"
+              style={{ flex: 1, padding: "18px 8px", border: store.get("last_futbol_location", null) === o.id ? `2px solid ${C.orange}` : undefined }}
+            >
               <div style={{ fontSize: 30 }}>{o.emoji}</div>
               <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8 }}>{o.label}</div>
               <div style={{ fontSize: 11, color: C.mut, marginTop: 3 }}>{o.desc}</div>
@@ -9703,6 +9695,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [reps, setReps] = useState("");
   const [leftW, setLeftW] = useState("");
   const [rightW, setRightW] = useState("");
+  const [weightUnit, setWeightUnit] = useState(() => store.get("weight_unit", "kg"));
   const [field, setField] = useState(() => (plan.exercises[0].type === "peso" ? "weight" : "reps"));
   const [repsError, setRepsError] = useState(false);
   const [flashDone, setFlashDone] = useState(false);
@@ -9720,8 +9713,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [rpeFor, setRpeFor] = useState(null);
   const rpeTimeoutRef = useRef(null);
-  const [techniqueSelected, setTechniqueSelected] = useState(null);
-  const techniqueTimeoutRef = useRef(null);
   const [setBadge, setSetBadge] = useState(null);
   const setBadgeTimeoutRef = useRef(null);
   useEffect(() => () => clearTimeout(setBadgeTimeoutRef.current), []);
@@ -9760,7 +9751,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [showFullBreathing, setShowFullBreathing] = useState(false);
   const [quickBreathDone, setQuickBreathDone] = useState(false);
 
-  useEffect(() => () => { clearTimeout(rpeTimeoutRef.current); clearTimeout(techniqueTimeoutRef.current); }, []);
+  useEffect(() => () => clearTimeout(rpeTimeoutRef.current), []);
 
   const showAutoBadge = (text) => {
     clearTimeout(autoDefaultTimeoutRef.current);
@@ -9772,13 +9763,10 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     clearTimeout(rpeTimeoutRef.current);
     setLogs((prev) => prev.map((arr, i) => (i === exI ? arr.map((s, j) => (j === setI ? { ...s, rpe: value } : s)) : arr)));
     setRpeFor(null);
-    setTechniqueSelected(null);
     if (isAuto) showAutoBadge(`Auto: RPE ${value}`);
   };
 
   const applyTechnique = (exI, setI, value, isAuto = false) => {
-    clearTimeout(techniqueTimeoutRef.current);
-    setTechniqueSelected(value);
     setLogs((prev) => prev.map((arr, i) => (i === exI ? arr.map((s, j) => (j === setI ? { ...s, technique: value } : s)) : arr)));
     if (isAuto) showAutoBadge("Auto: Técnica: Bien");
     if (value === 1) {
@@ -10097,10 +10085,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     if (ok && navigator.vibrate) navigator.vibrate(50);
     const repsVal = repsOverride !== null ? repsOverride : parseInt(reps, 10) || 0;
     const unilateral = isUnilateral(ex.name);
-    const lw = parseFloat(leftW) || 0;
-    const rw = parseFloat(rightW) || 0;
+    const toKg = (v) => (weightUnit === "lbs" ? v / 2.205 : v);
+    const lw = toKg(parseFloat(leftW) || 0);
+    const rw = toKg(parseFloat(rightW) || 0);
+    const weightInKg = toKg(parseFloat(weight) || 0);
     const entry = {
-      reps: repsVal, weight: unilateral ? Math.max(lw, rw) : (parseFloat(weight) || 0), ok,
+      reps: repsVal, weight: unilateral ? Math.max(lw, rw) : weightInKg, ok,
       ...(unilateral && (lw > 0 || rw > 0) ? { leftWeight: lw, rightWeight: rw } : {}),
     };
     const updatedLogs = logs.map((arr, i) => (i === exIdx ? [...arr, entry] : arr));
@@ -10118,11 +10108,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
       const thisExIdx = exIdx;
       const thisSetIdx = updatedLogs[exIdx].length - 1;
       setRpeFor({ exIdx: thisExIdx, setIdx: thisSetIdx });
-      setTechniqueSelected(null);
       clearTimeout(rpeTimeoutRef.current);
       rpeTimeoutRef.current = setTimeout(() => applyRpe(thisExIdx, thisSetIdx, 7, true), 5000);
-      clearTimeout(techniqueTimeoutRef.current);
-      techniqueTimeoutRef.current = setTimeout(() => applyTechnique(thisExIdx, thisSetIdx, 2, true), 4000);
+      applyTechnique(thisExIdx, thisSetIdx, 2);
 
       /* Feedback inmediato: compara con el récord y la sesión anterior */
       if (ex.type === "peso" && entry.weight > 0) {
@@ -10597,7 +10585,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           padding: "0 20px calc(20px + env(safe-area-inset-bottom))",
         }}
       >
-        <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} onPickTechnique={applyTechnique} techniqueSelected={techniqueSelected} />
+        <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
         {autoDefaultBadge && (
           <div className="pop" style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 300, background: C.card, border: `1px solid ${C.cyan}`, borderRadius: 99, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: C.cyan }}>
             {autoDefaultBadge}
@@ -10700,7 +10688,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <BreathingScreen onDone={() => setShowFullBreathing(false)} voiceOn={voiceOn} />
         </div>
       )}
-      <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} onPickTechnique={applyTechnique} techniqueSelected={techniqueSelected} />
+      <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
         {autoDefaultBadge && (
           <div className="pop" style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 300, background: C.card, border: `1px solid ${C.cyan}`, borderRadius: 99, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: C.cyan }}>
             {autoDefaultBadge}
@@ -10891,7 +10879,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
             {ex.superset === "giant" ? "⚡ GIANT SET" : `🔄 SUPERSET ${ex.superset}`}
           </span>
         )}
-        <ExerciseDemo exerciseName={ex.name} />
+        <ExerciseDemo exerciseName={ex.name} tip={ex.tip} desc={ex.desc} />
         <h2 style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25, marginTop: 12 }}>{ex.name}</h2>
         <p style={{ marginTop: 8, fontSize: 14 }}>
           <span style={{ color: plan.discColor, fontWeight: 800 }}>{ex.sets} series</span>
@@ -11142,7 +11130,38 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         </>
       ) : phase === "work" ? (
         <>
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          {ex.type === "peso" && (
+            <div style={{
+              display: "flex", gap: 0, border: `1px solid ${C.border}`, borderRadius: 8,
+              overflow: "hidden", width: "fit-content", margin: "16px auto 0",
+            }}>
+              {["kg", "lbs"].map((unit) => (
+                <button
+                  key={unit}
+                  onClick={() => {
+                    if (weight !== "") {
+                      const val = parseFloat(weight);
+                      if (!isNaN(val)) {
+                        const converted = unit === "lbs" ? Math.round(val * 2.205 * 4) / 4 : Math.round((val / 2.205) * 4) / 4;
+                        setWeight(String(converted));
+                      }
+                    }
+                    setWeightUnit(unit);
+                    store.set("weight_unit", unit);
+                  }}
+                  style={{
+                    padding: "4px 12px", fontSize: 11, fontWeight: 700,
+                    background: weightUnit === unit ? C.cyan : "transparent",
+                    color: weightUnit === unit ? "#07070C" : C.mut,
+                    border: "none", cursor: "pointer",
+                  }}
+                >
+                  {unit.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10, marginTop: ex.type === "peso" ? 6 : 16 }}>
             {ex.type === "peso" && (
               <button
                 onClick={() => setField("weight")}
@@ -11153,12 +11172,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
                   transition: "border-color .2s ease",
                 }}
               >
-                <div style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>PESO (KG)</div>
+                <div style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>PESO ({weightUnit.toUpperCase()})</div>
                 <div style={{
                   fontSize: 38, fontWeight: 900, marginTop: 2, fontVariantNumeric: "tabular-nums",
                   color: weight === "" ? C.dim : C.text,
                 }}>
-                  {weight !== "" ? weight : sug ? sug.weight : "kg"}
+                  {weight !== "" ? weight : sug ? (weightUnit === "lbs" ? Math.round(sug.weight * 2.205 * 4) / 4 : sug.weight) : "kg"}
                 </div>
               </button>
             )}
@@ -13011,7 +13030,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           <StatBox label="Mejor racha" value={bestStreak} accent={C.yellow} />
         </div>
 
-        <Heatmap sessions={sessions} color={C.cyan} freezes={freezes} />
+        <Heatmap sessions={sessions} color={C.cyan} freezes={freezes} activeProgram={getActiveProgram()} />
 
         <div className="sec-title">Montaña de progreso (8 semanas)</div>
         <Mountain3DChart sessions={sessions} />
