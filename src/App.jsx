@@ -175,15 +175,6 @@ function formatDuration(mins) {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
-function formatStreak(days) {
-  if (days === 0) return "0 días";
-  if (days === 1) return "1 día";
-  if (days < 7) return `${days} días`;
-  if (days < 30) return `${Math.floor(days / 7)} sem`;
-  if (days < 365) return `${Math.floor(days / 30)} meses`;
-  return `${(days / 365).toFixed(1)} años 🏆`;
-}
-
 /* ─── Tips del día (rotan uno por día) ─── */
 const DAILY_TIPS = [
   "El músculo crece en el descanso, no en el gym.",
@@ -1581,13 +1572,13 @@ const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 
 /* ─── Héroes por racha (escala histórica, 12 niveles desde 0 días) ─── */
 const HEROES = [
-  { id: "recluta", days: 0, emoji: "🌱", name: "Recluta", quote: "El primer paso es el más importante. Empieza.", color: C.mut },
+  { id: "recluta", days: 0, emoji: "🌱", name: "Recluta", quote: "El primer paso es el más difícil. Ya lo diste.", color: C.mut },
   { id: "atleta", days: 7, emoji: "🏃", name: "Atleta", quote: "Una semana de consistencia. El hábito empieza aquí.", color: C.green },
-  { id: "competidor", days: 21, emoji: "💪", name: "Competidor", quote: "3 semanas. Tu cuerpo ya cambió aunque no lo veas.", color: C.cyan },
-  { id: "avanzado", days: 45, emoji: "⚡", name: "Avanzado", quote: "45 días. Lo que empezó como esfuerzo ahora es rutina.", color: C.yellow },
-  { id: "elite", days: 90, emoji: "🔥", name: "Élite", quote: "3 meses sin parar. Estás en el 5% que sí lo hace.", color: C.orange },
+  { id: "competidor", days: 21, emoji: "💪", name: "Competidor", quote: "21 días. Tu cuerpo ya cambió aunque no lo veas.", color: C.cyan },
+  { id: "avanzado", days: 45, emoji: "⚡", name: "Avanzado", quote: "45 días. Lo que era esfuerzo ahora es rutina.", color: C.yellow },
+  { id: "elite", days: 90, emoji: "🔥", name: "Élite", quote: "3 meses. Estás en el 5% que sí lo hace.", color: C.orange },
   { id: "profesional", days: 180, emoji: "🏆", name: "Profesional", quote: "6 meses. Esto ya no es disciplina — es quién eres.", color: C.red },
-  { id: "leyenda", days: 365, emoji: "⚡", name: "Leyenda", quote: "Un año completo. Muy pocos llegan aquí. Tú sí.", color: C.purple },
+  { id: "leyenda", days: 365, emoji: "⭐", name: "Leyenda", quote: "Un año completo. Muy pocos llegan aquí. Tú sí.", color: C.purple },
 ];
 /* Mapa de compatibilidad para IDs de héroes guardados en localStorage antes de v30 */
 const LEGACY_HERO_ID_MAP = {
@@ -11927,31 +11918,6 @@ function SettingsScreen({
   );
 }
 
-/* ─── Código F.A.S.E. único por usuario (2 letras + 4 dígitos) ─── */
-function getFaseCode(name) {
-  let code = store.get("fase_code_val", null);
-  if (!code) {
-    const letters = (name || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase().padEnd(2, "X");
-    const digits = String(Math.floor(1000 + Math.random() * 9000));
-    code = `FASE-${letters}${digits}`;
-    store.set("fase_code_val", code);
-  }
-  return code;
-}
-
-/* Lazy-load de html2canvas desde CDN solo cuando se necesita exportar la imagen */
-function loadHtml2Canvas() {
-  return new Promise((resolve, reject) => {
-    if (window.html2canvas) return resolve(window.html2canvas);
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-    script.onload = () => resolve(window.html2canvas);
-    script.onerror = reject;
-    document.body.appendChild(script);
-  });
-}
-
-/* ─── Tarjeta de perfil pública / exportable ─── */
 /* ─── Backup completo: exporta/restaura todas las claves fase_* de localStorage ─── */
 function collectBackupData() {
   const data = {};
@@ -11990,129 +11956,6 @@ function applyBackup(obj) {
       /* clave omitida por falta de espacio */
     }
   });
-}
-
-function ProfileCard({ name, sessions, streak, freezes, onBack }) {
-  const cardRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const [copied, setCopied] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState(null);
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
-  const [pendingRestore, setPendingRestore] = useState(null);
-  const code = useMemo(() => getFaseCode(name), [name]);
-  const { list: achievements } = useMemo(() => computeAchievements(sessions, freezes), [sessions, freezes]);
-  const unlocked = achievements.filter((a) => a.unlocked);
-  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
-  const globalLvl = LEVELS[globalIdx];
-  const xpInfo = computeXP(sessions, unlocked.length, Math.max(longestStreakEver(sessions), streak));
-  const xpShown = useCountUp(xpInfo.xp, 1000);
-  const gStats = computeGlobalStats(sessions);
-  const hero = heroForStreak(streak);
-  const bestStreak = Math.max(longestStreakEver(sessions), streak);
-
-  const copyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* portapapeles no disponible */
-    }
-  };
-
-  const saveImage = async () => {
-    if (!cardRef.current) return;
-    setSaving(true);
-    try {
-      const html2canvas = await loadHtml2Canvas();
-      const canvas = await html2canvas(cardRef.current, { backgroundColor: C.bg, scale: 2 });
-      const link = document.createElement("a");
-      link.download = `fase-perfil-${code}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    } catch {
-      showToast("No se pudo generar la imagen. Revisa tu conexión a internet.");
-    }
-    setSaving(false);
-  };
-
-  const handleRestoreFile = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result));
-        if (!isValidBackup(parsed)) throw new Error("formato inválido");
-        setPendingRestore(parsed);
-      } catch {
-        showToast("Archivo de backup inválido o corrupto.");
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  return (
-    <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Volver</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>Mi perfil F.A.S.E.</h2>
-
-      <div ref={cardRef} className="card" style={{ marginTop: 14, padding: "24px 18px", textAlign: "center", background: C.card, border: `1px solid ${C.cyan}55` }}>
-        <div style={{ fontSize: 64 }}>{hero.emoji}</div>
-        <div style={{ fontSize: 18, fontWeight: 900, marginTop: 6 }}>{name}</div>
-        <div style={{ fontSize: 12, color: C.cyan, fontWeight: 700, marginTop: 2 }}>Código: {code}</div>
-        <hr className="divider-gradient" style={{ margin: "14px 0" }} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
-          <p style={{ fontSize: 13 }}>🔥 Racha: {formatStreak(streak)}</p>
-          <p style={{ fontSize: 13 }}>💪 Sesiones: {sessions.length}</p>
-          <p style={{ fontSize: 13 }}>🏆 Nivel: {globalLvl.name}</p>
-          <p style={{ fontSize: 13 }}>⭐ Puntos de esfuerzo: {xpShown}</p>
-        </div>
-        <hr className="divider-gradient" style={{ margin: "14px 0" }} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
-          <p style={{ fontSize: 12, color: C.mut }}>Disciplina favorita: {DISCIPLINES[gStats.favDiscId]?.label || "—"}</p>
-          <p style={{ fontSize: 12, color: C.mut }}>Ejercicio estrella: {gStats.favExercise || "—"}</p>
-          <p style={{ fontSize: 12, color: C.mut }}>Mejor racha: {formatStreak(bestStreak)}</p>
-        </div>
-        <hr className="divider-gradient" style={{ margin: "14px 0" }} />
-        <p style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>LOGROS</p>
-        <div style={{ fontSize: 22 }}>
-          {unlocked.length ? unlocked.slice(0, 8).map((a) => a.emoji).join(" ") : "—"}
-        </div>
-      </div>
-
-      <button className="btn-xl" onClick={saveImage} disabled={saving} style={{ marginTop: 14, background: C.cyan, color: "#07070C" }}>
-        {saving ? "Generando..." : "📸 Guardar como imagen"}
-      </button>
-      <button className="btn-xl" onClick={copyCode} style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
-        {copied ? "¡Copiado!" : "📋 Copiar código"}
-      </button>
-
-      <div className="sec-title">Copia de seguridad</div>
-      <button className="btn-xl" onClick={downloadBackupFile} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
-        💾 Exportar backup completo
-      </button>
-      <button
-        className="btn-xl" onClick={() => fileInputRef.current?.click()}
-        style={{ marginTop: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
-      >
-        📂 Restaurar backup
-      </button>
-      <input ref={fileInputRef} type="file" accept="application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
-
-      <ConfirmSheet
-        visible={!!pendingRestore}
-        title="¿Restaurar backup?"
-        message="Esto reemplazará todos tus datos actuales."
-        confirmLabel="Sí, restaurar"
-        onConfirm={() => { applyBackup(pendingRestore); window.location.reload(); }}
-        onCancel={() => setPendingRestore(null)}
-      />
-      <MiniToast message={toast} />
-    </div>
-  );
 }
 
 function OneRM({ onBack }) {
@@ -14246,7 +14089,6 @@ export default function App() {
     applyDarkMode(isDark);
     return isDark;
   });
-  const [showProfileCard, setShowProfileCard] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState(null);
@@ -14510,15 +14352,6 @@ export default function App() {
   if (loading) return <Splash onDone={() => setLoading(false)} />;
 
   if (!name) return <Welcome onDone={saveName} />;
-
-  if (showProfileCard) {
-    return (
-      <ProfileCard
-        name={name} sessions={sessions} streak={streak} freezes={freezes}
-        onBack={() => setShowProfileCard(false)}
-      />
-    );
-  }
 
   if (showSummary) {
     return <PersonalSummaryScreen name={name} onBack={() => setShowSummary(false)} sessions={sessions} />;
