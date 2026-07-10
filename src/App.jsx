@@ -8306,13 +8306,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 
   const GYM_LEVEL_IDS = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
   const isCampeonPlusGym = ["campeon", "elite", "leyenda", "the_one"].includes(GYM_LEVEL_IDS[mostFrequentLevel(sessions)]);
-  useEffect(() => {
-    if (discId === "gimnasio" && gymTypeChosen && extraStepDone && !gymMethod && !isCampeonPlusGym) {
-      const t = setTimeout(() => setGymMethod("standard"), 0);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [discId, gymTypeChosen, extraStepDone, gymMethod, isCampeonPlusGym]);
 
   const isConcreteDisc = discId && discId !== "futbol" && discId !== "basquetbol" && discId !== "atletismo";
   const disc = isConcreteDisc ? DISCIPLINES[discId] : null;
@@ -9084,7 +9077,106 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
 
   /* ── Gimnasio Paso 2: metodología (solo Campeón+; los demás usan Estándar directo) ── */
   if (discId === "gimnasio" && !gymMethod && !isCampeonPlusGym) {
-    return null;
+    return (
+      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
+        <button
+          onClick={() => { setGymTypeChosen(false); setExtraStepDone(false); }}
+          style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}
+        >
+          ‹ Tipo de rutina
+        </button>
+        <div style={{ fontSize: 40, marginTop: 12 }}>🏋️</div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Cómo quieres entrenar?</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>📊</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>Estándar</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Progresión clásica probada</div>
+              <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>Series: 3-5 · Reps: 6-15 · Rest: 60-90s</div>
+              <button
+                onClick={() => setGymMethod("standard")}
+                style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "8px 14px", borderRadius: 10, minHeight: 36 }}
+              >
+                Seleccionar
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>💯</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>Century Set</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>100 repeticiones contra el reloj</div>
+              <button
+                onClick={() => { setSpecial("century"); setDiscId(null); }}
+                style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "8px 14px", borderRadius: 10, minHeight: 36 }}
+              >
+                Seleccionar
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>⏱</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>AMRAP</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Máximas rondas en tiempo límite</div>
+              <button
+                onClick={() => { setSpecial("amrap"); setDiscId(null); }}
+                style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "8px 14px", borderRadius: 10, minHeight: 36 }}
+              >
+                Seleccionar
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>🔔</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>EMOM</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Un ejercicio al inicio de cada minuto</div>
+              <button
+                onClick={() => { setSpecial("emom"); setDiscId(null); }}
+                style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "8px 14px", borderRadius: 10, minHeight: 36 }}
+              >
+                Seleccionar
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>📊</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>Intervalos</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Alta intensidad con descansos controlados</div>
+              <button
+                onClick={() => { setSpecial("intervalos"); setDiscId(null); }}
+                style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: "#07070C", background: C.cyan, padding: "8px 14px", borderRadius: 10, minHeight: 36 }}
+              >
+                Seleccionar
+              </button>
+            </div>
+          </div>
+
+          {[
+            { id: "dup", emoji: "🔄", name: "DUP", req: "15 sesiones de gimnasio" },
+            { id: "heavyduty", emoji: "💀", name: "Heavy Duty", req: "30 sesiones de gimnasio" },
+            { id: "gvt", emoji: "🔟", name: "GVT 10×10", req: "20 sesiones de gimnasio" },
+            { id: "wendler", emoji: "📈", name: "Wendler 5/3/1", req: "1RM registrado en 4 ejercicios" },
+          ].map((m) => (
+            <div key={m.id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", opacity: 0.5 }}>
+              <span style={{ fontSize: 24 }}>{m.emoji}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 800 }}>{m.name}</div>
+                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🔒 Requiere {m.req}</div>
+                <div style={{ fontSize: 10, color: C.cyan, marginTop: 3, fontWeight: 700 }}>Sigue entrenando para desbloquear</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
   if (discId === "gimnasio" && !gymMethod && isCampeonPlusGym) {
     const userLvl = mostFrequentLevel(sessions);
