@@ -11774,7 +11774,7 @@ function SettingsScreen({
 
       <AccordionSection icon="🔔" title="Recordatorios">
       <div className="card">
-        <SettingsRow label="Recordatorio diario de entrenar">
+        <SettingsRow label="Recordatorio (mientras la app está abierta)">
           <SettingsToggle
             on={reminderOn} aria-label="Alternar recordatorio diario"
             onClick={async () => {
@@ -11787,6 +11787,9 @@ function SettingsScreen({
             }}
           />
         </SettingsRow>
+        <p style={{ fontSize: 10, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
+          Las notificaciones en segundo plano requieren un servidor. Por ahora solo funcionan si tienes la app abierta a la hora elegida.
+        </p>
         {reminderOn && (
           <div className="chip-wrap" style={{ marginTop: 6 }}>
             {[6, 7, 8, 9, 17, 18, 19, 20, 21].map((h) => (
