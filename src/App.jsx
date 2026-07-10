@@ -595,97 +595,6 @@ function MatchDebriefScreen({ onSave, onClose }) {
   );
 }
 
-/* ─── Mi semana: vista de calendario de la semana actual ─── */
-// eslint-disable-next-line no-unused-vars -- ya no tiene acceso desde Progreso; se deja el componente sin eliminar
-function MyWeekScreen({ sessions, onBack }) {
-  const [detailDay, setDetailDay] = useState(null);
-  const today = new Date();
-  const dow = (today.getDay() + 6) % 7; // 0 = lunes
-  const monday = new Date(today);
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(today.getDate() - dow);
-  const matchDay = store.get("match_day", null);
-  const structure = getWeeklyStructure();
-  const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const key = dayKey(d.getTime());
-    const daySessions = sessions.filter((s) => s.kind === "entreno" && dayKey(s.ts) === key);
-    const nowTs = today.getTime();
-    const isFuture = d.getTime() > nowTs && dayKey(d.getTime()) !== dayKey(nowTs);
-    const isToday = dayKey(d.getTime()) === dayKey(nowTs);
-    const isMatch = matchDay !== null && d.getDay() === matchDay;
-    const structIdx = structure.days.indexOf(dayNames[d.getDay()]);
-    return { date: d, sessions: daySessions, isFuture, isToday, isMatch, plannedLabel: structIdx >= 0 ? structure.sessions[structIdx] : null };
-  });
-
-  return (
-    <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 Mi semana</h2>
-      <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
-        {days.map((d, i) => (
-          <button
-            key={i}
-            onClick={() => setDetailDay(d)}
-            className="my-week-day card"
-            style={{
-              flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", minHeight: 90,
-              border: `1px solid ${d.isToday ? C.cyan : C.border}`,
-              background: d.isFuture ? C.surface : C.card,
-            }}
-          >
-            <div style={{ fontSize: 10, color: C.mut, fontWeight: 700 }}>{["L", "M", "X", "J", "V", "S", "D"][i]}</div>
-            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-              {d.isMatch && <span style={{ fontSize: 12 }}>⚽</span>}
-              {d.sessions.length > 0 ? (
-                <>
-                  {d.sessions.slice(0, 3).map((s, j) => (
-                    <span key={j} style={{ fontSize: 14 }}>{exerciseTypeIcon(s.exercises?.[0]?.name || "")}</span>
-                  ))}
-                  {d.sessions.length > 3 && <span style={{ fontSize: 10, color: C.mut, fontWeight: 700 }}>+{d.sessions.length - 3}</span>}
-                </>
-              ) : (
-                <span style={{ color: C.dim, fontSize: 12 }}>—</span>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-      {detailDay && (
-        <div
-          onClick={() => setDetailDay(null)}
-          style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-        >
-          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 430, padding: 20, borderRadius: "20px 20px 0 0" }}>
-            <p style={{ fontSize: 15, fontWeight: 800 }}>{detailDay.date.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}</p>
-            {detailDay.sessions.length > 0 ? (
-              detailDay.sessions.map((s, i) => {
-                const okSets = (s.exercises || []).flatMap((e) => e.sets || []).filter((st) => st.ok);
-                const vol = Math.round(okSets.reduce((a, st) => a + st.weight * st.reps, 0));
-                return (
-                  <div key={i} style={{ marginTop: 10, fontSize: 13 }}>
-                    <b>{DISCIPLINES[s.disc]?.label || s.disc}</b>
-                    <p style={{ color: C.mut, fontSize: 12, marginTop: 2 }}>{(s.exercises || []).length} ejercicios · {vol}kg volumen · {s.durationMin || 0} min</p>
-                  </div>
-                );
-              })
-            ) : detailDay.isFuture ? (
-              <p style={{ fontSize: 13, color: C.mut, marginTop: 8 }}>
-                Plan sugerido: {detailDay.plannedLabel || "Descanso"}
-              </p>
-            ) : (
-              <p style={{ fontSize: 13, color: C.mut, marginTop: 8 }}>Sin sesión ese día.</p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ─── Test de salto vertical semanal ─── */
 function jumpBaseline() {
   const history = store.get("jump_history", []);
@@ -735,67 +644,6 @@ function JumpTestCard() {
         </button>
       )}
     </div>
-  );
-}
-
-function acwrRecommendation(ratio) {
-  if (ratio > 1.5) {
-    return {
-      action: "Sesión ligera o descanso activo hoy",
-      detail: "Tu carga de esta semana supera mucho tu promedio. Entrenar duro hoy aumenta el riesgo de lesión. Considera movilidad o descanso.",
-    };
-  }
-  if (ratio > 1.3) {
-    return {
-      action: "Reduce intensidad un 20% hoy",
-      detail: "Carga alta pero manejable. Mismo entrenamiento, menos peso o menos series.",
-    };
-  }
-  if (ratio < 0.8) {
-    return {
-      action: "Puedes aumentar la carga esta semana",
-      detail: "Tu cuerpo está entrenando menos de lo habitual. Buen momento para añadir una sesión o subir la intensidad.",
-    };
-  }
-  return {
-    action: "Carga óptima — sigue igual",
-    detail: "Estás en la zona de progreso sin riesgo de sobreentrenamiento.",
-  };
-}
-
-// eslint-disable-next-line no-unused-vars -- ya no se usa en Home; se deja disponible para Progreso
-function AcwrCard({ sessions }) {
-  const [expanded, setExpanded] = useState(false);
-  const ratio = useMemo(() => calcACWR(sessions), [sessions]);
-  if (ratio === null) return null;
-  const info = acwrInfo(ratio);
-  const rec = acwrRecommendation(ratio);
-  return (
-    <button
-      onClick={() => setExpanded((v) => !v)}
-      className="card"
-      style={{
-        marginTop: 12, width: "100%", textAlign: "left", padding: "12px 14px",
-        border: `1px solid ${info.color}55`,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>📊 Carga semanal</span>
-        <span style={{ fontSize: 13, fontWeight: 900, color: info.color }}>{info.label}</span>
-      </div>
-      <p style={{ fontSize: 12, color: C.text, fontWeight: 700, marginTop: 6 }}>→ {rec.action}</p>
-      {expanded && (
-        <div style={{ marginTop: 8 }}>
-          <p style={{ fontSize: 11, color: C.dim, lineHeight: 1.5 }}>{rec.detail}</p>
-          <p style={{ fontSize: 11, color: C.dim, marginTop: 6, lineHeight: 1.5 }}>
-            Ratio Agudo/Crónico: compara lo que entrenaste esta semana vs tu promedio de 4 semanas.
-          </p>
-          <p style={{ fontSize: 10, color: C.dim, marginTop: 6, fontStyle: "italic" }}>
-            ACWR {ratio.toFixed(2)} · Zona óptima: 0.8 — 1.3
-          </p>
-        </div>
-      )}
-    </button>
   );
 }
 
@@ -3237,69 +3085,7 @@ const CHALLENGE_TYPES = [
 ];
 
 /* ─── Calculadora de plan de entrenamiento semanal ─── */
-const PLAN_GOALS = [
-  { id: "fuerza", label: "Fuerza" }, { id: "musculo", label: "Músculo" }, { id: "resistencia", label: "Resistencia" },
-  { id: "futbol", label: "Fútbol" }, { id: "atletismo", label: "Atletismo" },
-];
-const PLAN_DURATIONS = [30, 45, 60, 90];
-const PLAN_TEMPLATES = {
-  fuerza: [
-    { discId: "gimnasio", focusId: "push", label: "Gimnasio — Push (Pecho, hombros, tríceps)" },
-    { discId: "gimnasio", focusId: "pull", label: "Gimnasio — Pull (Espalda, bíceps)" },
-    { discId: "gimnasio", focusId: "legs", label: "Gimnasio — Legs (Piernas)" },
-    { discId: "gimnasio", focusId: "upper", label: "Gimnasio — Upper Body" },
-    { discId: "gimnasio", focusId: "full_body", label: "Gimnasio — Full Body" },
-    { discId: "gimnasio", focusId: "glutes_focus", label: "Gimnasio — Glúteos y forma" },
-  ],
-  musculo: [
-    { discId: "gimnasio", focusId: "push", label: "Gimnasio — Push" },
-    { discId: "gimnasio", focusId: "pull", label: "Gimnasio — Pull" },
-    { discId: "calistenia", focusId: "core", label: "Calistenia — Core" },
-    { discId: "gimnasio", focusId: "legs", label: "Gimnasio — Legs" },
-    { discId: "gimnasio", focusId: "upper", label: "Gimnasio — Upper Body" },
-    { discId: "gimnasio", focusId: "arms", label: "Gimnasio — Brazos" },
-  ],
-  resistencia: [
-    { discId: "futbolParque", focusId: "pivote", label: "Fútbol Parque — Pivote/Contención" },
-    { discId: "calistenia", focusId: "explosivo", label: "Calistenia — Full body explosivo" },
-    { discId: "atletismo", focusId: "5km", label: "Atletismo — 5 km" },
-    { discId: "calistenia", focusId: "core", label: "Calistenia — Core" },
-    { discId: "futbolParque", focusId: "extremo", label: "Fútbol Parque — Extremo" },
-    { discId: "atletismo", focusId: "1000m", label: "Atletismo — 1000 m" },
-  ],
-  futbol: [
-    { discId: "futbolGym", focusId: "defensaCentral", label: "Fútbol Gimnasio — Defensa Central" },
-    { discId: "futbolParque", focusId: "delantero", label: "Fútbol Parque — Delantero" },
-    { discId: "futbolGym", focusId: "extremo", label: "Fútbol Gimnasio — Extremo" },
-    { discId: "futbolParque", focusId: "mediocampista", label: "Fútbol Parque — Mediocampista" },
-    { discId: "futbolGym", focusId: "pivote", label: "Fútbol Gimnasio — Pivote/Contención" },
-    { discId: "futbolParque", focusId: "lateral", label: "Fútbol Parque — Lateral" },
-  ],
-  atletismo: [
-    { discId: "atletismo", focusId: "1000m", label: "Atletismo — 1000 m" },
-    { discId: "gimnasio", focusId: "legs", label: "Gimnasio — Piernas (fuerza)" },
-    { discId: "atletismo", focusId: "100m", label: "Atletismo — 100 m" },
-    { discId: "calistenia", focusId: "explosivo", label: "Calistenia — Explosivo" },
-    { discId: "atletismo", focusId: "5km", label: "Atletismo — 5 km" },
-    { discId: "atletismo", focusId: "400m", label: "Atletismo — 400 m" },
-  ],
-};
 const PLAN_DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-const PLAN_TRAIN_SLOTS = { 3: [0, 2, 4], 4: [0, 2, 3, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5] };
-
-// eslint-disable-next-line no-unused-vars -- ya no tiene acceso desde Progreso (PlanWizard); se deja sin eliminar
-function buildWeeklyPlan(days, goal, duration) {
-  const templates = PLAN_TEMPLATES[goal] || PLAN_TEMPLATES.musculo;
-  const trainDays = PLAN_TRAIN_SLOTS[days] || PLAN_TRAIN_SLOTS[4];
-  const plan = PLAN_DAY_NAMES.map((name, i) => {
-    if (i === 6) return { day: name, rest: true, label: "Descanso" };
-    const slotIdx = trainDays.indexOf(i);
-    if (slotIdx !== -1) return { day: name, ...templates[slotIdx % templates.length] };
-    if (i === 5) return { day: name, rest: true, activeRest: true, label: "Descanso activo (Movilidad)" };
-    return { day: name, rest: true, label: "Descanso" };
-  });
-  return { days, goal, duration, plan, createdTs: Date.now() };
-}
 
 /* ─── Semana completa sugerida al elegir un enfoque de Gimnasio específico ─── */
 const FOCUS_WEEK_TEMPLATES = {
@@ -4318,14 +4104,6 @@ function calcACWR(sessions) {
   if (chronic4w === 0) return null;
   return acute / chronic4w;
 }
-function acwrInfo(ratio) {
-  if (ratio === null) return null;
-  if (ratio < 0.8) return { color: C.blue, label: "Subcargado — puedes aumentar intensidad", level: "low" };
-  if (ratio <= 1.3) return { color: C.green, label: "Zona óptima ✓ — progresando de forma segura", level: "ok" };
-  if (ratio <= 1.5) return { color: C.yellow, label: "⚠️ Carga alta — monitorea la fatiga", level: "high" };
-  return { color: C.red, label: "🚨 Zona de riesgo — reduce volumen hoy", level: "danger" };
-}
-
 /* Estado agregado de recuperación para mostrar en Inicio */
 function getRecoveryStatus() {
   const recovery = store.get("recovery", {});
@@ -5196,6 +4974,11 @@ const EXERCISE_GIFS = {
   "Cruce de poleas alto a bajo": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg",
   "Extensión de cuádriceps": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/0.jpg",
   "Curl femoral": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/0.jpg",
+  "Remo con mancuerna a una mano": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/0.jpg",
+  "Sentadilla frontal": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Barbell_Squat/0.jpg",
+  "Press francés con barra Z": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/EZ-Bar_Skullcrusher/0.jpg",
+  "Extensión de tríceps sobre la cabeza": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Overhead_Barbell_Triceps_Extension/0.jpg",
+  "Encogimientos con mancuernas": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/0.jpg",
 };
 
 /* Placeholder limpio para ejercicios sin GIF mapeado (reemplaza el stickman CSS) */
@@ -5353,13 +5136,22 @@ function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
       </div>
       {tapped && <div style={{ fontSize: 11, color: C.mut, marginTop: 8, textAlign: "center" }}>{tapped}</div>}
       <div style={{ fontSize: 11, color: C.dim, marginTop: 8, textAlign: "right" }}>Últimas 5 semanas · lunes a domingo</div>
-      {activeProgram && (
-        <div style={{ fontSize: 10, color: C.dim, marginTop: 6, display: "flex", gap: 8 }}>
-          <span>░ Planificado</span>
-          <span>■ Completado</span>
-          <span>— Descanso</span>
-        </div>
-      )}
+      <div style={{ fontSize: 10, color: C.dim, marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: color, display: "inline-block" }} />
+          Entrenado
+        </span>
+        {activeProgram && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: `${color}44`, border: `1px dashed ${color}88`, display: "inline-block" }} />
+            Planificado
+          </span>
+        )}
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#1A1A2E", border: `1px solid ${C.border}`, display: "inline-block" }} />
+          Sin actividad
+        </span>
+      </div>
     </div>
   );
 }
@@ -5408,45 +5200,6 @@ function StatBox({ label, value, accent, sparkData }) {
   );
 }
 
-// eslint-disable-next-line no-unused-vars -- ya no se usa en Home; se deja disponible para Progreso
-function StreakBar({ streak }) {
-  const filled = Math.min(streak, 7);
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.mut }}>RACHA</span>
-        <span style={{ fontSize: 12, fontWeight: 800, color: C.orange }}>
-          {streak} {streak === 1 ? "día" : "días"} 🔥
-        </span>
-      </div>
-      <div style={{ display: "flex", gap: 6 }}>
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              flex: 1,
-              height: 40,
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-              background: i < filled ? "rgba(255,122,47,0.14)" : C.surface,
-              border: `1px solid ${i < filled ? "rgba(255,122,47,0.45)" : C.border}`,
-              transition: "all .3s ease",
-            }}
-          >
-            {i < filled ? (
-              <span className={i === filled - 1 ? "flame" : ""}>🔥</span>
-            ) : (
-              <span style={{ opacity: 0.2 }}>·</span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /* ─── Pantalla de bienvenida ─── */
 const MODE_OPTIONS = [
@@ -9848,8 +9601,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     return () => clearTimeout(t);
   }, [justWarmedUp]);
 
-  // eslint-disable-next-line no-unused-vars -- ya no se muestra el hint, se deja el estado sin eliminar
-  const [showSwipeHint] = useState(() => store.get("session_count", 0) < 3);
   const [showGestureOverlay, setShowGestureOverlay] = useState(() => store.get("session_count", 0) === 0);
   const [showStep4, setShowStep4] = useState(() => store.get("session_count", 0) === 0 && !store.get("tutorial_done", false));
   const [showGoalBanner, setShowGoalBanner] = useState(() => !!goalContextCopy());
@@ -11417,74 +11168,25 @@ function Mountain3DChart({ sessions }) {
 
   return (
     <div className="card" style={{ padding: "20px 10px 10px", overflow: "hidden" }}>
-      <div style={{ perspective: 800, height: 140 }}>
-        <div
-          className="mountain3d-base"
-          style={{
-            display: "flex", alignItems: "flex-end", gap: 6, height: 120,
-            transform: "rotateX(30deg)", transformStyle: "preserve-3d",
-          }}
-        >
-          {weeks.map((v, i) => {
-            const h = Math.max(4, Math.round((v / max) * 110));
-            const shade = 20 + Math.round((i / 7) * 60); // más oscuro (viejo) a más claro (actual)
-            const isNow = i === 7;
-            return (
-              <div
-                key={i}
-                style={{
-                  flex: 1, height: entered ? h : 0, borderRadius: "3px 3px 0 0",
-                  background: isNow ? C.cyan : `hsl(190, 80%, ${shade}%)`,
-                  transform: `translateZ(${i * 3}px)`,
-                  transition: `height .6s ease ${i * 0.06}s`,
-                  boxShadow: isNow ? `0 0 12px ${C.cyan}88` : "none",
-                }}
-              />
-            );
-          })}
-        </div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120 }}>
+        {weeks.map((v, i) => {
+          const h = Math.max(4, Math.round((v / max) * 110));
+          const shade = 20 + Math.round((i / 7) * 60); // más oscuro (viejo) a más claro (actual)
+          const isNow = i === 7;
+          return (
+            <div
+              key={i}
+              style={{
+                flex: 1, height: entered ? h : 0, borderRadius: "3px 3px 0 0",
+                background: isNow ? C.cyan : `hsl(190, 80%, ${shade}%)`,
+                transition: `height .6s ease ${i * 0.06}s`,
+                boxShadow: isNow ? `0 0 12px ${C.cyan}88` : "none",
+              }}
+            />
+          );
+        })}
       </div>
       <p style={{ fontSize: 10, color: C.dim, textAlign: "center", marginTop: 6 }}>Volumen semanal · últimas 8 semanas</p>
-    </div>
-  );
-}
-
-/* ─── Wizard de 3 preguntas para generar el plan semanal ─── */
-// eslint-disable-next-line no-unused-vars -- ya no tiene acceso desde Progreso; se deja el componente sin eliminar
-function PlanWizard({ onBack, onGenerate }) {
-  const [days, setDays] = useState(4);
-  const [goal, setGoal] = useState("musculo");
-  const [duration, setDuration] = useState(60);
-  return (
-    <div className="screen">
-      <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Progreso</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>📅 Mi plan</h2>
-      <p className="muted" style={{ marginTop: 2 }}>Responde 3 preguntas y genera tu plan semanal</p>
-
-      <div className="sec-title">¿Cuántos días a la semana entrenas?</div>
-      <div className="chip-wrap">
-        {[3, 4, 5, 6].map((n) => (
-          <button key={n} className={`chip ${days === n ? "on" : ""}`} style={days === n ? { background: C.cyan } : {}} onClick={() => setDays(n)}>{n}</button>
-        ))}
-      </div>
-
-      <div className="sec-title">¿Tu objetivo principal?</div>
-      <div className="chip-wrap">
-        {PLAN_GOALS.map((g) => (
-          <button key={g.id} className={`chip ${goal === g.id ? "on" : ""}`} style={goal === g.id ? { background: C.cyan } : {}} onClick={() => setGoal(g.id)}>{g.label}</button>
-        ))}
-      </div>
-
-      <div className="sec-title">¿Cuánto tiempo por sesión?</div>
-      <div className="chip-wrap">
-        {PLAN_DURATIONS.map((d) => (
-          <button key={d} className={`chip ${duration === d ? "on" : ""}`} style={duration === d ? { background: C.cyan } : {}} onClick={() => setDuration(d)}>{d} min</button>
-        ))}
-      </div>
-
-      <button className="btn-xl" onClick={() => onGenerate(days, goal, duration)} style={{ marginTop: 18, background: C.cyan, color: "#07070C" }}>
-        🗓️ GENERAR MI PLAN
-      </button>
     </div>
   );
 }
@@ -12692,65 +12394,6 @@ function techniqueQualityPct(sessions) {
   if (!ratings.length) return null;
   const good = ratings.filter((r) => r === "perfecta" || r === "bien").length;
   return Math.round((good / ratings.length) * 100);
-}
-
-/* ─── Comparativa temporal: esta semana vs la anterior ─── */
-function weekComparisonStats(sessions) {
-  const thisWeekStart = startOfWeek();
-  const lastWeekStart = thisWeekStart - 7 * 86400000;
-  const thisWeekList = sessions.filter((s) => s.ts >= thisWeekStart);
-  const lastWeekList = sessions.filter((s) => s.ts >= lastWeekStart && s.ts < thisWeekStart);
-  const statsFor = (list) => {
-    const workouts = list.filter((s) => s.kind === "entreno");
-    const sets = workouts.flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((st) => st.ok);
-    const volume = Math.round(sets.reduce((a, st) => a + st.weight * st.reps, 0));
-    const activeDays = new Set(list.map((s) => dayKey(s.ts))).size;
-    return { sessions: list.length, volume, series: sets.length, activeDays };
-  };
-  return { thisWeek: statsFor(thisWeekList), lastWeek: statsFor(lastWeekList), hasLastWeekData: lastWeekList.length > 0 };
-}
-
-// eslint-disable-next-line no-unused-vars -- ya no se usa en Progreso; se deja disponible para otro contexto
-function WeekComparisonCard({ sessions }) {
-  const { thisWeek, lastWeek, hasLastWeekData } = useMemo(() => weekComparisonStats(sessions), [sessions]);
-  if (!hasLastWeekData) {
-    return (
-      <div className="card" style={{ marginTop: 10 }}>
-        <p style={{ fontSize: 13, fontWeight: 800 }}>📊 Esta semana vs anterior</p>
-        <p style={{ fontSize: 12, color: C.mut, marginTop: 6 }}>Completa esta semana para ver la comparativa 📅</p>
-      </div>
-    );
-  }
-  const rows = [
-    { label: "Sesiones", a: thisWeek.sessions, b: lastWeek.sessions, unit: "" },
-    { label: "Volumen", a: thisWeek.volume, b: lastWeek.volume, unit: " kg" },
-    { label: "Series", a: thisWeek.series, b: lastWeek.series, unit: "" },
-    { label: "Días activos", a: thisWeek.activeDays, b: lastWeek.activeDays, unit: "" },
-  ];
-  return (
-    <div className="card" style={{ marginTop: 10 }}>
-      <p style={{ fontSize: 13, fontWeight: 800 }}>📊 Esta semana vs anterior</p>
-      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-        {rows.map((r) => {
-          const diff = r.a - r.b;
-          const pct = r.b > 0 ? Math.round((diff / r.b) * 100) : null;
-          const same = diff === 0;
-          const improved = diff > 0;
-          const color = same ? C.mut : improved ? C.green : C.orange;
-          const emoji = same ? "➡️" : improved ? (r.label === "Volumen" ? "📈" : "✅") : "⚠️";
-          const diffText = same ? "Igual" : pct !== null ? `${diff > 0 ? "+" : ""}${pct}%` : `${diff > 0 ? "+" : ""}${diff}`;
-          return (
-            <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
-              <span style={{ color: C.mut, flex: 1 }}>{r.label}</span>
-              <span style={{ width: 60, textAlign: "right", fontWeight: 700 }}>{r.a}{r.unit}</span>
-              <span style={{ width: 60, textAlign: "right", color: C.dim }}>{r.b}{r.unit}</span>
-              <span style={{ width: 70, textAlign: "right", color, fontWeight: 800 }}>{diffText} {emoji}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 /* ─── Análisis de punto débil ─── */
