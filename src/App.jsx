@@ -5098,7 +5098,11 @@ function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5 }}>
         {days.map((d, i) => {
-          const programDay = d.future && activeProgram ? getProgramDayLabel(d.date, activeProgram) : null;
+          const programDay = d.future && activeProgram
+            ? getProgramDayLabel(d.date, activeProgram)
+            : !d.future && !d.active && activeProgram
+              ? getProgramDayLabel(d.date, activeProgram)
+              : null;
           return (
             <button
               key={d.key}
@@ -5107,27 +5111,39 @@ function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
               style={{
                 aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
                 marginTop: i > 0 && i % 7 === 0 ? 4 : 0,
-                background: d.future
-                  ? (programDay === "rest" ? C.surface : programDay ? `${DISCIPLINES[programDay]?.color || C.cyan}44` : C.surface)
-                  : d.active ? color : "#1A1A2E",
+                background: d.active
+                  ? color
+                  : programDay === "rest"
+                    ? "#1A1A2E"
+                    : programDay && d.future
+                      ? `${DISCIPLINES[programDay]?.color || C.cyan}44`
+                      : programDay && !d.future
+                        ? `${DISCIPLINES[programDay]?.color || C.cyan}22`
+                        : "#1A1A2E",
                 border: d.isToday
                   ? "2px solid #FFFFFFcc"
                   : d.active
                     ? `1px solid ${color}`
                     : d.future && programDay && programDay !== "rest"
                       ? `1.5px dashed ${DISCIPLINES[programDay]?.color || C.cyan}99`
-                      : `1px solid ${C.border}`,
+                      : !d.future && programDay && programDay !== "rest"
+                        ? `1px solid ${DISCIPLINES[programDay]?.color || C.cyan}44`
+                        : `1px solid ${C.border}`,
                 opacity: 1,
                 transition: "background .3s ease",
               }}
             >
               <span style={{
                 fontSize: 8,
-                color: d.active ? "#07070C" : d.future && programDay && programDay !== "rest" ? DISCIPLINES[programDay]?.color || C.cyan : C.dim,
-                fontWeight: d.isToday ? 900 : 400,
                 lineHeight: 1,
+                color: d.active
+                  ? "#07070C"
+                  : d.isToday
+                    ? "#fff"
+                    : C.dim,
+                fontWeight: d.isToday ? 900 : 400,
               }}>
-                {d.date.getDate()}
+                {new Date(d.date).getDate()}
               </span>
               {d.frozen && !d.active ? "❄️" : ""}
             </button>
@@ -8229,6 +8245,16 @@ function TravelMode({ onFinish, onSave }) {
   );
 }
 
+const trainModeChipStyle = (active) => ({
+  padding: "8px 14px",
+  borderRadius: 99,
+  border: `1px solid ${active ? C.cyan : C.border}`,
+  background: active ? C.cyan : C.surface,
+  color: active ? "#07070C" : C.text,
+  fontSize: 12, fontWeight: 700,
+  cursor: "pointer", whiteSpace: "nowrap",
+});
+
 function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], streak = 0, challenge, onSaveChallenge, onCompleteBody }) {
   const [showBody, setShowBody] = useState(false);
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
@@ -8588,7 +8614,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     return (
       <div className="screen" style={{ position: "relative" }}>
         <h2 style={{ fontSize: 18, fontWeight: 800 }}>Entrenar</h2>
-        <p className="muted" style={{ marginTop: 2 }}>Elige tu disciplina de hoy</p>
         <FeatureTooltip visible={showProgramsHint} onDismiss={dismissProgramsHint} text="💡 Tenemos metodologías avanzadas aquí (Gimnasio → Estándar/DUP/Heavy Duty…)" />
         {showTutorial && (
           <div className="card" style={{ marginTop: 10, padding: "9px 12px", borderColor: `${C.cyan}66`, background: "rgba(0,229,255,0.08)" }}>
@@ -8597,19 +8622,26 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         )}
 
         {activeProgram ? (
-          <button
-            className="card fade-up"
-            onClick={() => {
-              const candidate = programDailyCandidate(sessions);
-              if (!candidate) return;
-              const p = buildPlanFor(candidate.discId, candidate.focusId, candidate.lvlIdx);
-              if (p) onStart(p);
-            }}
-            style={{ marginTop: 12, width: "100%", textAlign: "left", padding: 14, borderLeft: `4px solid ${activeProgram.program.color}` }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 800, color: activeProgram.program.color }}>▶ Continuar: {activeProgram.program.name}</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Semana {activeProgram.week} · Toca para iniciar la sesión de hoy</div>
-          </button>
+          !programDailyCandidate(sessions) ? (
+            <div className="card" style={{ marginTop: 12, padding: 14, borderLeft: `4px solid ${C.dim}` }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: C.mut }}>😴 Hoy es día de descanso</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{activeProgram.program.name} · Semana {activeProgram.week}</div>
+            </div>
+          ) : (
+            <button
+              className="card fade-up"
+              onClick={() => {
+                const candidate = programDailyCandidate(sessions);
+                if (!candidate) return;
+                const p = buildPlanFor(candidate.discId, candidate.focusId, candidate.lvlIdx);
+                if (p) onStart(p);
+              }}
+              style={{ marginTop: 12, width: "100%", textAlign: "left", padding: 14, borderLeft: `4px solid ${activeProgram.program.color}` }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 800, color: activeProgram.program.color }}>▶ Continuar: {activeProgram.program.name}</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Semana {activeProgram.week} · Toca para iniciar la sesión de hoy</div>
+            </button>
+          )
         ) : lastSession ? (
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button
@@ -8629,9 +8661,15 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           </div>
         ) : null}
 
+        <div style={{ display: "flex", gap: 8, marginTop: 14, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+          <button style={trainModeChipStyle(trainMode === "musculo")} onClick={() => setTrainMode("musculo")}>🏋️ Entrenar</button>
+          <button style={trainModeChipStyle(trainMode === "programa")} onClick={() => setTrainMode("programa")}>📅 Programas</button>
+          <button style={trainModeChipStyle(trainMode === "rutina")} onClick={() => setTrainMode("rutina")}>📋 Mi rutina</button>
+        </div>
+
         {trainMode === "musculo" && (
           <>
-            <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginTop: 16, marginBottom: 12 }}>¿Qué entrenas hoy?</p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginTop: 16, marginBottom: 12 }}>Elige una disciplina</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {trainCards.map((d) => (
                 <button
@@ -8682,17 +8720,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                 <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
               </div>
             </button>
-
-            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={() => setTrainMode("programa")} style={{ fontSize: 12, color: C.cyan, fontWeight: 700, textAlign: "left" }}>
-                📅 Ver programas de varias semanas →
-              </button>
-              {customRoutines.length > 0 && (
-                <button onClick={() => setTrainMode("rutina")} style={{ fontSize: 12, color: C.cyan, fontWeight: 700, textAlign: "left" }}>
-                  📋 Usar mi rutina guardada →
-                </button>
-              )}
-            </div>
           </>
         )}
 
@@ -11333,34 +11360,6 @@ function SettingsScreen({
           <button onClick={() => setShowTrainModePicker(true)} style={{ fontSize: 12, fontWeight: 800, color: C.cyan }}>Cambiar</button>
         </div>
       </div>
-      {showTrainModePicker && (
-        <div
-          onClick={() => setShowTrainModePicker(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="card" style={{ width: "100%", maxWidth: 430, padding: "20px 20px calc(20px + env(safe-area-inset-bottom))", borderRadius: "20px 20px 0 0" }}
-          >
-            <p style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 12 }}>¿Cómo prefieres entrenar?</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {TRAIN_MODES.map((m) => (
-                <button
-                  key={m.id} className="card"
-                  onClick={() => { store.set("train_mode", m.id); setShowTrainModePicker(false); refresh(); }}
-                  style={{ textAlign: "left", padding: 14, border: store.get("train_mode", "manual") === m.id ? `2px solid ${C.cyan}` : undefined }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 22 }}>{m.emoji}</span>
-                    <span style={{ fontSize: 14, fontWeight: 800 }}>{m.name}</span>
-                  </div>
-                  <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{m.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
       <button
         onClick={onShowSummary}
         style={{ width: "100%", padding: "14px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, color: C.text, fontSize: 14, fontWeight: 700, textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}
@@ -11369,28 +11368,6 @@ function SettingsScreen({
         <span style={{ color: C.dim }}>›</span>
       </button>
       <div className="card">
-        <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>OBJETIVO DE ENTRENAMIENTO</p>
-        <p style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>Toca una opción para actualizarlo cuando quieras.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-          {TRAINING_GOALS.map((g) => {
-            const active = store.get("training_goal", null) === g.id;
-            return (
-              <button
-                key={g.id}
-                className="card"
-                onClick={() => { store.set("training_goal", active ? null : g.id); refresh(); }}
-                style={{ textAlign: "left", padding: "10px 10px", border: `1px solid ${active ? g.color : C.border}`, background: active ? `${g.color}18` : C.card }}
-              >
-                <div style={{ fontSize: 20 }}>{g.emoji}</div>
-                <div style={{ fontSize: 12, fontWeight: 800, marginTop: 4, color: active ? g.color : C.text }}>{g.name}</div>
-                <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{g.subtitle}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: 10 }}>
         {(() => {
           const discIds = ["gimnasio", "calistenia", "futbolGym", "atletismo", "basquetCancha"];
           const discLabels = { gimnasio: "Gimnasio", calistenia: "Calistenia", futbolGym: "Fútbol", atletismo: "Atletismo", basquetCancha: "Básquetbol" };
@@ -11682,6 +11659,35 @@ function SettingsScreen({
       </div>
 
       <MiniToast message={toast} />
+
+      {showTrainModePicker && (
+        <div
+          onClick={() => setShowTrainModePicker(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card" style={{ width: "100%", maxWidth: 430, padding: "20px 20px calc(20px + env(safe-area-inset-bottom))", borderRadius: "20px 20px 0 0" }}
+          >
+            <p style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 12 }}>¿Cómo prefieres entrenar?</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {TRAIN_MODES.map((m) => (
+                <button
+                  key={m.id} className="card"
+                  onClick={() => { store.set("train_mode", m.id); setShowTrainModePicker(false); refresh(); }}
+                  style={{ textAlign: "left", padding: 14, border: store.get("train_mode", "manual") === m.id ? `2px solid ${C.cyan}` : undefined }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{m.emoji}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800 }}>{m.name}</span>
+                  </div>
+                  <p style={{ fontSize: 11, color: C.mut, marginTop: 4 }}>{m.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
