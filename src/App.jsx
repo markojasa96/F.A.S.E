@@ -723,7 +723,7 @@ function Splash({ onDone }) {
 
   useEffect(() => {
     const hasName = !!store.get("name", "");
-    const duration = hasName ? 800 : 1500;
+    const duration = hasName ? 400 : 1200;
     const fadeTimer = setTimeout(() => setFadingOut(true), Math.max(duration - 300, 0));
     const doneTimer = setTimeout(onDone, duration);
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
@@ -880,18 +880,20 @@ function useGlobalTouchEffects() {
 
 /* ─── Fondo de partículas sutiles (solo pantalla Inicio) ─── */
 function ParticleBackground() {
+  const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const [particles] = useState(() =>
-    Array.from({ length: 12 }, (_, i) => ({
+    Array.from({ length: 8 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
       size: Math.random() * 2 + 1.5,
-      opacity: Math.random() * 0.05 + 0.03,
-      duration: Math.random() * 15 + 20,
+      opacity: Math.random() * 0.04 + 0.02,
+      duration: Math.random() * 20 + 25,
       delay: Math.random() * -20,
       variant: i % 6,
     }))
   );
+  if (prefersReduced) return null;
   return (
     <div className="particle-field" aria-hidden="true">
       {particles.map((p) => (
@@ -13946,7 +13948,7 @@ export default function App() {
 
   /* Skeleton loaders breves: al entrar a una pestaña (más si el historial es grande) */
   useEffect(() => {
-    const t = setTimeout(() => setCalculating(false), sessions.length > 50 ? 500 : 300);
+    const t = setTimeout(() => setCalculating(false), sessions.length > 200 ? 400 : 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
