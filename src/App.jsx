@@ -4013,6 +4013,7 @@ function muscleGroupOf(session) {
   if (session.disc?.startsWith("futbol")) return "Fútbol";
   if (session.disc?.startsWith("basquet")) return "Básquetbol";
   if (session.kind === "cuerpo") return "Cuerpo";
+  if (session.kind === "partido") return "Fútbol";
   return null;
 }
 
@@ -4025,6 +4026,11 @@ function updateRecoveryState(session) {
   const hoursNeeded = getRecoveryTime(group, intensityKey);
   const recovery = store.get("recovery", {});
   recovery[group] = { lastSession: session.ts, hoursNeeded, intensityKey };
+  /* Un partido real (90 min) vacía el glucógeno y castiga el tren inferior más
+     que una sesión normal de fútbol: bloquea piernas pesadas 60h en vez de las 36h base. */
+  if (session.kind === "partido") {
+    recovery.Piernas = { lastSession: session.ts, hoursNeeded: 60, intensityKey: "campeon" };
+  }
   store.set("recovery", recovery);
 }
 
@@ -14011,7 +14017,7 @@ export default function App() {
     }
     setSessions(next);
     store.set("sessions", next);
-    if (record.kind === "entreno") {
+    if (record.kind === "entreno" || record.kind === "partido") {
       updateRecoveryState(record);
       if (!store.get("first_session_date", null)) store.set("first_session_date", record.ts);
     }
