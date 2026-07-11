@@ -3976,65 +3976,6 @@ function focusGroupOf(label) {
   return "otro";
 }
 
-function hoursSinceTs(ts) {
-  return (Date.now() - ts) / 3600000;
-}
-
-function MuscleRecoveryCard({ sessions }) {
-  const recoveryData = useMemo(() => {
-    const groups = [
-      { key: "empuje", label: "Pecho/Hombros", hours: 48, icon: "💪" },
-      { key: "tiron", label: "Espalda/Bíceps", hours: 48, icon: "🏋️" },
-      { key: "piernas", label: "Piernas/Glúteos", hours: 72, icon: "🦵" },
-      { key: "core", label: "Core", hours: 24, icon: "🔥" },
-    ];
-
-    return groups.map(({ key, label, hours, icon }) => {
-      const lastSession = [...sessions]
-        .filter((s) => s.kind === "entreno" && (s.muscleGroup === key || focusGroupOf(s.focusLabel) === key))
-        .sort((a, b) => b.ts - a.ts)[0];
-
-      if (!lastSession) {
-        return { label, icon, pct: 100, ready: true };
-      }
-
-      const hoursSince = hoursSinceTs(lastSession.ts);
-      const pct = Math.min(100, Math.round((hoursSince / hours) * 100));
-      return {
-        label, icon, pct,
-        ready: pct >= 80,
-        hoursLeft: Math.max(0, Math.round(hours - hoursSince)),
-      };
-    });
-  }, [sessions]);
-
-  if (!sessions.some((s) => s.kind === "entreno")) return null;
-
-  return (
-    <div className="card" style={{ marginTop: 12 }}>
-      <p style={{ fontSize: 12, fontWeight: 700, color: C.mut, marginBottom: 10 }}>
-        💪 Recuperación muscular
-      </p>
-      {recoveryData.map(({ label, icon, pct, ready, hoursLeft }) => (
-        <div key={label} style={{ marginBottom: 8 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-            <span style={{ fontSize: 11, color: C.mut }}>{icon} {label}</span>
-            <span style={{ fontSize: 10, color: ready ? C.green : C.orange, fontWeight: 700 }}>
-              {ready ? "✓ Listo" : `${hoursLeft}h`}
-            </span>
-          </div>
-          <div style={{ height: 4, background: C.surface, borderRadius: 99, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: ready ? C.green : C.orange, borderRadius: 99, transition: "width 0.5s ease" }} />
-          </div>
-        </div>
-      ))}
-      <p style={{ fontSize: 9, color: C.dim, marginTop: 8, fontStyle: "italic" }}>
-        Estimado según intensidad registrada. Escucha siempre tu cuerpo.
-      </p>
-    </div>
-  );
-}
-
 /* Nivel del usuario centralizado: específico de disciplina → global → calculado del historial */
 function getUserLevel(discId) {
   const discLevel = store.get(`level_${discId}`, null);
@@ -4149,11 +4090,11 @@ function getRecoveryStatus() {
   const recentIntenseSessions = Object.values(recovery).filter((r) => now - r.lastSession < 3 * 86400000).length;
   let level = "green";
   let message = "Listo para entrenar fuerte";
-  let chipLabel = "💪 Cuerpo listo para entrenar";
+  let chipLabel = "✅ Todo recuperado — buen día para entrenar fuerte";
   if (peakGroups.length) {
     level = "cyan";
     message = `${peakGroups.map((g) => g.group).join(" y ")} ${peakGroups.length > 1 ? "están" : "está"} en su pico de adaptación hoy. Es el mejor momento para entrenarlos.`;
-    chipLabel = `⚡ Pico de adaptación: ${peakGroups.map((g) => g.group).join(", ")}`;
+    chipLabel = `⚡ Momento óptimo para ${peakGroups.map((g) => g.group).join(", ")}`;
   } else if (worst && worst.hoursLeft > 24) {
     level = "red";
     message = "Sesión ligera recomendada";
@@ -6677,7 +6618,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
           </div>
         );
       })()}
-      <MuscleRecoveryCard sessions={sessions} />
       <PlanPeriodizationCard sessions={sessions} />
       <DeloadBanner sessions={sessions} />
 
@@ -6720,7 +6660,7 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
                     {s.note && <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.cyan, flexShrink: 0 }} />}
                   </div>
                   <div style={{ fontSize: 12, color: C.mut }}>
-                    {isBody ? "Acondicionamiento" : `${s.focusLabel} · ${LEVELS[s.levelIdx].emoji} ${LEVELS[s.levelIdx].name}`}
+                    {isBody ? "Acondicionamiento" : `${s.focusLabel} · ${LEVELS[s.levelIdx]?.emoji ?? ""} ${LEVELS[s.levelIdx]?.name ?? ""}`}
                   </div>
                 </div>
                 <span style={{ fontSize: 12, color: C.dim }}>{timeAgo(s.ts)}</span>
@@ -12918,7 +12858,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
                 }} />
               </div>
               <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>
-                → {LEVELS[globalIdx + 1].name} en {nextThreshold - sessions.length} sesiones más
+                → {LEVELS[globalIdx + 1]?.name ?? "el siguiente nivel"} en {nextThreshold - sessions.length} sesiones más
               </div>
             </div>
           )}
