@@ -386,7 +386,7 @@ function CombineScreen({ onClose }) {
       store.set("jump_history", next);
     }
     if (runMinutes) {
-      store.set("resistance_tests", [...store.get("resistance_tests", []), { date: Date.now(), minutes: parseFloat(runMinutes) }].slice(-12));
+      store.set("resistance_tests", [...store.get("resistance_tests", []), { date: Date.now(), value: parseFloat(runMinutes), type: "shuttle_20m" }].slice(-12));
     }
     store.set("last_combine", Date.now());
     setStep(5);
@@ -438,9 +438,13 @@ function CombineScreen({ onClose }) {
       {showTapTest && <TapTestScreen onClose={() => { setShowTapTest(false); setStep(4); }} />}
       {step === 4 && (
         <div className="card" style={{ marginTop: 20 }}>
-          <p style={{ fontSize: 13, fontWeight: 700 }}>Test 5 — Resistencia (opcional)</p>
-          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>¿Cuántos minutos puedes correr a ritmo moderado sin parar?</p>
-          <input className="input" type="number" placeholder="Minutos" value={runMinutes} onChange={(e) => setRunMinutes(e.target.value)} style={{ marginTop: 10, padding: 10 }} />
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Test 5 — Resistencia de campo (opcional)</p>
+          <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
+            Shuttle runs 20m: sprint de 20m, toca la línea, vuelve. Cuenta cuántas repeticiones completas haces en 1 minuto sin parar.
+          </p>
+          <p style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>Referencia FIFA: Élite = 18-22 reps/min</p>
+          <input className="input" type="number" placeholder="Repeticiones en 1 minuto" value={runMinutes} onChange={(e) => setRunMinutes(e.target.value)} style={{ marginTop: 10, padding: 10 }} />
+          <p style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>O ingresa los minutos de carrera continua si prefieres ese método.</p>
           <button className="btn-xl" onClick={finish} style={{ marginTop: 12, background: C.green, color: "#07070C" }}>Terminar Combine</button>
         </div>
       )}
@@ -2135,7 +2139,9 @@ function pickScale(scale, value, key = "min") {
 /* ─── Utilidades ─── */
 const dayKey = (ts) => {
   const d = new Date(ts);
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
 };
 
 /* Verificación de integridad del historial: descarta registros corruptos o manipulados */
@@ -3698,6 +3704,15 @@ function appendExtraMuscleExercises(routine, extraFocusIds, lvlIdx) {
   return out;
 }
 
+function fisherYates(arr, rnd) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
   /* Brazos como sesión dedicada solo desde Campeón (lvlIdx >= 2); antes redirige a Push */
   if (discId === "gimnasio" && focusId === "arms" && lvlIdx < 2) {
@@ -3746,7 +3761,7 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     ? Math.max(minTarget, Math.min(9, Math.min(pool.length, Math.round(targetVolume / avgSetsPerExercise))))
     : Math.max(minTarget, Math.min(8, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0))));
 
-  const shuffled = [...pool].sort(() => rnd() - 0.5);
+  const shuffled = fisherYates(pool, rnd);
   const chosen = [];
   const seenTags = new Set();
   const isolationCountByTag = {};
@@ -3891,7 +3906,7 @@ function genAtletismoRoutine(distance, lvlIdx, seed = 0) {
   let pool = fullPool.filter((e) => !e.lv || (e.lv[0] <= effLvlIdx && effLvlIdx <= e.lv[1]));
   if (pool.length < 4) pool = fullPool;
   const target = Math.min(pool.length, 5 + (rnd() < 0.5 ? 1 : 0));
-  const shuffled = [...pool].sort(() => rnd() - 0.5).slice(0, target);
+  const shuffled = fisherYates(pool, rnd).slice(0, target);
   const scaling = LEVEL_SCALING[effLvlIdx] || LEVEL_SCALING[0];
   const planWeek = getPlanWeekNumber();
   const phaseMods = !deloadActive && planWeek && planWeek <= 12 ? PERIODIZATION[getPlanPhase(planWeek)] : null;
@@ -4085,7 +4100,8 @@ function sessionAvgRpe(session) {
 }
 function sessionLoad(session) {
   if (session.load) return session.load;
-  return (session.durationMin || 45) * sessionAvgRpe(session);
+  const defaultDuration = session.kind === "partido" ? 90 : session.disc?.startsWith("futbol") ? 60 : 45;
+  return (session.durationMin || defaultDuration) * sessionAvgRpe(session);
 }
 function calcACWR(sessions) {
   const now = Date.now();
@@ -4205,6 +4221,23 @@ function dailyPlanCandidates(sessions) {
     const programCandidate = programDailyCandidate(sessions);
     if (programCandidate) return [programCandidate];
   }
+
+  /* 0.5. Tapering: si hay partido configurado cerca, la disciplina sugerida debe respetarlo,
+     no solo el volumen dentro de la sesión (eso ya lo hace genRoutine con taperingMultiplier) */
+  const taperingPhase = getTaperingFactor();
+  if (taperingPhase === "match_day") {
+    return [{ discId: "cuerpo", focusId: null, lvlIdx: mostFrequentLevel(sessions), reason: "⚽ Día de partido — activación ligera y movilidad." }];
+  }
+  if (taperingPhase === "recovery") {
+    return [{ discId: "cuerpo", focusId: null, lvlIdx: mostFrequentLevel(sessions), reason: "🧘 Recuperación post-partido — movilidad suave." }];
+  }
+  if (taperingPhase === "activation") {
+    return [{ discId: "futbolParque", focusId: store.get("futbol_position", "mediocampista"), lvlIdx: Math.max(0, mostFrequentLevel(sessions) - 1), reason: "⚡ Víspera de partido — activación técnica sin contacto." }];
+  }
+  if (taperingPhase === "tapering") {
+    return [{ discId: "futbolGym", focusId: store.get("futbol_position", "mediocampista"), lvlIdx: Math.max(0, mostFrequentLevel(sessions) - 1), reason: "📉 Tapering — fuerza explosiva ligera antes del partido." }];
+  }
+  // Si taperingPhase es "build" o "normal": sesión normal (el multiplicador de volumen ya se aplica en genRoutine)
 
   /* 1. SNC (Tap Test): si está fatigado hoy, prioriza recuperación sobre cualquier otra sugerencia */
   const sncFatigue = store.get("snc_fatigued_today", null);
@@ -9418,7 +9451,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                     border: `1px solid ${focusId === f.id ? disc.color : C.border}`,
                     background: focusId === f.id ? `${disc.color}18` : C.card,
                   }}
-                  onClick={() => setFocusId(f.id)}
+                  onClick={() => { setFocusId(f.id); store.set("futbol_position", f.id); }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 800, color: focusId === f.id ? disc.color : C.text }}>{f.label}</div>
                   {f.desc && <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{f.desc}</div>}
@@ -12259,7 +12292,7 @@ function calcDNA(sessions, streak) {
 const PLAYER_AXES = [
   { id: "velocidad", label: "Velocidad", genericLabel: "Velocidad" },
   { id: "motor", label: "Motor", genericLabel: "Motor" },
-  { id: "defensa", label: "Defensa", genericLabel: "Fuerza" },
+  { id: "defensa", label: "Fuerza", genericLabel: "Fuerza" },
   { id: "pase", label: "Pase", genericLabel: "Técnica" },
   { id: "agilidad", label: "Agilidad", genericLabel: "Agilidad" },
   { id: "tiro", label: "Tiro", genericLabel: "Potencia" },
