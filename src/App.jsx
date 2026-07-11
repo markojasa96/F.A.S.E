@@ -4330,6 +4330,14 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
   return [{ discId: "calistenia", focusId: "todo", lvlIdx, reason: "Sigue sumando sesiones." }];
 }
 
+/* Renderizado condicional estricto: básquetbol, Heavy Duty, Wendler y programas puramente
+   estéticos solo se muestran si el usuario eligió "ganar músculo y fuerza" como objetivo.
+   El resto de disciplinas/programas quedan intactos en el código para otros usuarios/objetivos. */
+function showAestheticContent() {
+  return store.get("profile", {}).goal === "musculo";
+}
+const AESTHETIC_ONLY_PROGRAM_IDS = new Set(["basquet_completo", "wendler_531", "glutes_6w", "v_shape_8w"]);
+
 /* ─── Biblioteca de programas prediseñados ─── */
 const PROGRAMS = [
   {
@@ -6749,8 +6757,9 @@ const TRAIN_CARDS = [
 
 /* Sugiere primero la disciplina afín al objetivo elegido en el onboarding */
 function orderedTrainCards() {
+  const cards = showAestheticContent() ? TRAIN_CARDS : TRAIN_CARDS.filter((c) => c.id !== "basquetbol");
   const profile = store.get("profile", null);
-  if (!profile?.goal) return TRAIN_CARDS;
+  if (!profile?.goal) return cards;
   const priority = {
     rendimiento: ["futbol", "atletismo", "calistenia", "gimnasio"],
     musculo: ["gimnasio", "calistenia"],
@@ -6758,8 +6767,8 @@ function orderedTrainCards() {
     general: ["calistenia", "gimnasio", "atletismo", "futbol"],
     bienestar: ["calistenia", "atletismo"],
   }[profile.goal];
-  if (!priority) return TRAIN_CARDS;
-  return [...TRAIN_CARDS].sort((a, b) => {
+  if (!priority) return cards;
+  return [...cards].sort((a, b) => {
     const ia = priority.indexOf(a.id);
     const ib = priority.indexOf(b.id);
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
@@ -9185,10 +9194,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     const METHODOLOGIES = [
       { id: "standard", emoji: "📊", name: "Estándar", desc: "Progresión clásica probada", stats: "Series: 3-5 · Reps: 6-15 · Rest: 60-90s" },
       { id: "dup", emoji: "🔄", name: "DUP", desc: "Fuerza, hipertrofia y resistencia rotando", stats: "Series: 3-5 · Reps: Varía · Rest: Varía" },
-      { id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "Máxima intensidad, mínimo volumen", stats: "Series: 1-2 · Reps: Al fallo · Rest: 3-5 min" },
+      ...(showAestheticContent() ? [{ id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "Máxima intensidad, mínimo volumen", stats: "Series: 1-2 · Reps: Al fallo · Rest: 3-5 min" }] : []),
       { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio", stats: "Series: 10 · Reps: 10 · Rest: 60s exactos" },
       { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones contra el reloj", stats: "Series: 1 · Reps: 100 · Rest: Cuando necesites" },
-      { id: "wendler", emoji: "📈", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes", stats: "Series: 3 · Reps: 5/3/1+ · Rest: 3-5 min" },
+      ...(showAestheticContent() ? [{ id: "wendler", emoji: "📈", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes", stats: "Series: 3 · Reps: 5/3/1+ · Rest: 3-5 min" }] : []),
       { id: "amrap", emoji: "⏱", name: "AMRAP", desc: "Máximas rondas en tiempo límite", stats: "Tiempo: variable · Al máximo" },
       { id: "emom", emoji: "🔔", name: "EMOM", desc: "Un ejercicio al inicio de cada minuto", stats: "Reps: 10-15 · Cada 60s" },
       { id: "intervalos", emoji: "📊", name: "Intervalos / RSA", desc: "Alta intensidad con descansos controlados", stats: "Trabajo: 20-30s · Descanso: 40-60s" },
@@ -13663,7 +13672,7 @@ function ProgramsScreen() {
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-        {PROGRAMS.map((p) => {
+        {PROGRAMS.filter((p) => showAestheticContent() || !AESTHETIC_ONLY_PROGRAM_IDS.has(p.id)).map((p) => {
           const recommended = profile.goal && p.goalTags.includes(profile.goal);
           const isActive = active?.programId === p.id;
           return (
