@@ -287,13 +287,6 @@ const MENTORS = {
   coach: { name: "El Coach", color: "#22FF88" },
 };
 
-function canShowMentorToday() {
-  return store.get("mentor_shown_today", null) !== todayKey();
-}
-function markMentorShown() {
-  store.set("mentor_shown_today", todayKey());
-}
-
 function MentorToast({ mentorId, message, onClose }) {
   const mentor = MENTORS[mentorId];
   useEffect(() => {
@@ -4528,6 +4521,12 @@ function startProgram(programId) {
 }
 
 function stopProgram() {
+  const active = store.get("active_program", null);
+  if (active) {
+    try {
+      window.localStorage.removeItem("fase_deload_bonus_" + active.startTs);
+    } catch { /* nada más que hacer */ }
+  }
   store.set("active_program", null);
 }
 
@@ -4607,12 +4606,13 @@ function getDailyPlan(sessions) {
   const programCandidate = getActiveProgram() ? programDailyCandidate(sessions) : null;
   const rawCandidates = dailyPlanCandidates(sessions);
   const candidates = deprioritizeUnrecovered(rawCandidates);
+  const profile = store.get("profile", {});
   const cached = store.get("daily_plan", null);
-  if (cached && cached.date === today && cached.fromProgram === !!programCandidate) {
+  if (cached && cached.date === today && cached.fromProgram === !!programCandidate && cached.fromGoal === (profile.goal || "")) {
     return { plan: cached.plan, index: cached.index, candidates };
   }
   const plan = candidates[0];
-  store.set("daily_plan", { date: today, plan, index: 0, fromProgram: !!programCandidate });
+  store.set("daily_plan", { date: today, plan, index: 0, fromProgram: !!programCandidate, fromGoal: profile.goal || "" });
   return { plan, index: 0, candidates };
 }
 
@@ -8275,7 +8275,13 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [showHdUnlock, setShowHdUnlock] = useState(false);
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
-  const [special, setSpecial] = useState(null); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "partido"
+  const [special, setSpecial] = useState(() => {
+    if (store.get("open_special_reto", false)) {
+      store.set("open_special_reto", false);
+      return "reto";
+    }
+    return null;
+  }); // null | "amrap" | "emom" | "intervalos" | "reto" | "viaje" | "biblioteca" | "partido"
   const [, setTick] = useState(0);
   const activeProgram = getActiveProgram();
   const [trainMode, setTrainMode] = useState(() => (activeProgram ? "programa" : "musculo"));
@@ -8705,21 +8711,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                 <span style={{ marginLeft: "auto", color: C.blue, fontSize: 20 }}>›</span>
               </button>
             </div>
-
-            <button className="card" onClick={() => setSpecial("reto")} style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.yellow}` }}>
-              <span style={{ fontSize: 24 }}>🏆</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>Reto Personal</div>
-                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{challenge ? "Ver progreso de tu reto activo" : "Crea un desafío contra ti mismo"}</div>
-              </div>
-            </button>
-            <button className="card" onClick={() => setSpecial("viaje")} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `2px dashed ${C.border}` }}>
-              <span style={{ fontSize: 24 }}>✈️</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>Modo viaje</div>
-                <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
-              </div>
-            </button>
           </>
         )}
 
@@ -9552,7 +9543,10 @@ function EducationScreen({ plan, eduText, onDone }) {
 function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, voiceOn, name, onMentor }) {
   const [exIdx, setExIdx] = useState(0);
   const [setNum, setSetNum] = useState(0);
-  const [phase, setPhase] = useState("education"); // education | warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
+  const [phase, setPhase] = useState(() => {
+    const discSessions = sessions.filter((s) => s.disc === plan.discId && s.kind === "entreno");
+    return discSessions.length >= 3 ? "warmupPrompt" : "education";
+  }); // education | warmupPrompt | warmup | breathing | work | rest | exdone | coolPrompt | cooldown | finished
   const [restLeft, setRestLeft] = useState(0);
   const [logs, setLogs] = useState(() => plan.exercises.map(() => []));
   const [editingSet, setEditingSet] = useState(null);
@@ -9566,7 +9560,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [repsError, setRepsError] = useState(false);
   const [flashDone, setFlashDone] = useState(false);
   const [sessionSecs, setSessionSecs] = useState(0);
-  const [confetti, setConfetti] = useState(false);
   const [flashWhite, setFlashWhite] = useState(false);
   const [photoFinish, setPhotoFinish] = useState(false);
   const recordCelebratedRef = useRef(false);
@@ -9694,8 +9687,7 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const lvl = LEVELS[plan.lvlIdx];
 
   const popConfetti = () => {
-    setConfetti(true);
-    setTimeout(() => setConfetti(false), 2500);
+    // setConfetti(true); // eliminado
   };
 
   /* Cronómetro global de la sesión */
@@ -10191,7 +10183,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         }}
       >
         {flashWhite && <div className="white-flash" />}
-        <Confetti show={confetti} />
         <div className="unlock-pop" style={{ fontSize: 64 }}>{hero.emoji}</div>
         <DisciplineCelebration discId={plan.discId} />
         <h2 style={{ fontSize: 22, fontWeight: 900, marginTop: 8 }}>
@@ -12570,7 +12561,7 @@ function PlateauCard({ sessions }) {
   );
 }
 
-function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
+function Progress({ sessions, freezes = [], streak = 0, onQuickStart, onOpenChallenge }) {
   const fatigueLevel = useMemo(() => analyzeFatigue(sessions), [sessions]);
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
@@ -13245,6 +13236,12 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
       <p className="disclaimer">
         Marcas mundiales aproximadas, solo como referencia motivacional. Contenido informativo: no sustituye asesoría profesional.
       </p>
+
+      {onOpenChallenge && (
+        <button onClick={onOpenChallenge} style={{ fontSize: 12, color: C.cyan, fontWeight: 700, marginTop: 8 }}>
+          🏆 Reto Personal →
+        </button>
+      )}
     </div>
   );
 }
@@ -13530,12 +13527,12 @@ function getTabAccent(tabId) {
 }
 
 /* ─── YO: perfil, progreso y cuerpo en un solo lugar (config vive solo en el header) ─── */
-function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart }) {
+function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart, onOpenChallenge }) {
   if (section === "progreso") {
     return (
       <div className="screen">
         <button onClick={() => onSection(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Yo</button>
-        <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} />
+        <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} onOpenChallenge={onOpenChallenge} />
       </div>
     );
   }
@@ -13564,7 +13561,7 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart 
               }} />
             </div>
             <div style={{ fontSize: 11, color: C.dim }}>
-              → {LEVELS[globalIdx + 1]?.name} en {sessionsToNext} sesiones más
+              → {LEVELS[globalIdx + 1]?.name ?? "Leyenda"} en {sessionsToNext} sesiones más
             </div>
           </>
         )}
@@ -13752,11 +13749,7 @@ export default function App() {
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
   const [mentor, setMentor] = useState(null);
 
-  const triggerMentor = (id, message) => {
-    if (!canShowMentorToday()) return;
-    markMentorShown();
-    setMentor({ id, message });
-  };
+  const triggerMentor = () => {}; // silenciado
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(() => store.get("installed", false));
   const [showIOSHint, setShowIOSHint] = useState(() => {
@@ -13904,7 +13897,6 @@ export default function App() {
   /* El Médico aparece cuando la fatiga es crítica (máximo 1 mentor al día) */
   useEffect(() => {
     if (fatigueLevel === "critical") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza un modal con un valor externo (localStorage) que cambia entre renders
       triggerMentor("medico", "Tu cuerpo habla. Escúchalo antes de que grite. Descansa 2 días completos y luego retoma con Cuerpo o Movilidad suave.");
     }
   }, [fatigueLevel]);
@@ -13914,7 +13906,6 @@ export default function App() {
     const isMonday = new Date().getDay() === 1;
     if (isMonday && store.get("coach_monday_shown", null) !== todayKey()) {
       store.set("coach_monday_shown", todayKey());
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- muestra el modal una vez al montar según una fecha externa
       triggerMentor("coach", "Nueva semana, nueva oportunidad. Planifica ahora — los que planifican, logran.");
       return;
     }
@@ -14250,6 +14241,7 @@ export default function App() {
               <YoScreen
                 section={yoSection} onSection={setYoSection}
                 sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive}
+                onOpenChallenge={() => { store.set("open_special_reto", true); changeTab("entrenar"); }}
               />
             )}
           </>
