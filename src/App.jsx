@@ -319,6 +319,8 @@ const PERIODIZATION = {
 };
 
 function getPlanWeekNumber() {
+  const active = getActiveProgram();
+  if (active) return active.week;
   const start = store.get("plan_start", null);
   if (!start) return null;
   return Math.floor((Date.now() - new Date(start).getTime()) / (7 * 86400000)) + 1;
@@ -1308,6 +1310,20 @@ function applyGymFocusToExercises(exercises, focusId) {
 function getTrainingGoal() {
   const id = store.get("training_goal", null);
   return TRAINING_GOALS.find((g) => g.id === id) || null;
+}
+
+/* training_goal es un ajuste fino opcional; si no se configuró, se deriva del objetivo
+   principal del perfil (profile.goal) para que ambos sistemas fluyan en la misma dirección. */
+function getTrainingGoalFromProfile() {
+  const goal = store.get("profile", {})?.goal;
+  const map = {
+    musculo: "muscle",
+    rendimiento: "athletic",
+    grasa: "fat_loss",
+    general: "health",
+    bienestar: "health",
+  };
+  return map[goal] || null;
 }
 
 /* Copy contextual según el objetivo activo (plan del día y banner de inicio de sesión) */
@@ -3790,8 +3806,9 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
     }
   }
   const withFocus = applyGymFocusToExercises(sorted, store.get("gym_focus", null));
-  const withGoal = applyGoalToExercises(withFocus, store.get("training_goal", null));
-  const withOrder = sortByGoalOrder(withGoal, store.get("training_goal", null));
+  const effectiveGoal = store.get("training_goal", null) || getTrainingGoalFromProfile();
+  const withGoal = applyGoalToExercises(withFocus, effectiveGoal);
+  const withOrder = sortByGoalOrder(withGoal, effectiveGoal);
   const supersetsEnabled = store.get("supersets_enabled", effLvlIdx >= 3);
   return supersetsEnabled ? tagSupersets(withOrder, effLvlIdx, deloadActive) : withOrder;
 }
@@ -4330,13 +4347,19 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
   return [{ discId: "calistenia", focusId: "todo", lvlIdx, reason: "Sigue sumando sesiones." }];
 }
 
-/* Renderizado condicional estricto: básquetbol, Heavy Duty, Wendler y programas puramente
-   estéticos solo se muestran si el usuario eligió "ganar músculo y fuerza" como objetivo.
+/* Renderizado condicional: básquetbol y programas puramente estéticos solo se muestran
+   si el usuario eligió "ganar músculo y fuerza". Heavy Duty y Wendler (fuerza pura) también
+   son válidos para "rendimiento" (atletas), así que usan un criterio más amplio.
    El resto de disciplinas/programas quedan intactos en el código para otros usuarios/objetivos. */
+function showStrengthContent() {
+  const goal = store.get("profile", {}).goal;
+  return goal === "musculo" || goal === "rendimiento";
+}
 function showAestheticContent() {
   return store.get("profile", {}).goal === "musculo";
 }
-const AESTHETIC_ONLY_PROGRAM_IDS = new Set(["basquet_completo", "wendler_531", "glutes_6w", "v_shape_8w"]);
+const STRENGTH_PROGRAM_IDS = new Set(["wendler_531"]);
+const AESTHETIC_ONLY_PROGRAM_IDS = new Set(["basquet_completo", "glutes_6w", "v_shape_8w"]);
 
 /* ─── Biblioteca de programas prediseñados ─── */
 const PROGRAMS = [
@@ -4510,7 +4533,7 @@ const GOAL_TO_PROGRAM = {
   rendimiento: "football_athlete",
   musculo: "ppl",
   grasa: "recomp_8w",
-  general: "calistenia_cero",
+  general: "atletismo_velocidad",
   bienestar: "calistenia_cero",
 };
 
@@ -5105,13 +5128,11 @@ function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginTop: 10 }}>
         {["L", "M", "X", "J", "V", "S", "D"].map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: 9, fontWeight: 700, color: C.dim, paddingBottom: 4 }}>
+          <div key={`h-${d}`} style={{ textAlign: "center", fontSize: 9, fontWeight: 700, color: C.dim, paddingBottom: 2 }}>
             {d}
           </div>
         ))}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5 }}>
-        {days.map((d, i) => {
+        {days.map((d) => {
           const programDay = d.future && activeProgram
             ? getProgramDayLabel(d.date, activeProgram)
             : !d.future && !d.active && activeProgram
@@ -5121,10 +5142,30 @@ function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
             <button
               key={d.key}
               aria-label={d.future ? "Día futuro" : d.active ? "Entrenaste aquí" : d.frozen ? "Racha congelada este día" : "Sin entrenamiento"}
-              onClick={() => !d.future && setTapped(d.frozen ? "Racha congelada este día ❄️" : d.active ? "Entrenaste aquí 💪" : "Sin entrenamiento")}
+              onClick={() => {
+                if (d.future) return;
+                if (d.frozen) {
+                  setTapped("❄️ Racha congelada — el streak se protegió");
+                  return;
+                }
+                if (d.active) {
+                  const dayStr = d.key;
+                  const session = sessions.find((s) => dayKey(s.ts) === dayStr && s.kind === "entreno");
+                  if (session) {
+                    setTapped(`💪 ${session.focusLabel || session.disc} · ${session.exercises?.length || 0} ejercicios`);
+                  } else {
+                    setTapped("💪 Entrenaste aquí");
+                  }
+                  return;
+                }
+                if (programDay && programDay !== "rest") {
+                  setTapped(`📅 ${DISCIPLINES[programDay]?.label || programDay} — programado`);
+                  return;
+                }
+                setTapped("Sin actividad este día");
+              }}
               style={{
                 aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
-                marginTop: i > 0 && i % 7 === 0 ? 4 : 0,
                 background: d.active
                   ? color
                   : programDay === "rest"
@@ -9194,10 +9235,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     const METHODOLOGIES = [
       { id: "standard", emoji: "📊", name: "Estándar", desc: "Progresión clásica probada", stats: "Series: 3-5 · Reps: 6-15 · Rest: 60-90s" },
       { id: "dup", emoji: "🔄", name: "DUP", desc: "Fuerza, hipertrofia y resistencia rotando", stats: "Series: 3-5 · Reps: Varía · Rest: Varía" },
-      ...(showAestheticContent() ? [{ id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "Máxima intensidad, mínimo volumen", stats: "Series: 1-2 · Reps: Al fallo · Rest: 3-5 min" }] : []),
+      ...(showStrengthContent() ? [{ id: "heavyduty", emoji: "💀", name: "Heavy Duty", desc: "Máxima intensidad, mínimo volumen", stats: "Series: 1-2 · Reps: Al fallo · Rest: 3-5 min" }] : []),
       { id: "gvt", emoji: "🔟", name: "GVT — 10×10", desc: "10 series del mismo ejercicio", stats: "Series: 10 · Reps: 10 · Rest: 60s exactos" },
       { id: "century", emoji: "💯", name: "Century Set", desc: "100 repeticiones contra el reloj", stats: "Series: 1 · Reps: 100 · Rest: Cuando necesites" },
-      ...(showAestheticContent() ? [{ id: "wendler", emoji: "📈", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes", stats: "Series: 3 · Reps: 5/3/1+ · Rest: 3-5 min" }] : []),
+      ...(showStrengthContent() ? [{ id: "wendler", emoji: "📈", name: "Wendler 5/3/1", desc: "Ciclos de 4 semanas con porcentajes", stats: "Series: 3 · Reps: 5/3/1+ · Rest: 3-5 min" }] : []),
       { id: "amrap", emoji: "⏱", name: "AMRAP", desc: "Máximas rondas en tiempo límite", stats: "Tiempo: variable · Al máximo" },
       { id: "emom", emoji: "🔔", name: "EMOM", desc: "Un ejercicio al inicio de cada minuto", stats: "Reps: 10-15 · Cada 60s" },
       { id: "intervalos", emoji: "📊", name: "Intervalos / RSA", desc: "Alta intensidad con descansos controlados", stats: "Trabajo: 20-30s · Descanso: 40-60s" },
@@ -13672,7 +13713,11 @@ function ProgramsScreen() {
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-        {PROGRAMS.filter((p) => showAestheticContent() || !AESTHETIC_ONLY_PROGRAM_IDS.has(p.id)).map((p) => {
+        {PROGRAMS.filter((p) => {
+          if (AESTHETIC_ONLY_PROGRAM_IDS.has(p.id)) return showAestheticContent();
+          if (STRENGTH_PROGRAM_IDS.has(p.id)) return showStrengthContent();
+          return true;
+        }).map((p) => {
           const recommended = profile.goal && p.goalTags.includes(profile.goal);
           const isActive = active?.programId === p.id;
           return (
@@ -13907,30 +13952,17 @@ export default function App() {
   }, [tab]);
 
   const streak = useMemo(() => calcStreak(sessions, freezes), [sessions, freezes]);
-  const fatigueLevel = useMemo(() => analyzeFatigue(sessions), [sessions]);
 
-  /* El Médico aparece cuando la fatiga es crítica (máximo 1 mentor al día) */
-  useEffect(() => {
-    if (fatigueLevel === "critical") {
-      triggerMentor("medico", "Tu cuerpo habla. Escúchalo antes de que grite. Descansa 2 días completos y luego retoma con Cuerpo o Movilidad suave.");
-    }
-  }, [fatigueLevel]);
-
-  /* El Coach aparece los lunes y al entrar a una nueva fase del plan de 12 semanas */
+  /* El Coach marca la fase actual del plan de 12 semanas (flag persistido, sin mentor) */
   useEffect(() => {
     const isMonday = new Date().getDay() === 1;
     if (isMonday && store.get("coach_monday_shown", null) !== todayKey()) {
       store.set("coach_monday_shown", todayKey());
-      triggerMentor("coach", "Nueva semana, nueva oportunidad. Planifica ahora — los que planifican, logran.");
       return;
     }
     const wk = getPlanWeekNumber();
     if (wk && wk <= 12) {
       const phaseId = getPlanPhase(wk);
-      const lastPhase = store.get("plan_last_phase", null);
-      if (lastPhase !== null && lastPhase !== phaseId) {
-        triggerMentor("coach", `Entraste a la fase de ${PERIODIZATION_LABELS[phaseId].toLowerCase()}. ${PERIODIZATION[phaseId].focus}.`);
-      }
       store.set("plan_last_phase", phaseId);
     }
   }, []);
