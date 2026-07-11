@@ -1260,6 +1260,13 @@ const TRAINING_GOALS = [
   { id: "aesthetics", emoji: "🎨", name: "Estética / Físico", subtitle: "Forma, proporción y definición", desc: "Entrenar para verse bien. Zonas específicas, proporción y definición muscular.", color: "#A855F7", params: { repsRange: [10, 15], setsMultiplier: 1.1, restSeconds: 60 } },
 ];
 
+/* Paso 7 del onboarding: 3 enfoques directos en vez de las 8 opciones técnicas de TRAINING_GOALS */
+const FOCUS_OPTIONS = [
+  { id: "athletic", emoji: "⚡", name: "Rendimiento atlético", desc: "Velocidad, potencia, fuerza funcional. Para ser el mejor en la cancha.", trainingGoal: "athletic" },
+  { id: "physique", emoji: "💪", name: "Físico e hipertrofia", desc: "Masa muscular, fuerza y definición. Para verse y sentirse fuerte.", trainingGoal: "muscle" },
+  { id: "general", emoji: "🌱", name: "Condición general", desc: "Mejorar la forma física general sin especialización.", trainingGoal: "health" },
+];
+
 /* ─── Enfoques estéticos de Gimnasio (prioridades de rutina) ─── */
 const GYM_WORKOUT_TYPES = [
   { id: "push", name: "Push", emoji: "💪", desc: "Pecho, hombros y tríceps", muscles: ["Pecho", "Hombros", "Tríceps"] },
@@ -1482,6 +1489,7 @@ const DISCIPLINES = {
     desc: "1 hora · Fuerza aplicada al campo, por posición",
     focuses: [
       { id: "todo", label: "Todo", tags: null },
+      { id: "fisico_completo", label: "🔥 Físico completo", tags: ["velocidad", "fuerza", "salto", "estabilidad"], desc: "Full body atlético: potencia, fuerza y core" },
       { id: "portero", label: "🧤 Portero", tags: ["estabilidad", "salto"], desc: "Reflejos y dominio del área" },
       { id: "defensaCentral", label: "🛡️ Defensa Central", tags: ["fuerza", "salto"], desc: "Fuerza y anticipación" },
       { id: "lateral", label: "↔️ Lateral", tags: ["velocidad", "resistencia"], desc: "Velocidad y resistencia" },
@@ -1489,6 +1497,11 @@ const DISCIPLINES = {
       { id: "mediocampista", label: "🎯 Mediocampista", tags: ["resistencia", "estabilidad"], desc: "Motor del equipo" },
       { id: "extremo", label: "🏃 Extremo", tags: ["velocidad", "salto"], desc: "Velocidad y 1vs1" },
       { id: "delantero", label: "⚡ Delantero", tags: ["velocidad", "fuerza"], desc: "Finalización y movimiento" },
+      { id: "velocidad", label: "⚡ Velocidad", tags: ["velocidad"], desc: "Sprint, aceleración y velocidad máxima" },
+      { id: "explosividad", label: "💥 Explosividad", tags: ["velocidad", "salto"], desc: "Potencia de arranque, salto y cambios de ritmo" },
+      { id: "fuerza_campo", label: "🏋️ Fuerza funcional", tags: ["fuerza"], desc: "Fuerza base para duelos y choque físico" },
+      { id: "resistencia_campo", label: "🫁 Resistencia", tags: ["resistencia"], desc: "Motor aeróbico y capacidad de repetir sprints" },
+      { id: "estabilidad_campo", label: "⚖️ Estabilidad y core", tags: ["estabilidad"], desc: "Core, equilibrio y prevención de lesiones" },
     ],
   },
   futbolParque: {
@@ -1505,6 +1518,10 @@ const DISCIPLINES = {
       { id: "mediocampista", label: "🎯 Mediocampista", tags: ["regate", "resistencia"], desc: "Motor del equipo" },
       { id: "extremo", label: "🏃 Extremo", tags: ["regate", "ritmo", "velocidad"], desc: "Velocidad y 1vs1" },
       { id: "delantero", label: "⚡ Delantero", tags: ["tiro", "regate"], desc: "Finalización y movimiento" },
+      { id: "tiro_stat", label: "🎯 Definición", tags: ["tiro"], desc: "Técnica de tiro, potencia y precisión" },
+      { id: "regate_stat", label: "🌀 Regate y conducción", tags: ["regate"], desc: "1vs1, dribling y control del balón" },
+      { id: "velocidad_stat", label: "⚡ Velocidad con balón", tags: ["velocidad", "ritmo"], desc: "Aceleración, cambios de ritmo y conducción rápida" },
+      { id: "resistencia_stat", label: "🫁 Resistencia de campo", tags: ["resistencia"], desc: "Fartlek, intervalos y volumen aeróbico" },
     ],
   },
   basquetCancha: {
@@ -3754,12 +3771,13 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
      al volumen total (en series) objetivo del nivel */
   const avgSetsPerExercise = 3.5 + scaling.setsAdd;
   const targetVolume = discId === "gimnasio" ? GYM_VOLUME_TARGET[effLvlIdx] : null;
-  const minTarget = effLvlIdx >= 3 ? 7 : 6;
+  const minTarget = discId === "futbolGym" ? 7 : effLvlIdx >= 3 ? 7 : 6;
+  const maxTarget = discId === "futbolGym" ? 9 : 8;
   const target = focusId === "core"
     ? Math.min(8, pool.length)
     : targetVolume
     ? Math.max(minTarget, Math.min(9, Math.min(pool.length, Math.round(targetVolume / avgSetsPerExercise))))
-    : Math.max(minTarget, Math.min(8, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0))));
+    : Math.max(minTarget, Math.min(maxTarget, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0))));
 
   const shuffled = fisherYates(pool, rnd);
   const chosen = [];
@@ -6026,28 +6044,39 @@ function Welcome({ onDone }) {
     );
   }
 
-  /* Paso 7 — Objetivo principal */
+  /* Paso 7 — Enfoque principal */
   if (step === 7) {
     return wrap(
       <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Qué quieres lograr?</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
-          {TRAINING_GOALS.map((g) => (
+        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu enfoque?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+          {FOCUS_OPTIONS.map((o) => (
             <button
-              key={g.id} onClick={() => setGoal(g.id)}
+              key={o.id}
+              onClick={() => setGoal(o.id)}
               style={{
-                padding: "14px 10px", borderRadius: 14, textAlign: "left",
-                border: `2px solid ${goal === g.id ? g.color : C.border}`,
-                background: goal === g.id ? `${g.color}18` : C.card,
+                padding: "16px 14px", borderRadius: 14, textAlign: "left",
+                border: `2px solid ${goal === o.id ? C.cyan : C.border}`,
+                background: goal === o.id ? `${C.cyan}18` : C.card,
               }}
             >
-              <div style={{ fontSize: 22 }}>{g.emoji}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4, color: goal === g.id ? g.color : C.text }}>{g.name}</div>
-              <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{g.subtitle}</div>
+              <div style={{ fontSize: 24 }}>{o.emoji}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, marginTop: 4, color: goal === o.id ? C.cyan : C.text }}>{o.name}</div>
+              <div style={{ fontSize: 11, color: C.mut, marginTop: 3, lineHeight: 1.4 }}>{o.desc}</div>
             </button>
           ))}
         </div>
-        {continueBtn(() => go(7.5), !goal)}
+        {continueBtn(() => {
+          const selected = FOCUS_OPTIONS.find((o) => o.id === goal);
+          if (selected) {
+            store.set("training_goal", selected.trainingGoal);
+          }
+          if (goal === "athletic" || goal === "general") {
+            go(8);
+          } else {
+            go(7.5);
+          }
+        }, !goal)}
       </>
     );
   }
@@ -6481,6 +6510,11 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
             >
               ▶ Empezar este plan
             </button>
+            {store.get("double_session_pending", false) && (
+              <p style={{ fontSize: 11, color: C.green, fontWeight: 700, marginTop: 8, textAlign: "center" }}>
+                💪+⚽ Sesión doble activa — no olvides tu sesión de parque más tarde
+              </p>
+            )}
             <div style={{ textAlign: "center", display: "flex", justifyContent: "center", gap: 14 }}>
               {lastEntreno && (
                 <button onClick={() => onRepeat?.(lastEntreno)} style={{ marginTop: 6, color: C.dim, fontSize: 12 }}>
@@ -8905,6 +8939,17 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Registra acciones en tiempo real durante el partido</div>
           </div>
         </button>
+        <button
+          className="card"
+          onClick={() => { store.set("double_session_pending", true); setDiscId("futbolGym"); }}
+          style={{ marginTop: 10, width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.green}` }}
+        >
+          <span style={{ fontSize: 24 }}>💪+⚽</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Sesión doble</div>
+            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Gym ahora + Parque más tarde. La combinación de élite.</div>
+          </div>
+        </button>
       </div>
     );
   }
@@ -9440,25 +9485,59 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
               <p style={{ fontSize: 12, fontWeight: 700, color: C.cyan }}>Selecciona tu enfoque</p>
             </div>
           )}
-          {discId?.startsWith("futbol") ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-              {disc.focuses.map((f) => (
-                <button
-                  key={f.id}
-                  className="card"
-                  style={{
-                    textAlign: "left", padding: "8px 10px",
-                    border: `1px solid ${focusId === f.id ? disc.color : C.border}`,
-                    background: focusId === f.id ? `${disc.color}18` : C.card,
-                  }}
-                  onClick={() => { setFocusId(f.id); store.set("futbol_position", f.id); }}
-                >
-                  <div style={{ fontSize: 12, fontWeight: 800, color: focusId === f.id ? disc.color : C.text }}>{f.label}</div>
-                  {f.desc && <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{f.desc}</div>}
-                </button>
-              ))}
-            </div>
-          ) : (
+          {discId?.startsWith("futbol") ? (() => {
+            const positionFocusIds = new Set(["portero", "defensaCentral", "lateral", "pivote", "mediocampista", "extremo", "delantero"]);
+            const futbolFocuses = disc.focuses.filter((f) => f.id !== "todo");
+            const specialFocus = futbolFocuses.find((f) => f.id === "fisico_completo");
+            const byPosition = futbolFocuses.filter((f) => positionFocusIds.has(f.id));
+            const byStat = futbolFocuses.filter((f) => !positionFocusIds.has(f.id) && f.id !== "fisico_completo");
+            const focusBtn = (f) => (
+              <button
+                key={f.id}
+                className="card"
+                style={{
+                  textAlign: "left", padding: "8px 10px",
+                  border: `1px solid ${focusId === f.id ? disc.color : C.border}`,
+                  background: focusId === f.id ? `${disc.color}18` : C.card,
+                }}
+                onClick={() => { setFocusId(f.id); store.set("futbol_position", f.id); }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 800, color: focusId === f.id ? disc.color : C.text }}>{f.label}</div>
+                {f.desc && <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{f.desc}</div>}
+              </button>
+            );
+            return (
+              <>
+                {specialFocus && (
+                  <button
+                    key={specialFocus.id}
+                    className="card"
+                    style={{
+                      width: "100%", textAlign: "left", padding: "10px 12px",
+                      border: `2px solid ${focusId === specialFocus.id ? disc.color : C.border}`,
+                      background: focusId === specialFocus.id ? `${disc.color}18` : C.card,
+                    }}
+                    onClick={() => { setFocusId(specialFocus.id); store.set("futbol_position", specialFocus.id); }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 800, color: focusId === specialFocus.id ? disc.color : C.text }}>{specialFocus.label}</div>
+                    {specialFocus.desc && <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{specialFocus.desc}</div>}
+                  </button>
+                )}
+                <p style={{ fontSize: 11, fontWeight: 700, color: C.mut, marginTop: 14, marginBottom: 6 }}>POR POSICIÓN</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  {byPosition.map(focusBtn)}
+                </div>
+                {byStat.length > 0 && (
+                  <>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: C.mut, marginTop: 14, marginBottom: 6 }}>POR ESTADÍSTICA</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                      {byStat.map(focusBtn)}
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })() : (
             <div className="chip-wrap">
               {disc.focuses.map((f) => (
                 <button
@@ -10390,6 +10469,12 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         {suggestion && (
           <div className="card" style={{ marginTop: 8, padding: "11px" }}>
             <span style={{ fontSize: 12, fontWeight: 700 }}>{suggestion}</span>
+          </div>
+        )}
+
+        {plan.discId === "futbolGym" && store.get("double_session_pending", false) && (
+          <div className="card" style={{ marginTop: 8, padding: "11px", borderLeft: `4px solid ${C.green}` }}>
+            <span style={{ fontSize: 12, fontWeight: 700 }}>💪 Primera sesión completada. Recuerda tu sesión de técnica más tarde.</span>
           </div>
         )}
 
@@ -14096,6 +14181,9 @@ export default function App() {
     if (record.kind === "entreno" || record.kind === "partido") {
       updateRecoveryState(record);
       if (!store.get("first_session_date", null)) store.set("first_session_date", record.ts);
+    }
+    if (record.disc === "futbolParque" && store.get("double_session_pending", false)) {
+      store.set("double_session_pending", false);
     }
     const s = calcStreak(next, freezes);
     const earned = HEROES.filter((h) => s >= h.days).map((h) => h.id);
