@@ -3434,7 +3434,7 @@ function repRangeRestBounds(repsStr) {
 }
 
 /* Volumen total (en series) objetivo por nivel para sesiones de gimnasio */
-const GYM_VOLUME_TARGET = [11, 13, 16, 20, 22, 25];
+const GYM_VOLUME_TARGET = [12, 15, 18, 22, 25, 28];
 
 function genBasquetRoutine(discId, lvlIdx, deloadActive) {
   const effLvlIdx = Math.max(0, Math.min(5, deloadActive ? lvlIdx - 1 : lvlIdx));
@@ -3728,9 +3728,12 @@ function genRoutine(discId, focusId, lvlIdx, seed = 0, opts = {}) {
      al volumen total (en series) objetivo del nivel */
   const avgSetsPerExercise = 3.5 + scaling.setsAdd;
   const targetVolume = discId === "gimnasio" ? GYM_VOLUME_TARGET[effLvlIdx] : null;
-  const target = targetVolume
-    ? Math.max(5, Math.min(9, Math.min(pool.length, Math.round(targetVolume / avgSetsPerExercise))))
-    : Math.max(5, Math.min(8, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0))));
+  const minTarget = effLvlIdx >= 3 ? 7 : 6;
+  const target = focusId === "core"
+    ? Math.min(8, pool.length)
+    : targetVolume
+    ? Math.max(minTarget, Math.min(9, Math.min(pool.length, Math.round(targetVolume / avgSetsPerExercise))))
+    : Math.max(minTarget, Math.min(8, Math.min(pool.length, 5 + (effLvlIdx >= 2 ? 1 : 0) + (effLvlIdx >= 4 ? 1 : 0) + (rnd() < 0.5 ? 1 : 0))));
 
   const shuffled = [...pool].sort(() => rnd() - 0.5);
   const chosen = [];
@@ -5087,7 +5090,14 @@ function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
         <span style={{ fontSize: 12, color: C.mut, textTransform: "capitalize" }}>{month}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginTop: 10 }}>
-        {days.map((d) => {
+        {["L", "M", "X", "J", "V", "S", "D"].map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: 9, fontWeight: 700, color: C.dim, paddingBottom: 4 }}>
+            {d}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5 }}>
+        {days.map((d, i) => {
           const programDay = d.future && activeProgram ? getProgramDayLabel(d.date, activeProgram) : null;
           return (
             <button
@@ -5096,25 +5106,35 @@ function Heatmap({ sessions, color, freezes = [], activeProgram = null }) {
               onClick={() => !d.future && setTapped(d.frozen ? "Racha congelada este día ❄️" : d.active ? "Entrenaste aquí 💪" : "Sin entrenamiento")}
               style={{
                 aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
+                marginTop: i > 0 && i % 7 === 0 ? 4 : 0,
                 background: d.future
-                  ? (programDay === "rest" ? "transparent" : programDay ? `${DISCIPLINES[programDay]?.color || C.cyan}22` : "transparent")
+                  ? (programDay === "rest" ? C.surface : programDay ? `${DISCIPLINES[programDay]?.color || C.cyan}44` : C.surface)
                   : d.active ? color : "#1A1A2E",
                 border: d.isToday
-                  ? "1.5px solid #FFFFFFcc"
-                  : d.future && programDay && programDay !== "rest"
-                    ? `1px dashed ${DISCIPLINES[programDay]?.color || C.cyan}66`
-                    : `1px solid ${d.active ? color : C.border}`,
+                  ? "2px solid #FFFFFFcc"
+                  : d.active
+                    ? `1px solid ${color}`
+                    : d.future && programDay && programDay !== "rest"
+                      ? `1.5px dashed ${DISCIPLINES[programDay]?.color || C.cyan}99`
+                      : `1px solid ${C.border}`,
                 opacity: 1,
                 transition: "background .3s ease",
               }}
             >
+              <span style={{
+                fontSize: 8,
+                color: d.active ? "#07070C" : d.future && programDay && programDay !== "rest" ? DISCIPLINES[programDay]?.color || C.cyan : C.dim,
+                fontWeight: d.isToday ? 900 : 400,
+                lineHeight: 1,
+              }}>
+                {d.date.getDate()}
+              </span>
               {d.frozen && !d.active ? "❄️" : ""}
             </button>
           );
         })}
       </div>
       {tapped && <div style={{ fontSize: 11, color: C.mut, marginTop: 8, textAlign: "center" }}>{tapped}</div>}
-      <div style={{ fontSize: 11, color: C.dim, marginTop: 8, textAlign: "right" }}>Últimas 5 semanas · lunes a domingo</div>
       <div style={{ fontSize: 10, color: C.dim, marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 10, height: 10, borderRadius: 2, background: color, display: "inline-block" }} />
@@ -8609,15 +8629,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
           </div>
         ) : null}
 
-        <div className="chip-wrap" style={{ marginTop: 14 }}>
-          <button className={`chip ${trainMode === "musculo" ? "on" : ""}`} onClick={() => setTrainMode("musculo")}>💪 Entrenar por músculo</button>
-          <button className={`chip ${trainMode === "programa" ? "on" : ""}`} onClick={() => setTrainMode("programa")}>📅 Programa semanal</button>
-          <button className={`chip ${trainMode === "rutina" ? "on" : ""}`} onClick={() => setTrainMode("rutina")}>🔨 Crear mi rutina</button>
-        </div>
-
         {trainMode === "musculo" && (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+            <p style={{ fontSize: 14, fontWeight: 800, color: C.text, marginTop: 16, marginBottom: 12 }}>¿Qué entrenas hoy?</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {trainCards.map((d) => (
                 <button
                   key={d.id}
@@ -8667,6 +8682,17 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
                 <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Sin equipo, 20 min, para cualquier lugar</div>
               </div>
             </button>
+
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+              <button onClick={() => setTrainMode("programa")} style={{ fontSize: 12, color: C.cyan, fontWeight: 700, textAlign: "left" }}>
+                📅 Ver programas de varias semanas →
+              </button>
+              {customRoutines.length > 0 && (
+                <button onClick={() => setTrainMode("rutina")} style={{ fontSize: 12, color: C.cyan, fontWeight: 700, textAlign: "left" }}>
+                  📋 Usar mi rutina guardada →
+                </button>
+              )}
+            </div>
           </>
         )}
 
@@ -13498,21 +13524,12 @@ function getTabAccent(tabId) {
 }
 
 /* ─── YO: perfil, progreso y cuerpo en un solo lugar (config vive solo en el header) ─── */
-function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart, onCompleteBody }) {
+function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart }) {
   if (section === "progreso") {
     return (
       <div className="screen">
         <button onClick={() => onSection(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Yo</button>
         <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} />
-      </div>
-    );
-  }
-
-  if (section === "cuerpo") {
-    return (
-      <div className="screen">
-        <button onClick={() => onSection(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Yo</button>
-        <Body onComplete={onCompleteBody} />
       </div>
     );
   }
@@ -13553,18 +13570,6 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart,
           <div>
             <div style={{ fontSize: 15, fontWeight: 800 }}>Mi progreso</div>
             <div style={{ fontSize: 12, color: C.mut }}>Récords, estadísticas, DNA atlético, logros y más</div>
-          </div>
-          <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
-        </button>
-        <button
-          onClick={() => onSection("cuerpo")}
-          className="card"
-          style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", padding: 16, marginTop: 8 }}
-        >
-          <span style={{ fontSize: 28 }}>🧘</span>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800 }}>Movilidad y recuperación</div>
-            <div style={{ fontSize: 12, color: C.mut }}>Estiramientos, movilidad articular y recuperación activa</div>
           </div>
           <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
         </button>
@@ -14239,7 +14244,6 @@ export default function App() {
               <YoScreen
                 section={yoSection} onSection={setYoSection}
                 sessions={sessions} freezes={freezes} streak={streak} onQuickStart={setLive}
-                onCompleteBody={completeBody}
               />
             )}
           </>
