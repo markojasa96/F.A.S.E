@@ -279,37 +279,6 @@ const FATIGUE_INFO = {
   critical: { emoji: "🔴", label: "Crítico", color: C.red, title: "⚠️ Signos de sobreentrenamiento", desc: "Tu rendimiento bajó y llevas muchos días seguidos. Tu cuerpo está pidiendo descanso. Recomendación: 2 días de descanso completo, luego Cuerpo/Movilidad suave." },
 };
 
-/* ─── Mentores virtuales ─── */
-const MENTORS = {
-  maestro: { name: "El Maestro", color: "#FFD700" },
-  guerrero: { name: "El Guerrero", color: "#FF3B5C" },
-  medico: { name: "El Médico", color: "#60A5FA" },
-  coach: { name: "El Coach", color: "#22FF88" },
-};
-
-function MentorToast({ mentorId, message, onClose }) {
-  const mentor = MENTORS[mentorId];
-  useEffect(() => {
-    const t = setTimeout(onClose, 6000);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  if (!mentor) return null;
-  return (
-    <div
-      role="button" tabIndex={0} onClick={onClose}
-      className="card fade-up"
-      style={{
-        position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 400, maxWidth: 430, margin: "0 auto",
-        padding: "14px 16px", borderLeft: `3px solid ${mentor.color}`,
-      }}
-    >
-      <p style={{ fontSize: 12, fontWeight: 900, color: mentor.color }}>{mentor.name}</p>
-      <p style={{ fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>{message}</p>
-    </div>
-  );
-}
-
 /* ─── Periodización automática de 12 semanas ─── */
 const PERIODIZATION = {
   foundation: { desc: "Construyendo la base", focus: "Técnica perfecta y adaptación", setsModifier: -1, restModifier: 30, color: C.blue },
@@ -367,6 +336,25 @@ function persistentPainZones() {
     .map(([zone]) => zone);
 }
 
+function estimateOnermFromHistory(sessions, exerciseName) {
+  // Epley: 1RM = weight × (1 + reps / 30)
+  let best = null;
+  const base = exerciseName.toLowerCase();
+  sessions.forEach((s) => {
+    if (s.kind !== "entreno") return;
+    s.exercises.forEach((e) => {
+      if (!e.name?.toLowerCase().startsWith(base)) return;
+      e.sets.filter((st) => st.ok && st.weight > 0 && st.reps > 0 && st.reps <= 10).forEach((st) => {
+        const estimated = Math.round(st.weight * (1 + st.reps / 30) * 2) / 2;
+        if (!best || estimated > best.value) {
+          best = { value: estimated, from: `${st.weight}kg × ${st.reps}` };
+        }
+      });
+    });
+  });
+  return best;
+}
+
 function CombineScreen({ onClose }) {
   const [step, setStep] = useState(0); // 0 sprint, 1 jump, 2 1rm, 3 tap, 4 resistencia, 5 resultados
   const [sprintTime, setSprintTime] = useState("");
@@ -391,8 +379,6 @@ function CombineScreen({ onClose }) {
     store.set("last_combine", Date.now());
     setStep(5);
   };
-
-  const squat1RM = store.get("1rm", {})["Sentadilla"]?.rm || null;
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto", padding: 24 }}>
@@ -420,11 +406,22 @@ function CombineScreen({ onClose }) {
       {step === 2 && (
         <div className="card" style={{ marginTop: 20 }}>
           <p style={{ fontSize: 13, fontWeight: 700 }}>Test 3 — 1RM estimado</p>
-          {squat1RM ? (
-            <p style={{ fontSize: 22, fontWeight: 900, color: C.cyan, marginTop: 8 }}>{squat1RM}kg</p>
-          ) : (
-            <p style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>Sin 1RM registrado todavía. Regístralo en Progreso → Calculadora 1RM.</p>
-          )}
+          <p style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>Calculado automáticamente de tus series pesadas en gimnasio (fórmula de Epley)</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+            {["Sentadilla", "Press banca", "Peso muerto", "Press militar"].map((ex) => {
+              const orm = estimateOnermFromHistory(store.get("sessions", []), ex);
+              return (
+                <div key={ex} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: C.mut }}>{ex}</span>
+                  {orm ? (
+                    <span style={{ fontSize: 14, fontWeight: 800, color: C.cyan }}>~{orm.value} kg <span style={{ fontSize: 10, color: C.dim, fontWeight: 400 }}>({orm.from})</span></span>
+                  ) : (
+                    <span style={{ fontSize: 11, color: C.dim }}>Sin datos</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
           <button className="btn-xl" onClick={() => setStep(3)} style={{ marginTop: 12, background: C.cyan, color: "#07070C" }}>Siguiente</button>
         </div>
       )}
@@ -1260,13 +1257,6 @@ const TRAINING_GOALS = [
   { id: "aesthetics", emoji: "🎨", name: "Estética / Físico", subtitle: "Forma, proporción y definición", desc: "Entrenar para verse bien. Zonas específicas, proporción y definición muscular.", color: "#A855F7", params: { repsRange: [10, 15], setsMultiplier: 1.1, restSeconds: 60 } },
 ];
 
-/* Paso 7 del onboarding: 3 enfoques directos en vez de las 8 opciones técnicas de TRAINING_GOALS */
-const FOCUS_OPTIONS = [
-  { id: "athletic", emoji: "⚡", name: "Rendimiento atlético", desc: "Velocidad, potencia, fuerza funcional. Para ser el mejor en la cancha.", trainingGoal: "athletic" },
-  { id: "physique", emoji: "💪", name: "Físico e hipertrofia", desc: "Masa muscular, fuerza y definición. Para verse y sentirse fuerte.", trainingGoal: "muscle" },
-  { id: "general", emoji: "🌱", name: "Condición general", desc: "Mejorar la forma física general sin especialización.", trainingGoal: "health" },
-];
-
 /* ─── Enfoques estéticos de Gimnasio (prioridades de rutina) ─── */
 const GYM_WORKOUT_TYPES = [
   { id: "push", name: "Push", emoji: "💪", desc: "Pecho, hombros y tríceps", muscles: ["Pecho", "Hombros", "Tríceps"] },
@@ -1415,29 +1405,16 @@ function PowerBar({ levelIdx }) {
 /* Umbrales de sesiones totales para el nivel global (Iniciado 0-4, Guerrero 5-14, Campeón 15-29, Élite 30-59, Leyenda 60-99, THE ONE 100+) */
 const GLOBAL_LEVEL_THRESHOLDS = [0, 5, 15, 30, 60, 100];
 
-/* ─── Héroes por racha (escala histórica, 12 niveles desde 0 días) ─── */
-const HEROES = [
-  { id: "recluta", days: 0, emoji: "🌱", name: "Recluta", quote: "El primer paso es el más difícil. Ya lo diste.", color: C.mut },
-  { id: "atleta", days: 7, emoji: "🏃", name: "Atleta", quote: "Una semana seguida. El hábito empieza aquí.", color: C.green },
-  { id: "competidor", days: 21, emoji: "💪", name: "Competidor", quote: "21 días. Tu cuerpo ya cambió aunque no lo veas.", color: C.cyan },
-  { id: "avanzado", days: 45, emoji: "⚡", name: "Avanzado", quote: "45 días. Lo que era esfuerzo ahora es rutina.", color: C.yellow },
-  { id: "elite", days: 90, emoji: "🔥", name: "Élite", quote: "3 meses. Estás en el 5% que sí lo hace.", color: C.orange },
-  { id: "profesional", days: 180, emoji: "🏆", name: "Profesional", quote: "6 meses. Esto ya no es disciplina — es quién eres.", color: C.red },
-  { id: "leyenda", days: 365, emoji: "⭐", name: "Leyenda", quote: "Un año completo. Muy pocos llegan aquí. Tú sí.", color: C.purple },
+/* ─── Hitos de racha (id + días, usados por heroForStreak y el tracking de desbloqueos) ─── */
+const HERO_MILESTONES = [
+  { id: "recluta", days: 0 },
+  { id: "atleta", days: 7 },
+  { id: "competidor", days: 21 },
+  { id: "avanzado", days: 45 },
+  { id: "elite", days: 90 },
+  { id: "profesional", days: 180 },
+  { id: "leyenda", days: 365 },
 ];
-/* Mapa de compatibilidad para IDs de héroes guardados en localStorage antes de v30 */
-const LEGACY_HERO_ID_MAP = {
-  esclavo: "recluta", arquero: "atleta", legionario: "atleta", caballero: "competidor",
-  ninja: "competidor", vikingo: "avanzado", espartano: "avanzado", samurai: "elite",
-  gladiador: "elite", conquistador: "profesional", general: "profesional", leyenda: "leyenda",
-};
-
-/* Devuelve el héroe con days más alto que sea <= streak */
-function getMascot(streak) {
-  let hero = HEROES[0];
-  for (const h of HEROES) if (streak >= h.days) hero = h;
-  return hero;
-}
 
 /* ─── Disciplinas y enfoques ─── */
 const DISCIPLINES = {
@@ -3103,7 +3080,13 @@ function generateFocusWeek(focusId) {
 }
 
 function heroForStreak(streak) {
-  return getMascot(streak);
+  if (streak >= 365) return { emoji: "⭐", name: "Leyenda", color: C.purple };
+  if (streak >= 180) return { emoji: "🏆", name: "Profesional", color: C.red };
+  if (streak >= 90) return { emoji: "🔥", name: "Élite", color: C.orange };
+  if (streak >= 45) return { emoji: "⚡", name: "Avanzado", color: C.yellow };
+  if (streak >= 21) return { emoji: "💪", name: "Competidor", color: C.cyan };
+  if (streak >= 7) return { emoji: "🏃", name: "Atleta", color: C.green };
+  return { emoji: "🌱", name: "Recluta", color: C.mut };
 }
 
 function startOfWeek() {
@@ -4168,20 +4151,6 @@ function computeYesterdayBasedCandidates(sessions, workouts, lvlIdx) {
 /* ─── Biblioteca de programas prediseñados ─── */
 const PROGRAMS = [
   {
-    id: "ppl", name: "PPL Híbrido — Fuerza + Masa", emoji: "🏋️", color: C.cyan,
-    durationWeeks: 8, daysPerWeek: 6, minLevelIdx: 1, goalTags: ["musculo"],
-    desc: "El programa más probado para ganar músculo. Divide el cuerpo en empuje, jalón y piernas. Alta frecuencia, alto volumen.",
-    structure: [
-      { discId: "gimnasio", focusId: "push", label: "Empuje (pecho, hombros, tríceps)" },
-      { discId: "gimnasio", focusId: "pull", label: "Jalón (espalda, bíceps)" },
-      { discId: "gimnasio", focusId: "legs", label: "Piernas (cuádriceps, isquios, glúteos)" },
-      { discId: "gimnasio", focusId: "push", label: "Empuje (variaciones)" },
-      { discId: "gimnasio", focusId: "pull", label: "Jalón (variaciones)" },
-      { discId: "gimnasio", focusId: "glutes_focus", label: "Piernas (énfasis glúteo e isquio)" },
-      null,
-    ],
-  },
-  {
     id: "5x5", name: "5×5 Fuerza Pura", emoji: "🏆", color: C.orange,
     durationWeeks: 12, daysPerWeek: 3, minLevelIdx: 2, goalTags: ["musculo", "rendimiento"],
     desc: "Sentadilla, peso muerto, press banca, press militar, remo. 5 series de 5 reps. Añades peso cada sesión. Simple y brutal.",
@@ -4234,19 +4203,6 @@ const PROGRAMS = [
     ],
   },
   {
-    id: "recomp_8w", name: "Recomposición — Corte Atlético", emoji: "⚖️", color: C.cyan,
-    durationWeeks: 8, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["recomposition"],
-    desc: "Perder grasa y ganar músculo simultáneamente con estructura Upper/Lower y cardio al final. Requiere disciplina nutricional además del entrenamiento.",
-    structure: [
-      { discId: "gimnasio", focusId: "upper", label: "Upper A (pecho, espalda, hombros)" },
-      { discId: "gimnasio", focusId: "legs", label: "Lower A (piernas + cardio final)" },
-      null,
-      { discId: "gimnasio", focusId: "upper", label: "Upper B (variación)" },
-      { discId: "gimnasio", focusId: "glutes_focus", label: "Lower B (glúteos + cardio final)" },
-      null, null,
-    ],
-  },
-  {
     id: "football_athlete", name: "Atleta de Fútbol — 12 Semanas", emoji: "⚽", color: C.orange,
     durationWeeks: 12, daysPerWeek: 4, minLevelIdx: 1, goalTags: ["athletic"],
     desc: "Fuerza, velocidad y resistencia específicas para fútbol: 2 sesiones de gimnasio y 2 de parque por semana.",
@@ -4283,15 +4239,16 @@ const TRAIN_MODES = [
 /* Objetivo del perfil (onboarding) → programa recomendado, sin volver a preguntar */
 const GOAL_TO_PROGRAM = {
   rendimiento: "football_athlete",
-  musculo: "ppl",
-  grasa: "recomp_8w",
+  athletic: "football_athlete",
+  musculo: "5x5",
+  grasa: "atletismo_velocidad",
   general: "atletismo_velocidad",
   bienestar: "calistenia_cero",
 };
 
 function getRecommendedProgram() {
   const goal = store.get("profile", {})?.goal;
-  const programId = GOAL_TO_PROGRAM[goal] || "ppl";
+  const programId = GOAL_TO_PROGRAM[goal] || "5x5";
   return PROGRAMS.find((p) => p.id === programId) || PROGRAMS[0];
 }
 
@@ -5036,11 +4993,6 @@ function StatBox({ label, value, accent, sparkData }) {
 
 
 /* ─── Pantalla de bienvenida ─── */
-const MODE_OPTIONS = [
-  { id: "guiado", emoji: "🎮", label: "Con guía y retos", desc: "Gamificación activa: héroes, rachas visuales y mensajes" },
-  { id: "pro", emoji: "⚙️", label: "Control total", desc: "Datos puros, sin distracciones" },
-];
-
 const GOAL_OPTIONS = [
   { id: "rendimiento", emoji: "🏆", label: "Rendimiento deportivo", desc: "Fútbol, atletismo",
     msg: "Tu camino al alto rendimiento empieza hoy. F.A.S.E. te llevará ahí." },
@@ -5053,141 +5005,6 @@ const GOAL_OPTIONS = [
   { id: "bienestar", emoji: "🧘", label: "Movilidad y bienestar", desc: "Cuidar el cuerpo",
     msg: "Cuidar tu cuerpo es la inversión más importante que harás. Empecemos con calma." },
 ];
-
-const GENDER_OPTIONS = [
-  { id: "m", emoji: "♂", label: "Masculino" },
-  { id: "f", emoji: "♀", label: "Femenino" },
-  { id: "x", emoji: "🫥", label: "Prefiero no decir" },
-];
-
-const FITNESS_LEVEL_OPTIONS = [
-  { id: "iniciado", emoji: "🔵", label: "Iniciado", desc: "Llevo menos de 6 meses entrenando o estoy empezando desde cero.", lvlIdx: 0 },
-  { id: "intermedio", emoji: "🟢", label: "Intermedio", desc: "Llevo más de 6 meses y conozco los ejercicios básicos.", lvlIdx: 1 },
-  { id: "avanzado", emoji: "🔴", label: "Avanzado", desc: "Llevo más de 2 años y entreno con consistencia real.", lvlIdx: 3 },
-];
-
-const HEALTH_ISSUE_OPTIONS = [
-  { id: "ninguna", emoji: "✅", label: "Ninguna" },
-  { id: "rodilla", emoji: "🦵", label: "Rodilla" },
-  { id: "cadera", emoji: "🦴", label: "Cadera" },
-  { id: "espalda", emoji: "🔙", label: "Espalda o hernia" },
-  { id: "hombros", emoji: "💪", label: "Hombros o brazos" },
-  { id: "tobillos", emoji: "🦶", label: "Tobillos o pies" },
-  { id: "cardio", emoji: "❤️", label: "Condición cardíaca" },
-  { id: "saltos", emoji: "⚡", label: "No puedo hacer saltos" },
-];
-
-/* Mapa corporal anatómico interactivo: SVG con zonas iluminables + lista de checks a la derecha */
-const BODY_MAP_ZONES = [
-  { id: "hombros", label: "Hombros", color: "#00E5FF" },
-  { id: "pecho", label: "Pecho", color: "#FF6B2B" },
-  { id: "brazos", label: "Brazos", color: "#22FF88" },
-  { id: "abdomen", label: "Abdomen", color: "#FFD600" },
-  { id: "gluteos", label: "Glúteos", color: "#FF9EC4" },
-  { id: "piernas", label: "Piernas", color: "#A855F7" },
-  { id: "espalda", label: "Espalda", color: "#3B82F6" },
-];
-
-function BodyMapSVG({ selected, onChange }) {
-  const isSelected = (id) => selected.includes(id) || selected.includes("todo");
-  const toggle = (id) => onChange(id);
-  const colorFor = (id) => BODY_MAP_ZONES.find((z) => z.id === id)?.color || C.cyan;
-
-  const strokeFor = (id) => (isSelected(id) ? colorFor(id) : C.border);
-
-  return (
-    <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-      <svg viewBox="0 0 120 260" width="120" height="260" style={{ flexShrink: 0, display: "block" }}>
-        {/* CABEZA */}
-        <ellipse cx="60" cy="22" rx="16" ry="20" fill={C.card} stroke={C.border} strokeWidth="1.5" />
-        <ellipse cx="60" cy="20" rx="11" ry="13" fill={C.surface} stroke={C.border} strokeWidth="1" />
-
-        {/* CUELLO */}
-        <rect x="54" y="40" width="12" height="10" rx="4" fill={C.card} stroke={C.border} strokeWidth="1" />
-
-        {/* HOMBROS */}
-        <ellipse cx="32" cy="60" rx="16" ry="10" fill={isSelected("hombros") ? colorFor("hombros") : C.surface} stroke={strokeFor("hombros")} strokeWidth="1.5" onClick={() => toggle("hombros")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-        <ellipse cx="88" cy="60" rx="16" ry="10" fill={isSelected("hombros") ? colorFor("hombros") : C.surface} stroke={strokeFor("hombros")} strokeWidth="1.5" onClick={() => toggle("hombros")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-
-        {/* PECHO */}
-        <path d="M44,52 Q60,48 76,52 L78,85 Q60,90 42,85 Z" fill={isSelected("pecho") ? colorFor("pecho") : C.surface} stroke={strokeFor("pecho")} strokeWidth="1.5" onClick={() => toggle("pecho")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-        <line x1="60" y1="52" x2="60" y2="86" stroke={isSelected("pecho") ? "#00000033" : C.border} strokeWidth="0.5" />
-
-        {/* BRAZOS SUPERIORES */}
-        <ellipse cx="26" cy="88" rx="11" ry="24" fill={isSelected("brazos") ? colorFor("brazos") : C.surface} stroke={strokeFor("brazos")} strokeWidth="1.5" onClick={() => toggle("brazos")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-        <ellipse cx="94" cy="88" rx="11" ry="24" fill={isSelected("brazos") ? colorFor("brazos") : C.surface} stroke={strokeFor("brazos")} strokeWidth="1.5" onClick={() => toggle("brazos")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-
-        {/* ANTEBRAZOS */}
-        <ellipse cx="22" cy="128" rx="9" ry="20" fill={isSelected("brazos") ? `${colorFor("brazos")}66` : C.card} stroke={strokeFor("brazos")} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
-        <ellipse cx="98" cy="128" rx="9" ry="20" fill={isSelected("brazos") ? `${colorFor("brazos")}66` : C.card} stroke={strokeFor("brazos")} strokeWidth="1" onClick={() => toggle("brazos")} style={{ cursor: "pointer" }} />
-
-        {/* ABDOMEN */}
-        <path d="M42,85 Q60,90 78,85 L76,118 Q60,122 44,118 Z" fill={isSelected("abdomen") ? colorFor("abdomen") : C.surface} stroke={strokeFor("abdomen")} strokeWidth="1.5" onClick={() => toggle("abdomen")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-        {[95, 105].map((y) => (
-          <line key={y} x1="49" y1={y} x2="71" y2={y} stroke={isSelected("abdomen") ? "#00000022" : "transparent"} strokeWidth="0.8" />
-        ))}
-        <line x1="60" y1="86" x2="60" y2="118" stroke={isSelected("abdomen") ? "#00000022" : "transparent"} strokeWidth="0.5" />
-
-        {/* GLÚTEOS / CADERA */}
-        <path d="M44,118 Q60,122 76,118 L80,148 Q60,155 40,148 Z" fill={isSelected("gluteos") ? colorFor("gluteos") : C.surface} stroke={strokeFor("gluteos")} strokeWidth="1.5" onClick={() => toggle("gluteos")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-
-        {/* MUSLOS / CUÁDRICEPS */}
-        <ellipse cx="48" cy="180" rx="16" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : C.surface} stroke={strokeFor("piernas")} strokeWidth="1.5" onClick={() => toggle("piernas")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-        <ellipse cx="72" cy="180" rx="16" ry="32" fill={isSelected("piernas") ? colorFor("piernas") : C.surface} stroke={strokeFor("piernas")} strokeWidth="1.5" onClick={() => toggle("piernas")} style={{ cursor: "pointer", transition: "fill 0.2s ease" }} />
-
-        {/* RODILLAS */}
-        <ellipse cx="48" cy="218" rx="11" ry="8" fill={C.card} stroke={strokeFor("piernas")} strokeWidth="1" />
-        <ellipse cx="72" cy="218" rx="11" ry="8" fill={C.card} stroke={strokeFor("piernas")} strokeWidth="1" />
-
-        {/* PANTORRILLAS */}
-        <ellipse cx="48" cy="242" rx="11" ry="20" fill={isSelected("piernas") ? `${colorFor("piernas")}66` : C.card} stroke={strokeFor("piernas")} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
-        <ellipse cx="72" cy="242" rx="11" ry="20" fill={isSelected("piernas") ? `${colorFor("piernas")}66` : C.card} stroke={strokeFor("piernas")} strokeWidth="1" onClick={() => toggle("piernas")} style={{ cursor: "pointer" }} />
-
-        {/* ESPALDA (indicadores laterales) */}
-        {isSelected("espalda") && (
-          <>
-            <rect x="14" y="55" width="8" height="55" rx="4" fill={colorFor("espalda")} opacity="0.7" />
-            <rect x="98" y="55" width="8" height="55" rx="4" fill={colorFor("espalda")} opacity="0.7" />
-          </>
-        )}
-
-        {/* LABELS en las zonas */}
-        {[
-          { id: "hombros", x: 60, y: 58, label: "HOMBROS" },
-          { id: "pecho", x: 60, y: 72, label: "PECHO" },
-          { id: "abdomen", x: 60, y: 103, label: "ABDOMEN" },
-          { id: "gluteos", x: 60, y: 136, label: "GLÚTEOS" },
-          { id: "piernas", x: 60, y: 182, label: "PIERNAS" },
-        ].map(({ id, x, y, label }) => isSelected(id) && (
-          <text key={id} x={x} y={y} textAnchor="middle" fontSize="5.5" fill="#07070C" fontWeight="800" opacity="0.7">
-            {label}
-          </text>
-        ))}
-      </svg>
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-        {BODY_MAP_ZONES.map((z) => {
-          const on = isSelected(z.id);
-          return (
-            <button
-              key={z.id}
-              onClick={() => toggle(z.id)}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                padding: "8px 12px", borderRadius: 10,
-                border: `2px solid ${on ? z.color : C.border}`,
-                background: on ? `${z.color}18` : C.card,
-              }}
-            >
-              <span style={{ fontSize: 10 }}>{on ? "☑" : "☐"}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: on ? z.color : C.text }}>{z.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 /* Ejercicios a evitar o advertir según limitaciones físicas (usado en genRoutine) */
 const HEALTH_FILTERS = {
@@ -5310,79 +5127,285 @@ function SelectionCard({ emoji, name, subtitle, selected, onSelect, color }) {
 }
 
 /* Selector deslizable de números (edad, altura, peso). 56px por fila. */
-function ScrollPicker({ value, onChange, min, max, unit = "", step = 1 }) {
-  const rowH = 56;
-  const items = useMemo(() => {
-    const arr = [];
-    for (let i = min; i <= max; i += step) arr.push(Math.round(i * 10) / 10);
-    return arr;
-  }, [min, max, step]);
-  const idxOf = (v) => Math.max(0, Math.min(items.length - 1, Math.round((v - min) / step)));
-  const [scrollY, setScrollY] = useState(idxOf(value) * rowH);
-  const [dragging, setDragging] = useState(false);
-  const startY = useRef(0);
-  const startScroll = useRef(0);
+/* ─── Pantalla de bienvenida: onboarding de 4 pasos ─── */
+const ONBOARD_TOTAL_STEPS = 4;
 
-  const onStart = (clientY) => { startY.current = clientY; startScroll.current = scrollY; setDragging(true); };
-  const onMove = (clientY) => {
-    const delta = startY.current - clientY;
-    setScrollY(Math.max(0, Math.min(startScroll.current + delta, (items.length - 1) * rowH)));
-  };
-  const onEnd = () => {
-    setDragging(false);
-    const idx = Math.round(scrollY / rowH);
-    setScrollY(idx * rowH);
-    onChange(items[idx]);
+function Welcome({ onDone }) {
+  const [step, setStep] = useState(1);
+  const [slide, setSlide] = useState("visible");
+  const [name, setName] = useState("");
+  const [goal, setGoal] = useState(null);
+  const [fitnessLevel, setFitnessLevel] = useState(null);
+  const [matchDay, setMatchDay] = useState(6); // 6 = sábado por defecto
+
+  const go = (next) => {
+    setSlide("exit-left");
+    setTimeout(() => {
+      setStep(next);
+      setSlide("enter-right");
+      requestAnimationFrame(() => setSlide("visible"));
+    }, 180);
   };
 
-  const activeIdx = Math.round(scrollY / rowH);
+  const WELCOME_GOALS = [
+    {
+      id: "rendimiento",
+      trainingGoal: "athletic",
+      emoji: "⚽",
+      name: "Rendimiento deportivo",
+      desc: "Velocidad, potencia y resistencia para el campo.",
+      color: C.orange,
+    },
+    {
+      id: "musculo",
+      trainingGoal: "muscle",
+      emoji: "🏋️",
+      name: "Fuerza y músculo",
+      desc: "Ganar masa muscular y fuerza funcional.",
+      color: C.cyan,
+    },
+    {
+      id: "general",
+      trainingGoal: "endurance",
+      emoji: "🤸",
+      name: "Condición general",
+      desc: "Moverse mejor, tener más energía y resistencia.",
+      color: C.green,
+    },
+  ];
 
-  return (
+  const FITNESS_LEVELS = [
+    { id: "inicio", emoji: "🌱", label: "Comenzando", desc: "Menos de 3 meses entrenando", lvlIdx: 0 },
+    { id: "intermedio", emoji: "💪", label: "Intermedio", desc: "Entre 3 meses y 1 año de base", lvlIdx: 2 },
+    { id: "avanzado", emoji: "🔥", label: "Avanzado", desc: "Más de 1 año entrenando regularmente", lvlIdx: 4 },
+  ];
+
+  const MATCH_DAYS = [
+    { id: 1, label: "Lunes" },
+    { id: 2, label: "Martes" },
+    { id: 3, label: "Miércoles" },
+    { id: 4, label: "Jueves" },
+    { id: 5, label: "Viernes" },
+    { id: 6, label: "Sábado" },
+    { id: 0, label: "Domingo" },
+  ];
+
+  const finish = () => {
+    const cleanName = sanitize(name) || "Atleta";
+    const selectedGoal = WELCOME_GOALS.find((g) => g.id === goal);
+    const lvlIdxStart = fitnessLevel?.lvlIdx ?? 0;
+
+    store.set("name", cleanName);
+    store.set("training_goal", selectedGoal?.trainingGoal || "athletic");
+    store.set("fitness_level", fitnessLevel?.id || "inicio");
+    store.set("level_global", lvlIdxStart);
+    store.set("match_day", matchDay);
+    store.set("futbol_position", "mediocampista"); // default, editable en settings
+    store.set("profile", { goal: selectedGoal?.trainingGoal || "athletic", days: 4 });
+    store.set("weekly_goal", 4);
+    store.set("health_issues", ["ninguna"]); // sin limitaciones por defecto
+    store.set("gender", null);
+    store.set("onboarded", true);
+
+    onDone(cleanName, "guiado");
+  };
+
+  const wrap = (content) => (
     <div
-      style={{ height: rowH * 3, overflow: "hidden", position: "relative", touchAction: "none", userSelect: "none" }}
-      onTouchStart={(e) => onStart(e.touches[0].clientY)}
-      onTouchMove={(e) => onMove(e.touches[0].clientY)}
-      onTouchEnd={onEnd}
-      onMouseDown={(e) => { e.preventDefault(); onStart(e.clientY); }}
-      onMouseMove={(e) => { if (dragging) onMove(e.clientY); }}
-      onMouseUp={onEnd}
-      onMouseLeave={() => dragging && onEnd()}
+      style={{
+        minHeight: "100svh", background: C.bg, display: "flex",
+        flexDirection: "column", padding: "32px 24px 40px",
+      }}
+      className={`fade-up exercise-card-${slide}`}
     >
-      <div style={{ position: "absolute", top: rowH, left: 0, right: 0, height: rowH, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, pointerEvents: "none", zIndex: 1 }} />
-      <div style={{ transform: `translateY(${rowH - scrollY}px)`, transition: dragging ? "none" : "transform 0.2s ease" }}>
-        {items.map((item, i) => {
-          const distance = Math.abs(i - activeIdx);
-          return (
-            <div
-              key={item}
-              style={{
-                height: rowH, display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: distance === 0 ? 42 : distance === 1 ? 26 : 18,
-                fontWeight: distance === 0 ? 900 : 400,
-                color: distance === 0 ? C.text : `rgba(255,255,255,${Math.max(0.08, 0.3 - distance * 0.1)})`,
-                transition: "all 0.1s ease",
-              }}
-            >
-              {item}{unit}
-            </div>
-          );
-        })}
+      <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: 3,
+          background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`,
+          WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+          F.A.S.E.
+        </div>
+        <div style={{ fontSize: 11, color: C.mut, letterSpacing: 2, marginTop: 2 }}>
+          FORMACIÓN ATLÉTICA Y SISTEMAS DE ENTRENAMIENTO
+        </div>
       </div>
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: rowH, background: `linear-gradient(to bottom, ${C.bg}, transparent)`, pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: rowH, background: `linear-gradient(to top, ${C.bg}, transparent)`, pointerEvents: "none" }} />
+
+      <OnboardingProgress step={step} total={ONBOARD_TOTAL_STEPS} />
+      <div style={{ fontSize: 11, color: C.dim, textAlign: "right", marginBottom: 20 }}>
+        {step} / {ONBOARD_TOTAL_STEPS}
+      </div>
+
+      <div style={{ flex: 1 }}>
+        {content}
+      </div>
     </div>
   );
+
+  /* Paso 1 — Nombre */
+  if (step === 1) {
+    return wrap(
+      <>
+        <p style={{ fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 20 }}>
+          ¿Cómo te llamas?
+        </p>
+        <input
+          className="input"
+          placeholder="Tu nombre"
+          value={name}
+          maxLength={24}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && name.trim() && go(2)}
+          autoFocus
+          style={{ textAlign: "center", fontSize: 20, padding: "16px" }}
+        />
+        <p style={{ color: C.dim, fontSize: 12, textAlign: "center", marginTop: 8 }}>
+          Sin cuentas ni correos. Todo se guarda en tu dispositivo.
+        </p>
+        <button
+          className="btn-xl"
+          disabled={!name.trim()}
+          onClick={() => go(2)}
+          style={{ marginTop: 24, background: C.cyan, color: "#07070C", minHeight: 56 }}
+        >
+          Siguiente →
+        </button>
+      </>
+    );
+  }
+
+  /* Paso 2 — Objetivo */
+  if (step === 2) {
+    return wrap(
+      <>
+        <p style={{ fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>
+          ¿Cuál es tu objetivo?
+        </p>
+        <p style={{ fontSize: 12, color: C.mut, textAlign: "center", marginBottom: 20 }}>
+          Esto ajusta tus rutinas, progresión de peso y programas sugeridos.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {WELCOME_GOALS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setGoal(g.id)}
+              style={{
+                padding: "18px 16px", borderRadius: 14, textAlign: "left",
+                border: `2px solid ${goal === g.id ? g.color : C.border}`,
+                background: goal === g.id ? `${g.color}18` : C.card,
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ fontSize: 22 }}>{g.emoji}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4,
+                color: goal === g.id ? g.color : C.text }}>
+                {g.name}
+              </div>
+              <div style={{ fontSize: 12, color: C.mut, marginTop: 3, lineHeight: 1.4 }}>
+                {g.desc}
+              </div>
+            </button>
+          ))}
+        </div>
+        <button
+          className="btn-xl"
+          disabled={!goal}
+          onClick={() => go(3)}
+          style={{ marginTop: 20, background: C.cyan, color: "#07070C", minHeight: 56 }}
+        >
+          Siguiente →
+        </button>
+      </>
+    );
+  }
+
+  /* Paso 3 — Nivel */
+  if (step === 3) {
+    return wrap(
+      <>
+        <p style={{ fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>
+          ¿Cuál es tu nivel actual?
+        </p>
+        <p style={{ fontSize: 12, color: C.mut, textAlign: "center", marginBottom: 20 }}>
+          Ajusta el volumen y la dificultad desde el primer día.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {FITNESS_LEVELS.map((f) => (
+            <SelectionCard
+              key={f.id}
+              emoji={f.emoji}
+              name={f.label}
+              subtitle={f.desc}
+              selected={fitnessLevel?.id === f.id}
+              onSelect={() => setFitnessLevel(f)}
+              color={C.cyan}
+            />
+          ))}
+        </div>
+        <button
+          className="btn-xl"
+          disabled={!fitnessLevel}
+          onClick={() => go(4)}
+          style={{ marginTop: 20, background: C.cyan, color: "#07070C", minHeight: 56 }}
+        >
+          Siguiente →
+        </button>
+        <button
+          onClick={() => go(1)}
+          style={{ marginTop: 10, color: C.mut, fontSize: 13, fontWeight: 600 }}
+        >
+          ← Atrás
+        </button>
+      </>
+    );
+  }
+
+  /* Paso 4 — Día de partido (o día libre de la semana) */
+  if (step === 4) {
+    return wrap(
+      <>
+        <p style={{ fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>
+          ¿Cuándo es tu partido o día libre?
+        </p>
+        <p style={{ fontSize: 12, color: C.mut, textAlign: "center", marginBottom: 20 }}>
+          El sistema ajusta la carga semanal para que llegues fresco ese día.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {MATCH_DAYS.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setMatchDay(d.id)}
+              style={{
+                padding: "18px 12px", borderRadius: 12, textAlign: "center",
+                border: `2px solid ${matchDay === d.id ? C.cyan : C.border}`,
+                background: matchDay === d.id ? `${C.cyan}18` : C.card,
+                color: matchDay === d.id ? C.cyan : C.text,
+                fontWeight: 700, fontSize: 15,
+              }}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+        <button
+          className="btn-xl"
+          onClick={finish}
+          style={{ marginTop: 24, background: C.green, color: "#07070C",
+            minHeight: 60, fontSize: 18, fontWeight: 900 }}
+        >
+          ⚡ GENERAR MI PLAN
+        </button>
+        <button
+          onClick={() => go(3)}
+          style={{ marginTop: 10, color: C.mut, fontSize: 13, fontWeight: 600 }}
+        >
+          ← Atrás
+        </button>
+      </>
+    );
+  }
+
+  return null;
 }
 
-const PLAN_LOADING_MESSAGES = [
-  "Analizando tu perfil...",
-  "Calculando tu plan óptimo...",
-  "Ajustando para tu objetivo...",
-  "Configurando tus rutinas...",
-  "¡Tu plan está listo!",
-];
-
-/* Resumen personalizado reutilizable: recalcula macros con el peso más reciente registrado */
 function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
   const weightLog = getWeightLog();
   const weight = weightLog.length ? weightLog[weightLog.length - 1].weight : store.get("weight", 70);
@@ -5402,7 +5425,7 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
   const calGoal = goalId === "fat_loss" ? tdee - 400 : goalId === "muscle" ? tdee + 300 : goalId === "athletic" || goalId === "endurance" ? tdee + 200 : tdee;
   const calories = Math.round(calGoal);
   const protein = Math.round(weight * (goalId === "fat_loss" ? 2.2 : 2.0));
-  const hero0 = HEROES[0];
+  const hero0 = heroForStreak(0);
   const hasIssues = healthIssues.length && !healthIssues.includes("ninguna");
   const weightDiff = Math.round((targetWeight - weight) * 10) / 10;
   const showProjection = Math.abs(weightDiff) >= 1;
@@ -5451,435 +5474,6 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
         </div>
       )}
     </div>
-  );
-}
-
-function PlanLoadingScreen({ onDone }) {
-  const [msgIdx, setMsgIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const msgTimer = setInterval(() => setMsgIdx((i) => Math.min(PLAN_LOADING_MESSAGES.length - 1, i + 1)), 400);
-    const start = Date.now();
-    let raf;
-    const tick = () => {
-      const pct = Math.min(100, ((Date.now() - start) / 2000) * 100);
-      setProgress(pct);
-      if (pct < 100) raf = requestAnimationFrame(tick);
-      else onDone();
-    };
-    raf = requestAnimationFrame(tick);
-    return () => { clearInterval(msgTimer); cancelAnimationFrame(raf); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return (
-    <div style={{ minHeight: "100svh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <div style={{ fontSize: 56, animation: "spin 1.6s linear infinite" }}>⚡</div>
-      <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, color: C.text }}>{PLAN_LOADING_MESSAGES[msgIdx]}</p>
-      <div style={{ width: "70%", height: 4, background: C.border, borderRadius: 99, overflow: "hidden", marginTop: 20 }}>
-        <div style={{ height: "100%", width: `${progress}%`, background: C.cyan, borderRadius: 99 }} />
-      </div>
-    </div>
-  );
-}
-
-const ONBOARD_TOTAL_STEPS = 10;
-
-function Welcome({ onDone }) {
-  const [step, setStep] = useState(1);
-  const [slide, setSlide] = useState("visible");
-  const [value, setValue] = useState("");
-  const [gender, setGender] = useState(null);
-  const [age, setAge] = useState(20);
-  const [height, setHeight] = useState(170);
-  const [weight, setWeight] = useState(70);
-  const [targetWeight, setTargetWeight] = useState(70);
-  const [goal, setGoal] = useState(null);
-  const [fitnessLevel, setFitnessLevel] = useState(null);
-  const [healthIssues, setHealthIssues] = useState([]);
-  const [days, setDays] = useState(4);
-  const [mode, setMode] = useState("guiado");
-  const [showPlanLoading, setShowPlanLoading] = useState(false);
-  const [bodyFocus, setBodyFocus] = useState([]);
-
-  const go = (next) => {
-    setSlide("exit-left");
-    setTimeout(() => {
-      setStep(next);
-      setSlide("enter-right");
-      requestAnimationFrame(() => setSlide("visible"));
-    }, 180);
-  };
-  const back = (prev) => {
-    setSlide("exit-left");
-    setTimeout(() => {
-      setStep(prev);
-      setSlide("enter-right");
-      requestAnimationFrame(() => setSlide("visible"));
-    }, 180);
-  };
-
-  const toggleHealthIssue = (id) => {
-    setHealthIssues((prev) => {
-      if (id === "ninguna") return ["ninguna"];
-      const withoutNone = prev.filter((x) => x !== "ninguna");
-      return withoutNone.includes(id) ? withoutNone.filter((x) => x !== id) : [...withoutNone, id];
-    });
-  };
-
-  const skipAll = () => {
-    onDone(sanitize(value) || "Atleta", "guiado");
-  };
-
-  const finish = () => {
-    store.set("gender", gender);
-    store.set("age", age);
-    store.set("height", height);
-    store.set("weight", weight);
-    store.set("target_weight", targetWeight);
-    store.set("training_goal", goal);
-    store.set("fitness_level", fitnessLevel?.id || null);
-    store.set("health_issues", healthIssues);
-    store.set("body_focus", bodyFocus);
-    store.set("weekly_goal", days);
-    store.set("profile", { goal, days });
-    if (weight) saveWeightEntry(weight);
-    const goalObj = TRAINING_GOALS.find((g) => g.id === goal);
-    onDone(sanitize(value), mode);
-    void goalObj;
-  };
-
-  const wrap = (children, { showSkip = false, showBack = true, backTo = null } = {}) => (
-    <div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", background: C.bg }}>
-      <div style={{ padding: "16px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
-        {showBack && step > 1 ? (
-          <button onClick={() => back(backTo ?? step - 1)} style={{ color: C.mut, fontSize: 18, padding: 4 }}>←</button>
-        ) : <div style={{ width: 26 }} />}
-        <div style={{ flex: 1 }}><OnboardingProgress step={step} total={ONBOARD_TOTAL_STEPS} /></div>
-        {showSkip && (
-          <button onClick={skipAll} style={{ color: C.dim, fontSize: 12, fontWeight: 700 }}>Saltar →</button>
-        )}
-        {!showSkip && <div style={{ width: 40 }} />}
-      </div>
-      <div className={`exercise-card-${slide}`} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "8px 24px 24px", gap: 14 }}>
-        {children}
-      </div>
-    </div>
-  );
-
-  const continueBtn = (onClick, disabled, label = "Continuar") => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        width: "100%", height: 56, background: "#fff", color: "#07070C", fontWeight: 800, fontSize: 17,
-        borderRadius: 99, border: "none", marginTop: 18, opacity: disabled ? 0.4 : 1,
-      }}
-    >
-      {label}
-    </button>
-  );
-
-  if (showPlanLoading) {
-    return <PlanLoadingScreen onDone={() => { setShowPlanLoading(false); setStep(11); }} />;
-  }
-
-  /* Paso 11 — Resumen final */
-  if (step === 11) {
-    const goalObj = TRAINING_GOALS.find((g) => g.id === goal) || TRAINING_GOALS[0];
-    const w = weight, h = height, a = age;
-    const sex = gender === "f" ? "f" : "m";
-    const tmb = calcTMB(w, h, a, sex, null);
-    const activityMult = getActivityMult([], days);
-    const tdee = tmb * activityMult;
-    const calGoal = goal === "fat_loss" ? tdee - 400 : goal === "muscle" ? tdee + 300 : goal === "athletic" || goal === "endurance" ? tdee + 200 : tdee;
-    const calories = Math.round(calGoal);
-    const protein = Math.round(w * (goal === "fat_loss" ? 2.2 : 2.0));
-    const hero0 = HEROES[0];
-    const lvlIdxStart = fitnessLevel?.lvlIdx ?? 0;
-    const estMinutes = 30 + lvlIdxStart * 5;
-    const hasIssues = healthIssues.length && !healthIssues.includes("ninguna");
-    const weightDiff = Math.round((targetWeight - weight) * 10) / 10;
-    const showProjection = Math.abs(weightDiff) >= 1;
-    const projectionWeeks = weightDiff < 0 ? Math.max(1, Math.round(Math.abs(weightDiff) / 0.5)) : Math.max(1, Math.round(weightDiff / 0.3));
-    return (
-      <div style={{ minHeight: "100svh", background: C.bg, padding: "32px 20px", display: "flex", flexDirection: "column" }} className="fade-up">
-        <div style={{ textAlign: "center" }}>
-          <h1 style={{ fontSize: 28, fontWeight: 900 }}>✨ Tu plan está listo</h1>
-          <p style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>Personalizado para ti, {value.trim() || "atleta"}</p>
-        </div>
-
-        <div style={{ marginTop: 20, textAlign: "center" }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: goalObj.color, background: `${goalObj.color}18`, padding: "8px 16px", borderRadius: 99 }}>
-            {goalObj.emoji} {goalObj.name}
-          </span>
-        </div>
-
-        {showProjection && (
-          <div className="card" style={{ marginTop: 16, padding: "10px 8px" }}>
-            <WeightProjectionChart currentWeight={weight} targetWeight={targetWeight} weeks={projectionWeeks} />
-          </div>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 20 }}>
-          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: C.orange }}>{calories}</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🔥 kcal/día</div>
-          </div>
-          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: C.red }}>{protein}g</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>🥩 proteína</div>
-          </div>
-          <div className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: C.green }}>{days}x</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>📅 ~{estMinutes} min/sesión</div>
-          </div>
-        </div>
-
-        <div className="card" style={{ marginTop: 12, textAlign: "center", padding: "14px" }}>
-          <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>EMPIEZAS COMO</p>
-          <div style={{ fontSize: 40, marginTop: 6 }}>{hero0.emoji}</div>
-          <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>{hero0.name}</div>
-          <div style={{ fontSize: 12, color: C.mut, fontStyle: "italic", marginTop: 4 }}>“{hero0.quote}”</div>
-        </div>
-
-        {hasIssues && (
-          <div className="card" style={{ marginTop: 10, padding: "10px 14px", borderColor: `${C.green}55` }}>
-            <p style={{ fontSize: 12, color: C.green, fontWeight: 700 }}>✓ Rutinas adaptadas a tu condición física</p>
-          </div>
-        )}
-
-        <div className="chip-wrap" style={{ marginTop: 14, justifyContent: "center" }}>
-          {MODE_OPTIONS.map((m) => (
-            <button key={m.id} className={`chip ${mode === m.id ? "on" : ""}`} style={mode === m.id ? { background: goalObj.color } : {}} onClick={() => setMode(m.id)}>
-              {m.emoji} {m.label}
-            </button>
-          ))}
-        </div>
-
-        <button
-          className="btn-xl"
-          onClick={finish}
-          style={{ marginTop: 20, height: 64, background: goalObj.color, color: "#07070C", fontSize: 18, fontWeight: 900, borderRadius: 99 }}
-        >
-          Comenzar mi plan →
-        </button>
-      </div>
-    );
-  }
-
-  /* Paso 10 — Días disponibles */
-  if (step === 10) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuántos días a la semana puedes entrenar?</p>
-        <div style={{ textAlign: "center", marginTop: 10 }}>
-          <div style={{ fontSize: 56, fontWeight: 900, color: C.cyan }}>{days}x</div>
-          <div style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>por semana</div>
-          <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center" }}>
-            {[2, 3, 4, 5, 6].map((n) => (
-              <button
-                key={n} onClick={() => setDays(n)}
-                style={{ width: 44, height: 44, borderRadius: "50%", border: `1px solid ${days === n ? C.cyan : C.border}`, background: days === n ? `${C.cyan}20` : C.card, color: days === n ? C.cyan : C.text, fontWeight: 800 }}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
-        {continueBtn(() => setShowPlanLoading(true))}
-      </>
-    );
-  }
-
-  /* Paso 9 — Limitaciones de salud */
-  if (step === 9) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Tienes alguna limitación física?</p>
-        <p style={{ color: C.dim, fontSize: 11, textAlign: "center" }}>Puedes elegir varias</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
-          {HEALTH_ISSUE_OPTIONS.map((h) => (
-            <SelectionCard key={h.id} emoji={h.emoji} name={h.label} selected={healthIssues.includes(h.id)} onSelect={() => toggleHealthIssue(h.id)} color={C.green} />
-          ))}
-        </div>
-        {continueBtn(() => go(10), false)}
-      </>
-    );
-  }
-
-  /* Paso 8 — Nivel de fitness */
-  if (step === 8) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu nivel actual?</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
-          {FITNESS_LEVEL_OPTIONS.map((f) => (
-            <SelectionCard key={f.id} emoji={f.emoji} name={f.label} subtitle={f.desc} selected={fitnessLevel?.id === f.id} onSelect={() => setFitnessLevel(f)} />
-          ))}
-        </div>
-        {continueBtn(() => go(9), !fitnessLevel)}
-      </>,
-      { backTo: 7.5 }
-    );
-  }
-
-  /* Paso 7.5 — Zona corporal a priorizar (opcional) */
-  if (step === 7.5) {
-    const toggleZone = (id) => {
-      setBodyFocus((prev) => {
-        if (id === "todo") return ["todo"];
-        const without = prev.filter((z) => z !== "todo");
-        return without.includes(id) ? without.filter((z) => z !== id) : [...without, id];
-      });
-    };
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Qué zona quieres trabajar más?</p>
-        <button
-          onClick={() => toggleZone("todo")}
-          style={{
-            marginTop: 10, padding: "8px 12px", borderRadius: 10, textAlign: "center", fontSize: 12, fontWeight: 700, width: "100%",
-            border: `1px solid ${bodyFocus.includes("todo") ? C.cyan : C.border}`,
-            background: bodyFocus.includes("todo") ? `${C.cyan}18` : C.card,
-            color: bodyFocus.includes("todo") ? C.cyan : C.text,
-          }}
-        >
-          {bodyFocus.includes("todo") ? "☑" : "☐"} Todo el cuerpo
-        </button>
-        <div style={{ marginTop: 12 }}>
-          <BodyMapSVG selected={bodyFocus} onChange={toggleZone} />
-        </div>
-        {continueBtn(() => go(8))}
-      </>,
-      { backTo: 7 }
-    );
-  }
-
-  /* Paso 7 — Enfoque principal */
-  if (step === 7) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu enfoque?</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-          {FOCUS_OPTIONS.map((o) => (
-            <button
-              key={o.id}
-              onClick={() => setGoal(o.id)}
-              style={{
-                padding: "16px 14px", borderRadius: 14, textAlign: "left",
-                border: `2px solid ${goal === o.id ? C.cyan : C.border}`,
-                background: goal === o.id ? `${C.cyan}18` : C.card,
-              }}
-            >
-              <div style={{ fontSize: 24 }}>{o.emoji}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, marginTop: 4, color: goal === o.id ? C.cyan : C.text }}>{o.name}</div>
-              <div style={{ fontSize: 11, color: C.mut, marginTop: 3, lineHeight: 1.4 }}>{o.desc}</div>
-            </button>
-          ))}
-        </div>
-        {continueBtn(() => {
-          const selected = FOCUS_OPTIONS.find((o) => o.id === goal);
-          if (selected) {
-            store.set("training_goal", selected.trainingGoal);
-          }
-          if (goal === "athletic" || goal === "general") {
-            go(8);
-          } else {
-            go(7.5);
-          }
-        }, !goal)}
-      </>
-    );
-  }
-
-  /* Paso 6 — Peso objetivo */
-  if (step === 6) {
-    const diff = Math.round((targetWeight - weight) * 10) / 10;
-    const diffLabel = diff < -0.4 ? `Perder ${Math.abs(diff)}kg` : diff > 0.4 ? `Ganar ${diff}kg` : "Mantener mi peso";
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu peso objetivo?</p>
-        <ScrollPicker value={targetWeight} onChange={setTargetWeight} min={40} max={200} unit="kg" />
-        <p style={{ textAlign: "center", fontSize: 13, color: C.mut, fontWeight: 700 }}>{diffLabel}</p>
-        {continueBtn(() => go(7))}
-      </>
-    );
-  }
-
-  /* Paso 5 — Peso actual */
-  if (step === 5) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuánto pesas actualmente?</p>
-        <ScrollPicker value={weight} onChange={setWeight} min={40} max={200} unit="kg" />
-        {continueBtn(() => go(6))}
-      </>
-    );
-  }
-
-  /* Paso 4 — Altura */
-  if (step === 4) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuánto mides?</p>
-        <ScrollPicker value={height} onChange={setHeight} min={140} max={220} unit="cm" />
-        {continueBtn(() => go(5))}
-      </>
-    );
-  }
-
-  /* Paso 3 — Edad */
-  if (step === 3) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuántos años tienes?</p>
-        <ScrollPicker value={age} onChange={setAge} min={13} max={80} unit="" />
-        {continueBtn(() => go(4))}
-      </>
-    );
-  }
-
-  /* Paso 2 — Género */
-  if (step === 2) {
-    return wrap(
-      <>
-        <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cuál es tu género?</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
-          {GENDER_OPTIONS.map((g) => (
-            <SelectionCard key={g.id} emoji={g.emoji} name={g.label} selected={gender === g.id} onSelect={() => setGender(g.id)} color={C.green} />
-          ))}
-        </div>
-        {continueBtn(() => go(3), !gender)}
-      </>
-    );
-  }
-
-  /* Paso 1 — Nombre */
-  return wrap(
-    <>
-      <div style={{ textAlign: "center", marginBottom: 12 }}>
-        <div className="pop" style={{ fontSize: 56, marginBottom: 10 }}>⚡</div>
-        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: 3, background: `linear-gradient(90deg, ${C.cyan}, ${C.green})`, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
-          F.A.S.E.
-        </h1>
-      </div>
-      <p style={{ color: C.text, fontSize: 16, fontWeight: 700, textAlign: "center" }}>¿Cómo te llamas?</p>
-      <input
-        className="input"
-        placeholder="Tu nombre"
-        value={value}
-        maxLength={24}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && value.trim() && go(2)}
-        autoFocus
-        style={{ textAlign: "center", fontSize: 18 }}
-      />
-      {continueBtn(() => go(2), !value.trim())}
-      <p style={{ color: C.dim, fontSize: 12, textAlign: "center", marginTop: 4 }}>
-        Sin cuentas ni correos. Todo se guarda solo en tu dispositivo.
-      </p>
-    </>,
-    { showSkip: true, showBack: false }
   );
 }
 
@@ -8594,7 +8188,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     const volume = Math.round(allSets.reduce((acc, s) => acc + s.weight * s.reps, 0));
     const newStreak = streak;
     const hero = heroForStreak(newStreak);
-    const justUnlocked = HEROES.find((h) => h.days === newStreak);
+    const heroMilestones = [7, 21, 45, 90, 180, 365];
+    const justUnlocked = heroMilestones.includes(newStreak) ? heroForStreak(newStreak) : null;
 
     const bulldogs = (volume / 20).toFixed(0); // 1 bulldog ≈ 20kg
 
@@ -8675,7 +8270,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           <div className="card unlock-pop" style={{ marginTop: 14, borderColor: C.yellow, background: "rgba(255,214,0,0.07)" }}>
             <div style={{ fontSize: 36 }}>{justUnlocked.emoji}</div>
             <div style={{ fontWeight: 800, color: C.yellow, marginTop: 4, fontSize: 13 }}>¡Héroe desbloqueado: {justUnlocked.name}!</div>
-            <div style={{ fontSize: 11, color: C.mut, fontStyle: "italic" }}>“{justUnlocked.quote}”</div>
           </div>
         )}
 
@@ -12182,7 +11776,7 @@ export default function App() {
   });
   const [heroes, setHeroes] = useState(() => {
     const raw = store.get("heroes_unlocked", store.get("heroes", []));
-    const remapped = [...new Set(raw.map((id) => LEGACY_HERO_ID_MAP[id] || id).filter((id) => HEROES.some((h) => h.id === id)))];
+    const remapped = [...new Set(raw.filter((id) => HERO_MILESTONES.some((h) => h.id === id)))];
     return remapped;
   });
   const [tab, setTab] = useState("inicio");
@@ -12212,9 +11806,6 @@ export default function App() {
   }, []);
   const [storageFull, setStorageFull] = useState(false);
   const [voiceOn, setVoiceOn] = useState(() => store.get("voice", false));
-  const [mentor, setMentor] = useState(null);
-
-  const triggerMentor = () => {}; // silenciado
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(() => store.get("installed", false));
   const [showIOSHint, setShowIOSHint] = useState(() => {
@@ -12465,7 +12056,7 @@ export default function App() {
       store.set("double_session_pending", false);
     }
     const s = calcStreak(next, freezes);
-    const earned = HEROES.filter((h) => s >= h.days).map((h) => h.id);
+    const earned = HERO_MILESTONES.filter((h) => s >= h.days).map((h) => h.id);
     const merged = [...new Set([...heroes, ...earned])];
     if (merged.length !== heroes.length) {
       setHeroes(merged);
@@ -12537,7 +12128,6 @@ export default function App() {
         onSaveNote={updateSessionNote}
         onClose={() => { setLive(null); setTab("inicio"); }}
         name={name}
-        onMentor={triggerMentor}
         voiceOn={voiceOn}
       />
     );
@@ -12625,7 +12215,6 @@ export default function App() {
           </button>
         </div>
       )}
-      {mentor && <MentorToast mentorId={mentor.id} message={mentor.message} onClose={() => setMentor(null)} />}
       <header className="header" style={{ borderBottomColor: `${accent}55`, transition: "border-color .3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
           {/* Izquierda: logo */}
