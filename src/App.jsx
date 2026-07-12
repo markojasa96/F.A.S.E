@@ -169,67 +169,31 @@ function formatDuration(mins) {
 
 /* ─── Tips del día (rotan uno por día) ─── */
 const DAILY_TIPS = [
-  "El músculo crece en el descanso, no en el gym.",
-  "Progresión de carga: añade 2.5kg cuando completes todas las series con buena técnica.",
-  "La técnica primero, el peso después. Siempre.",
-  "3 sesiones consistentes superan a 6 sesiones irregulares.",
-  "El calentamiento no es opcional si quieres durar años entrenando.",
-  "Los isquiotibiales son el músculo más lesionado en el fútbol. Entrena el curl nórdico.",
-  "La velocidad se entrena descansado. Sprints con CNS fresco.",
-  "En gimnasio: los últimos 2 reps de cada serie son los que generan adaptación.",
-  "Fuerza + velocidad = potencia. Entrena las dos.",
-  "El dolor muscular al día siguiente (agujetas) no indica un buen entrenamiento.",
-  "Duerme 7-9 horas. Es el mejor suplemento que existe.",
-  "El estrés crónico eleva el cortisol y dificulta ganar músculo.",
-  "Hidratación: orina amarillo claro = bien hidratado.",
-  "Un día de descanso no te hace perder músculo. Te hace crecer.",
-  "El foam roller antes de entrenar mejora el rango de movimiento.",
-  "La constancia supera al talento. Siempre.",
-  "Un entrenamiento malo es mejor que ningún entrenamiento.",
-  "No compares tu capítulo 1 con el capítulo 20 de otro.",
-  "La motivación te arranca. El hábito te mantiene.",
-  "Visualiza la sesión antes de empezarla. Los atletas de élite lo hacen.",
-  "El mayor atleta es el que sigue cuando no tiene ganas.",
-  "Come proteína en cada comida principal.",
-  "Los carbohidratos son el combustible del entrenamiento, no el enemigo.",
-  "El ayuno antes de entrenar reduce la intensidad que puedes aplicar.",
-  "Post-entreno: proteína + carbohidrato en las primeras 2 horas.",
-  "La creatina monohidratada es el suplemento más estudiado y seguro.",
-  "Calienta las articulaciones antes de cargar peso, no solo los músculos.",
-  "La respiración correcta en cada rep mejora tu estabilidad y tu fuerza.",
-  "Entrenar al fallo en cada serie no es necesario para progresar.",
-  "El core no son solo abdominales: es todo el cilindro de presión.",
-  "Registra tus pesos. Lo que no mides, no mejora.",
-  "La movilidad de tobillo es la base de una buena sentadilla.",
-  "No hay músculo débil, hay músculo poco entrenado.",
-  "El descanso entre series importa tanto como el ejercicio mismo.",
-  "Cambia de rutina cada 6-8 semanas para seguir progresando.",
-  "El calzado plano ayuda a la estabilidad en sentadilla y peso muerto.",
-  "Estirar en frío no previene lesiones; el calentamiento activo sí ayuda.",
-  "La postura frente a la pantalla afecta tu técnica en el gimnasio.",
-  "Escuchar a tu cuerpo no es debilidad, es inteligencia de entrenamiento.",
-  "Un buen calentamiento reduce el riesgo de lesión más que cualquier estiramiento.",
-  "La fuerza de agarre predice más de lo que crees sobre tu progreso general.",
-  "Entrena primero lo que más te cuesta, cuando tienes más energía.",
-  "El sueño de mala calidad reduce tu fuerza al día siguiente más que el cansancio muscular.",
-  "La regla del 10%: no aumentes el volumen semanal más de un 10% de golpe.",
-  "El calentamiento específico (con el propio movimiento) es mejor que solo cardio general.",
-  "Beber agua durante el entrenamiento mantiene tu rendimiento en sesiones largas.",
-  "La simetría entre lados del cuerpo se entrena, no se asume.",
-  "Un plan de entrenamiento sin objetivo claro rara vez se sostiene en el tiempo.",
-  "El sobreentrenamiento se nota primero en el ánimo, no en el cuerpo.",
-  "Cuenta tempos: bajar controlado también construye fuerza.",
-  "La flexibilidad y la movilidad no son lo mismo; entrena ambas.",
-  "Celebra los pequeños progresos: son la prueba de que el sistema funciona.",
-  "El calentamiento mental cuenta: llega con la cabeza puesta en la sesión.",
-  "La consistencia mensual importa más que la intensidad de un solo día.",
-  "Entrena el lado no dominante un poco más para equilibrar tu cuerpo.",
-  "El café antes de entrenar puede mejorar tu rendimiento si lo toleras bien.",
-  "No hay atajos para la resistencia cardiovascular: se construye con tiempo.",
-  "Anota cómo te sentiste en cada sesión; los patrones te dirán mucho.",
-  "La recuperación activa (caminar, movilidad suave) acelera la siguiente sesión.",
-  "El objetivo no es entrenar más, es entrenar mejor y con más frecuencia sostenible.",
-  "Cada atleta de élite empezó exactamente donde tú estás ahora.",
+  "El sprint máximo requiere SNC fresco. No hagas velocidad si llevas 3 días seguidos entrenando.",
+  "El curl nórdico es el ejercicio más importante para un futbolista. Previene el 70% de lesiones de isquiotibiales.",
+  "Potencia = fuerza × velocidad. Entrena las dos, no solo una.",
+  "El descanso post-partido es entrenamiento. Tu cuerpo reconstruye en ese tiempo.",
+  "3 sprints máximos al 100% aportan más que 10 sprints al 70%.",
+  "La sentadilla profunda transfiere directo al sprint y al salto. No la sustituyas.",
+  "El café 45 minutos antes mejora la potencia de sprint hasta un 5%. Dato comprobado.",
+  "La deshidratación del 2% de tu peso reduce tu velocidad máxima. Bebe antes de sentir sed.",
+  "Los isquiotibiales son el músculo más lesionado en el fútbol. Entrénalos en excéntrico.",
+  "La fuerza unilateral (zancada, sentadilla búlgara) transfiere mejor al campo que la bilateral.",
+  "Tus primeros 10 metros de sprint se ganan con fuerza. Los siguientes, con técnica.",
+  "El sueño de menos de 7 horas reduce tu velocidad de reacción más que estar levemente ebrio.",
+  "La pliometría funciona mejor justo después de un ejercicio pesado (complejo de contraste).",
+  "La recuperación activa (trote suave, movilidad) acelera más la recuperación que el descanso pasivo.",
+  "La posición de tu tobillo en el sprint determina tu velocidad máxima. Trabaja la dorsiflexión.",
+  "El peso muerto rumano en excéntrico es el mejor ejercicio de prevención de isquiotibiales.",
+  "El hip thrust activa el glúteo un 50% más que la sentadilla. Úsalo para potencia de sprint.",
+  "Un jugador de élite corre 10-13km por partido. Tu base aeróbica importa tanto como tu potencia.",
+  "La técnica de carrera se entrena en descansado. No hagas drills de velocidad al final del entreno.",
+  "La fuerza de core no son abdominales. Es la capacidad de transferir fuerza entre piernas y brazo.",
+  "El deload cada 4 semanas no es debilidad. Es cuando el cuerpo asimila las adaptaciones.",
+  "La variabilidad en el entrenamiento (cambiar ejercicios cada 6-8 semanas) previene el plateau.",
+  "Los mejores jugadores del mundo hacen trabajo técnico incluso en días de descanso. Tú también puedes.",
+  "La fuerza máxima (1-3 RM) mejora la velocidad de sprint. No le tengas miedo al peso pesado.",
+  "El tapering la semana del partido no es excusa para no entrenar. Es una estrategia con ciencia.",
 ];
 
 /* Día del año (1-366), usado para rotar el tip diario */
@@ -2023,7 +1987,6 @@ function mulberry32(a) {
 }
 
 const todayKey = () => dayKey(Date.now());
-const seedNow = () => Date.now();
 /* Semilla de variación de rutina: incorpora el tipo de rutina elegido para no repetir
    siempre los mismos ejercicios cuando el usuario repite el mismo focusId */
 function routineSeed(discId, focusId) {
@@ -4818,33 +4781,6 @@ function filterExercisesByHealth(pool, issues) {
   });
 }
 
-function WeightProjectionChart({ currentWeight, targetWeight, weeks }) {
-  const width = 300, height = 120, padding = 20;
-  const startY = padding, endY = height - padding;
-  const startX = padding, endX = width - padding;
-  const losing = targetWeight < currentWeight;
-  const path = `M ${startX},${losing ? startY : endY} C ${startX + (endX - startX) * 0.6},${losing ? startY : endY} ${startX + (endX - startX) * 0.4},${losing ? endY : startY} ${endX},${losing ? endY : startY}`;
-  return (
-    <svg width="100%" viewBox={`0 0 ${width} ${height}`}>
-      <defs>
-        <linearGradient id="projGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#FF6B2B" />
-          <stop offset="100%" stopColor="#22FF88" />
-        </linearGradient>
-      </defs>
-      {[0.25, 0.5, 0.75].map((t, i) => (
-        <line key={i} x1={padding} y1={padding + t * (height - 2 * padding)} x2={width - padding} y2={padding + t * (height - 2 * padding)} stroke={C.border} strokeWidth="1" strokeDasharray="4,4" />
-      ))}
-      <path d={path} fill="none" stroke="url(#projGrad)" strokeWidth="3" strokeLinecap="round" />
-      <circle cx={startX} cy={losing ? startY : endY} r="5" fill="#FF6B2B" />
-      <circle cx={endX} cy={losing ? endY : startY} r="5" fill="#22FF88" />
-      <text x={startX + 8} y={losing ? startY + 4 : endY - 8} fontSize="11" fill="#FF6B2B" fontWeight="700">{currentWeight}kg</text>
-      <text x={endX - 40} y={losing ? endY - 8 : startY + 4} fontSize="11" fill="#22FF88" fontWeight="700">{targetWeight}kg</text>
-      <text x={width / 2} y={height} fontSize="10" fill={C.dim} textAnchor="middle">~{weeks} semanas estimadas</text>
-    </svg>
-  );
-}
-
 function OnboardingProgress({ step, total }) {
   return (
     <div style={{ height: 4, background: C.border, borderRadius: 99, overflow: "hidden", margin: "0 0 4px" }}>
@@ -5113,7 +5049,6 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
   const gender = store.get("gender", "m");
   const goalId = store.get("training_goal", null);
   const days = store.get("weekly_goal", 4);
-  const targetWeight = store.get("target_weight", weight);
   const healthIssues = store.get("health_issues", []);
   const bodyFat = parseFloat(store.get("body_fat", ""));
   const goalObj = TRAINING_GOALS.find((g) => g.id === goalId) || TRAINING_GOALS[0];
@@ -5124,11 +5059,7 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
   const calGoal = goalId === "fat_loss" ? tdee - 400 : goalId === "muscle" ? tdee + 300 : goalId === "athletic" || goalId === "endurance" ? tdee + 200 : tdee;
   const calories = Math.round(calGoal);
   const protein = Math.round(weight * (goalId === "fat_loss" ? 2.2 : 2.0));
-  const hero0 = heroForStreak(0);
   const hasIssues = healthIssues.length && !healthIssues.includes("ninguna");
-  const weightDiff = Math.round((targetWeight - weight) * 10) / 10;
-  const showProjection = Math.abs(weightDiff) >= 1;
-  const projectionWeeks = weightDiff < 0 ? Math.max(1, Math.round(Math.abs(weightDiff) / 0.5)) : Math.max(1, Math.round(weightDiff / 0.3));
   return (
     <div className="screen">
       <button onClick={onBack} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Configuración</button>
@@ -5141,11 +5072,6 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
           <span style={{ fontSize: 14, fontWeight: 800, color: goalObj.color, background: `${goalObj.color}18`, padding: "8px 16px", borderRadius: 99 }}>
             {goalObj.emoji} {goalObj.name}
           </span>
-        </div>
-      )}
-      {showProjection && (
-        <div className="card" style={{ marginTop: 14, padding: "10px 8px" }}>
-          <WeightProjectionChart currentWeight={weight} targetWeight={targetWeight} weeks={projectionWeeks} />
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
@@ -5161,11 +5087,6 @@ function PersonalSummaryScreen({ name, onBack, sessions = [] }) {
           <div style={{ fontSize: 26, fontWeight: 900, color: C.green }}>{days}x</div>
           <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>📅 sesiones/sem</div>
         </div>
-      </div>
-      <div className="card" style={{ marginTop: 12, textAlign: "center", padding: 14 }}>
-        <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>TU HÉROE INICIAL</p>
-        <div style={{ fontSize: 36, marginTop: 6 }}>{hero0.emoji}</div>
-        <div style={{ fontSize: 14, fontWeight: 800, marginTop: 4 }}>{hero0.name}</div>
       </div>
       {hasIssues && (
         <div className="card" style={{ marginTop: 10, padding: "10px 14px", borderColor: `${C.green}55` }}>
@@ -8722,57 +8643,6 @@ const RM_TABLE = [
 ];
 const round2p5 = (x) => Math.round(x / 2.5) * 2.5;
 
-/* ─── Montaña de progreso 3D (CSS transforms, sin WebGL) ─── */
-function Mountain3DChart({ sessions }) {
-  const [entered, setEntered] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setEntered(true), 50); return () => clearTimeout(t); }, []);
-
-  const weeks = useMemo(() => {
-    const now = seedNow();
-    const buckets = Array.from({ length: 8 }, () => 0);
-    sessions.filter((s) => s.kind === "entreno").forEach((s) => {
-      const weeksAgo = Math.floor((now - s.ts) / (7 * 86400000));
-      if (weeksAgo >= 0 && weeksAgo < 8) buckets[7 - weeksAgo] += sessionVolume(s);
-    });
-    return buckets;
-  }, [sessions]);
-
-  const max = Math.max(1, ...weeks);
-  const hasData = weeks.some((v) => v > 0);
-
-  if (!hasData) {
-    return (
-      <div className="card" style={{ textAlign: "center", color: C.dim, fontSize: 13, padding: "20px 12px" }}>
-        Aún no hay volumen registrado. Completa sesiones con peso para ver tu montaña de progreso.
-      </div>
-    );
-  }
-
-  return (
-    <div className="card" style={{ padding: "20px 10px 10px", overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120 }}>
-        {weeks.map((v, i) => {
-          const h = Math.max(4, Math.round((v / max) * 110));
-          const shade = 20 + Math.round((i / 7) * 60); // más oscuro (viejo) a más claro (actual)
-          const isNow = i === 7;
-          return (
-            <div
-              key={i}
-              style={{
-                flex: 1, height: entered ? h : 0, borderRadius: "3px 3px 0 0",
-                background: isNow ? C.cyan : `hsl(190, 80%, ${shade}%)`,
-                transition: `height .6s ease ${i * 0.06}s`,
-                boxShadow: isNow ? `0 0 12px ${C.cyan}88` : "none",
-              }}
-            />
-          );
-        })}
-      </div>
-      <p style={{ fontSize: 10, color: C.dim, textAlign: "center", marginTop: 6 }}>Volumen semanal · últimas 8 semanas</p>
-    </div>
-  );
-}
-
 /* ─── Configuración ─── */
 function SettingsToggle({ on, onClick, "aria-label": ariaLabel }) {
   return (
@@ -10101,8 +9971,33 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
 
         <Heatmap sessions={sessions} color={C.cyan} freezes={freezes} activeProgram={getActiveProgram()} />
 
-        <div className="sec-title">Montaña de progreso (8 semanas)</div>
-        <Mountain3DChart sessions={sessions} />
+        {volumeChart.vols.length > 0 && (
+          <div className="card" style={{ marginTop: 12, padding: "14px 10px" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: C.mut, marginBottom: 10 }}>
+              VOLUMEN POR SESIÓN — ÚLTIMAS {volumeChart.vols.length}
+            </p>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 5, height: 80 }}>
+              {volumeChart.vols.map((v, i) => {
+                const h = Math.max(4, Math.round((v.vol / volumeChart.max) * 74));
+                const isLast = i === volumeChart.vols.length - 1;
+                return (
+                  <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <div style={{
+                      width: "100%", height: h, borderRadius: "3px 3px 0 0",
+                      background: isLast ? C.cyan : C.border,
+                      transition: "height 0.4s ease",
+                    }} />
+                    {isLast && (
+                      <span style={{ fontSize: 9, color: C.cyan, fontWeight: 700 }}>
+                        {formatVolume(v.vol)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="card" style={{ marginTop: 10, padding: "12px 14px" }}>
           <p style={{ fontSize: 12, color: C.mut }}>Disciplina favorita</p>

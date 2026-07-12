@@ -1,5 +1,5 @@
 /* F.A.S.E. — Service Worker: caché offline + notificaciones locales */
-const CACHE_NAME = "fase-vC";
+const CACHE_NAME = "fase-vD";
 const CORE_ASSETS = ["/", "/index.html", "/manifest.json", "/favicon.svg", "/icon.svg", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
