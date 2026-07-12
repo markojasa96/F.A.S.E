@@ -238,13 +238,6 @@ function dayOfYear(d = new Date()) {
   return Math.floor((d - start) / 86400000);
 }
 
-/* Otorga XP de bonificación acumulada (agua, enfriamiento) de forma persistente y sin duplicar */
-function awardBonusXpOnce(guardKey, amount) {
-  if (store.get(guardKey, false)) return;
-  store.set(guardKey, true);
-  store.set("bonus_xp", store.get("bonus_xp", 0) + amount);
-}
-
 /* ─── Análisis de fatiga acumulada ─── */
 function analyzeFatigue(sessions) {
   const cutoff = Date.now() - 7 * 86400000;
@@ -2614,24 +2607,6 @@ function sessionVolume(s) {
 }
 
 /* ─── Definición de logros ─── */
-/* ─── Puntos de esfuerzo (XP total, sin rangos paralelos) ─── */
-function computeXP(sessions, bestStreak) {
-  const workouts = sessions.filter((s) => s.kind === "entreno");
-  const totalSets = workouts.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.filter((st) => st.ok).length, 0), 0);
-  const perfectSessions = workouts.filter((s) => s.exercises.every((e) => e.sets.length > 0 && e.sets.every((st) => st.ok))).length;
-  const recordsBonus = computeRecords(sessions).length * 200;
-  const cooldownBonus = workouts.filter((s) => s.cooldownBonus).length * 50;
-  const otherBonus = store.get("bonus_xp", 0); // agua y otras bonificaciones acumuladas
-  const xp = workouts.length * 100
-    + totalSets * 10
-    + perfectSessions * 150
-    + Math.floor(bestStreak / 7) * 500
-    + recordsBonus
-    + cooldownBonus
-    + otherBonus;
-  return { xp };
-}
-
 /* ─── Estadísticas globales épicas ─── */
 function computeGlobalStats(sessions) {
   const workouts = sessions.filter((s) => s.kind === "entreno");
@@ -4309,13 +4284,12 @@ function DeloadBanner({ sessions }) {
         <button
           className="btn-xl"
           onClick={() => {
-            awardBonusXpOnce(`deload_bonus_${active.startTs}`, 500);
             store.set("deload_active", null);
             refresh();
           }}
           style={{ marginTop: 10, background: C.green, color: "#07070C", fontSize: 12 }}
         >
-          Continuar (+500 XP)
+          Continuar
         </button>
       </div>
     );
@@ -5999,11 +5973,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
 }
 
 /* ─── ENTRENAR (selección) ─── */
-const ENERGY_OPTIONS = [
-  { id: "high", emoji: "⚡", label: "Al 100%" },
-  { id: "mid", emoji: "😐", label: "Normal" },
-  { id: "low", emoji: "😴", label: "Cansado" },
-];
 
 const TRAIN_CARDS = [
   { id: "calistenia", ...DISCIPLINES.calistenia },
@@ -6180,11 +6149,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], o
   const [toast, setToast] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
-  /* La energía elegida se recuerda durante el día */
-  const [energy, setEnergy] = useState(() => {
-    const saved = store.get("energy", null);
-    return saved && saved.day === todayKey() ? saved.value : "mid";
-  });
   const [innerTab, setInnerTab] = useState("libre");
 
   const GYM_LEVEL_IDS = ["iniciado", "guerrero", "campeon", "elite", "leyenda", "the_one"];
@@ -6208,8 +6172,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], o
 
   const routine = useMemo(() => {
     if (!isConcreteDisc || lvlIdx === null) return null;
-    /* Con poca energía: un nivel menos y una serie menos por ejercicio */
-    const effLvl = energy === "low" ? Math.max(0, lvlIdx - 1) : lvlIdx;
+    /* Carga alta (ACWR) detectada automáticamente: un nivel menos y una serie menos por ejercicio */
+    const acwr = calcACWR(sessions);
+    const autoLow = acwr > 1.3;
+    const effLvl = autoLow ? Math.max(0, lvlIdx - 1) : lvlIdx;
     /* Semilla automática: cambia cada 3 sesiones + botón "Variar" */
     const focusHash = [...(discId + focusId)].reduce((a, c) => a + c.charCodeAt(0), 0);
     const seedVal = Math.floor(totalSessions / 3) * 7919 + seed * 131 + effLvl * 17 + focusHash;
@@ -6217,8 +6183,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], o
       noBar: discId === "calistenia" && calLocation === "casa",
       noEquip: noEquipment,
     });
-    if (energy === "low") r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
-    if (energy === "high") r = r.map((e, i) => (i === 0 ? { ...e, sets: Math.min(6, e.sets + 1) } : e));
+    if (autoLow) r = r.map((e) => ({ ...e, sets: Math.max(1, e.sets - 1) }));
     if (dupType && r.some((e) => e.type === "peso")) {
       const dup = DUP_SCHEMES[dupType];
       r = r.map((e) => (e.type !== "peso" ? e : { ...e, sets: dup.sets, reps: dup.reps, rest: dup.restMin + (dup.restMax - dup.restMin) / 2, dupType }));
@@ -6227,7 +6192,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], o
       r = appendExtraMuscleExercises(r, extraFocusIds, effLvl);
     }
     return r;
-  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, energy, totalSessions, calLocation, noEquipment, dupType, extraFocusIds]);
+  }, [isConcreteDisc, discId, focusId, lvlIdx, seed, sessions, totalSessions, calLocation, noEquipment, dupType, extraFocusIds]);
 
   const atletRoutine = useMemo(() => {
     if (discId !== "atletismo" || !distance || lvlIdx === null) return null;
@@ -6248,11 +6213,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], o
       </div>
     );
   }
-
-  const chooseEnergy = (v) => {
-    setEnergy(v);
-    store.set("energy", { day: todayKey(), value: v });
-  };
 
   const pickDisc = (id) => {
     /* Modo sin equipo: fútbol siempre en parque, calistenia siempre en casa */
@@ -6925,16 +6885,10 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], o
         </div>
       )}
 
-      {energy === "low" && (
+      {calcACWR(sessions) > 1.3 && (
         <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.yellow}44`, background: "rgba(255,214,0,0.06)" }}>
-          <span style={{ fontSize: 13, color: C.yellow, fontWeight: 700 }}>😴 Ajustamos la sesión. Más vale algo que nada.</span>
-          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Un nivel abajo y una serie menos por ejercicio.</div>
-        </div>
-      )}
-      {energy === "high" && (
-        <div className="card" style={{ marginTop: 12, padding: "11px 14px", borderColor: `${C.green}44`, background: "rgba(34,255,136,0.06)" }}>
-          <span style={{ fontSize: 13, color: C.green, fontWeight: 700 }}>⚡ ¡Hoy te ves con todo!</span>
-          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Serie extra en el primer ejercicio.</div>
+          <span style={{ fontSize: 13, color: C.yellow, fontWeight: 700 }}>📊 Carga alta esta semana — sesión ajustada automáticamente.</span>
+          <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Volumen reducido para proteger tu recuperación.</div>
         </div>
       )}
 
@@ -7054,15 +7008,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], o
             <div style={{ fontSize: 12, fontWeight: 800, color: lvlIdx === i ? l.color : C.text }}>{l.emoji} {l.name}</div>
             <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{l.desc}</div>
             <PowerBar levelIdx={i} />
-          </button>
-        ))}
-      </div>
-
-      <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10, textAlign: "center" }}>¿Cuánta energía tienes hoy?</p>
-      <div className="chip-wrap" style={{ marginTop: 4, justifyContent: "center" }}>
-        {ENERGY_OPTIONS.map((o) => (
-          <button key={o.id} className={`chip ${energy === o.id ? "on" : ""}`} onClick={() => chooseEnergy(o.id)}>
-            {o.emoji} {o.label}
           </button>
         ))}
       </div>
@@ -7817,12 +7762,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           {isPerfect ? "⚡ SESIÓN PERFECTA" : pctComplete > 0.8 ? "💪 Gran trabajo" : "🦾 Sigue adelante"}
         </h2>
         <p style={{ color: C.mut, marginTop: 4, fontSize: 13 }}>Sesión de {plan.discLabel} completada</p>
-
-        {lastRecord?.cooldownBonus && (
-          <div className="card pop" style={{ marginTop: 12, borderColor: `${C.cyan}55`, background: "rgba(0,229,255,0.08)" }}>
-            <p style={{ fontSize: 12, color: C.cyan, fontWeight: 700 }}>Recuperación activa completada ✨ · +50 XP</p>
-          </div>
-        )}
 
         {sessionSecs < 300 && (
           <div className="card" style={{ marginTop: 12, borderColor: `${C.orange}55`, background: "rgba(255,122,47,0.08)" }}>
@@ -10092,7 +10031,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
     store.set("best_streak", best);
     return best;
   });
-  const xpInfo = useMemo(() => computeXP(sessions, bestStreak), [sessions, bestStreak]);
   const globalStats = useMemo(() => computeGlobalStats(sessions), [sessions]);
   const totalVolumeShown = useCountUp(globalStats.totalVolume, 1200);
 
@@ -10373,11 +10311,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
             </div>
           </>
         )}
-
-        <div className="card" style={{ marginTop: 10, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.mut }}>⭐ Puntos de esfuerzo</span>
-          <span style={{ fontSize: 15, fontWeight: 900, color: C.cyan }}>{xpInfo.xp}</span>
-        </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button className="card" onClick={() => setShowStats(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
