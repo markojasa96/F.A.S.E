@@ -1000,96 +1000,6 @@ const COOLDOWN_ROUTINES = {
 };
 
 /* Flujo guiado genérico (un ejercicio a la vez): usado por calentamiento y enfriamiento */
-/* ─── Respiración guiada pre-sesión (2 ciclos de 14s: inhala/mantén/exhala/descansa) ─── */
-const BREATH_PHASES = [
-  { key: "inhala", label: "Inhala", duration: 4000, color: "#00E5FF", fontSize: 18 },
-  { key: "manten", label: "Mantén", duration: 4000, color: "#F2F2F8", fontSize: 16 },
-  { key: "exhala", label: "Exhala", duration: 4000, color: "#60A5FA", fontSize: 18 },
-  { key: "descansa", label: "Descansa", duration: 2000, color: "#8A8AAD", fontSize: 14 },
-];
-
-function BreathingScreen({ onDone, voiceOn }) {
-  const [step, setStep] = useState(0);
-  const totalSteps = BREATH_PHASES.length * 2;
-  const showReady = step >= totalSteps;
-  const phase = BREATH_PHASES[step % BREATH_PHASES.length];
-  const cycle = Math.min(2, Math.floor(step / BREATH_PHASES.length) + 1);
-
-  useEffect(() => {
-    if (showReady) {
-      const t = setTimeout(onDone, 1000);
-      return () => clearTimeout(t);
-    }
-    if (voiceOn) {
-      try {
-        const u = new SpeechSynthesisUtterance(`${phase.label.toLowerCase()}...`);
-        u.lang = "es-ES"; u.rate = 0.7; u.pitch = 0.9;
-        window.speechSynthesis.speak(u);
-      } catch { /* voz no disponible */ }
-    }
-    const t = setTimeout(() => setStep((s) => s + 1), phase.duration);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
-
-  if (showReady) {
-    return (
-      <div className="fade-up" style={{ minHeight: "100svh", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", background: "#07070C" }}>
-        <p style={{ fontSize: 20, fontWeight: 900, color: C.green }}>Sistema nervioso listo ⚡</p>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", background: "#07070C" }}>
-      <button onClick={onDone} style={{ position: "absolute", top: 16, right: 16, fontSize: 12, color: C.dim, fontWeight: 700 }}>Saltar →</button>
-      <svg viewBox="0 0 200 200" width="200" height="200">
-        <circle
-          cx="100" cy="100" r="60" fill="none" stroke="#00E5FF" strokeWidth="2"
-          style={{ animation: "breathe 14s ease-in-out infinite", filter: "drop-shadow(0 0 20px #00E5FF40)" }}
-        />
-        <circle cx="100" cy="100" r="40" fill="#00E5FF08" style={{ animation: "breatheInner 14s ease-in-out infinite" }} />
-        <text x="100" y="95" textAnchor="middle" fontSize={phase.fontSize} fontWeight="800" fill={phase.color}>{phase.label}</text>
-      </svg>
-      <p style={{ fontSize: 12, color: C.dim, marginTop: 20 }}>Ciclo {cycle} de 2</p>
-    </div>
-  );
-}
-
-/* Overlay compacto de 10s al iniciar la primera serie (alternativa ligera a BreathingScreen completa) */
-function QuickBreath({ onDone }) {
-  const [secs, setSecs] = useState(10);
-
-  useEffect(() => {
-    if (secs <= 0) { onDone(); return undefined; }
-    const t = setTimeout(() => setSecs((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [secs, onDone]);
-
-  return (
-    <div
-      style={{
-        position: "absolute", inset: 0, background: "rgba(7,7,12,0.85)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        zIndex: 50, borderRadius: 16,
-      }}
-    >
-      <div
-        style={{
-          width: 80, height: 80, borderRadius: "50%", border: `3px solid ${C.cyan}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          animation: "breathe 4s ease-in-out infinite",
-        }}
-      >
-        <span style={{ fontSize: 28 }}>💨</span>
-      </div>
-      <p style={{ color: C.cyan, fontWeight: 800, fontSize: 16, marginTop: 16 }}>Respira profundo</p>
-      <p style={{ color: C.mut, fontSize: 13, marginTop: 6 }}>Empieza en {secs}s</p>
-      <button onClick={onDone} style={{ marginTop: 16, color: C.dim, fontSize: 12, fontWeight: 600 }}>Saltar →</button>
-    </div>
-  );
-}
-
 /* ─── Selector rápido de RPE tras cada serie exitosa ─── */
 const RPE_COLORS = { 6: C.green, 7: "#8BC34A", 8: C.yellow, 9: C.orange, 10: C.red };
 
@@ -6235,119 +6145,6 @@ function CustomRoutineBuilder({ initial, onSave, onCancel }) {
   );
 }
 
-/* ─── Modo partido: registro de acciones en tiempo real durante un partido de fútbol ─── */
-const MATCH_ACTIONS = [
-  { id: "sprint", label: "🏃 SPRINT", color: C.orange },
-  { id: "tiro", label: "⚽ TIRO", color: C.green },
-  { id: "regate", label: "🔄 REGATE", color: C.cyan },
-  { id: "pase", label: "✈️ PASE LARGO", color: C.blue },
-  { id: "tackle", label: "🛡️ TACKLE", color: C.red },
-  { id: "salto", label: "↕️ SALTO", color: C.purple },
-];
-
-function MatchMode({ onFinish, onSave }) {
-  const [running, setRunning] = useState(false);
-  const [seconds, setSeconds] = useState(0);
-  const [period, setPeriod] = useState(1);
-  const [counts, setCounts] = useState({ sprint: 0, tiro: 0, regate: 0, pase: 0, tackle: 0, salto: 0 });
-  const [finished, setFinished] = useState(false);
-  const secRef = useRef(0);
-
-  useEffect(() => {
-    if (!running) return undefined;
-    const t = setInterval(() => { secRef.current += 1; setSeconds(secRef.current); }, 1000);
-    return () => clearInterval(t);
-  }, [running]);
-
-  const tap = (id) => {
-    if (navigator.vibrate) navigator.vibrate(50);
-    setCounts((prev) => ({ ...prev, [id]: prev[id] + 1 }));
-  };
-
-  const totalActions = Object.values(counts).reduce((a, b) => a + b, 0);
-  const distanceKm = ((counts.sprint * 30 + (totalActions - counts.sprint) * 10) / 1000).toFixed(1);
-
-  const finishMatch = () => {
-    onSave({
-      id: Date.now(), ts: Date.now(), kind: "entreno", disc: "futbolParque",
-      focusLabel: "Partido", levelIdx: 2, durationMin: Math.round(seconds / 60),
-      exercises: MATCH_ACTIONS.filter((a) => counts[a.id] > 0).map((a) => ({
-        name: a.label.replace(/^\S+\s/, ""),
-        sets: [{ weight: 0, reps: counts[a.id], ok: true }],
-      })),
-    });
-    onFinish();
-  };
-
-  if (finished) {
-    return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 30 }}>
-        <div className="pop" style={{ fontSize: 50 }}>⚽</div>
-        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 10 }}>Resumen del partido</h2>
-        <div className="card" style={{ marginTop: 16, textAlign: "left" }}>
-          {MATCH_ACTIONS.map((a) => (
-            <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13 }}>{a.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 800 }}>{counts[a.id]}</span>
-            </div>
-          ))}
-          <hr className="divider-gradient" style={{ margin: "8px 0" }} />
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>Total acciones</span>
-            <span style={{ fontSize: 13, fontWeight: 900 }}>{totalActions}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>Distancia estimada</span>
-            <span style={{ fontSize: 13, fontWeight: 900 }}>{distanceKm} km</span>
-          </div>
-        </div>
-        <button className="btn-xl" onClick={finishMatch} style={{ marginTop: 16, background: C.green, color: "#07070C" }}>
-          GUARDAR Y VOLVER
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 16 }}>
-      <p style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>PERÍODO {period} · 45 MIN</p>
-      <div style={{ fontSize: 40, fontWeight: 900, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-        ⏱ {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
-        {MATCH_ACTIONS.map((a) => (
-          <button
-            key={a.id} onClick={() => tap(a.id)}
-            style={{ height: 80, borderRadius: 16, fontSize: 15, fontWeight: 900, color: "#07070C", background: a.color }}
-          >
-            {a.label}
-            <div style={{ fontSize: 20 }}>{counts[a.id]}</div>
-          </button>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-        {!running ? (
-          <button className="btn-xl" onClick={() => setRunning(true)} style={{ background: C.green, color: "#07070C" }}>▶ INICIAR</button>
-        ) : (
-          <button className="btn-xl" onClick={() => setRunning(false)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}>
-            PAUSAR
-          </button>
-        )}
-      </div>
-      {period === 1 && seconds >= 45 * 60 && (
-        <button
-          className="btn-xl" onClick={() => { setPeriod(2); setRunning(false); }}
-          style={{ marginTop: 10, background: C.orange, color: "#07070C" }}
-        >
-          Descanso — Empezar 2° tiempo
-        </button>
-      )}
-      <button onClick={() => setFinished(true)} style={{ marginTop: 14, color: C.dim, fontSize: 12, fontWeight: 600 }}>Terminar partido</button>
-    </div>
-  );
-}
-
-
 const trainModeChipStyle = (active) => ({
   padding: "8px 14px",
   borderRadius: 99,
@@ -6358,7 +6155,7 @@ const trainModeChipStyle = (active) => ({
   cursor: "pointer", whiteSpace: "nowrap",
 });
 
-function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, sessions = [], onCompleteBody }) {
+function Train({ onStart, onAccent, totalSessions, noEquipment, sessions = [], onCompleteBody }) {
   const [showBody, setShowBody] = useState(false);
   const [discId, setDiscId] = useState(null); // null | "futbol" (pendiente) | "atletismo" | id concreto
   const [focusId, setFocusId] = useState("todo");
@@ -6376,7 +6173,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [showProgramsHint, dismissProgramsHint] = useFirstTime("programs");
   const [showTutorial] = useState(() => !store.get("tutorial_done", false));
   const [builderMode, setBuilderMode] = useState(null); // null | "new" | routine object para editar
-  const [special, setSpecial] = useState(null); // null | "partido"
   const activeProgram = getActiveProgram();
   const lastSession = useMemo(() => [...sessions].reverse().find((s) => s.kind === "entreno"), [sessions]);
   const [weekChoice, setWeekChoice] = useState(null); // null | "solo" | "semana"
@@ -6532,11 +6328,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
         onCancel={() => setBuilderMode(null)}
       />
     );
-  }
-
-  /* ── Modo partido: se mantiene, alimenta el ACWR ── */
-  if (special === "partido") {
-    return <MatchMode onFinish={() => { setSpecial(null); setDiscId(null); }} onSave={onSaveSpecial} />;
   }
 
   /* ── Pantalla 1: lista de disciplinas ── */
@@ -6719,16 +6510,6 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
             </button>
           ))}
         </div>
-        <button
-          className="card" onClick={() => setSpecial("partido")}
-          style={{ marginTop: 10, width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderLeft: `4px solid ${C.orange}` }}
-        >
-          <span style={{ fontSize: 24 }}>⚽</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>Modo partido</div>
-            <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>Registra acciones en tiempo real durante el partido</div>
-          </div>
-        </button>
         <button
           className="card"
           onClick={() => { store.set("double_session_pending", true); setDiscId("futbolGym"); }}
@@ -7457,8 +7238,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
   const [showExtras, setShowExtras] = useState(false);
   const [quickNote, setQuickNote] = useState("");
   const [activationDone, setActivationDone] = useState({});
-  const [showFullBreathing, setShowFullBreathing] = useState(false);
-  const [quickBreathDone, setQuickBreathDone] = useState(false);
 
   useEffect(() => () => clearTimeout(rpeTimeoutRef.current), []);
 
@@ -8374,15 +8153,8 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
 
   /* Ejercicio (work / exdone) */
   const doneSets = logs[exIdx];
-  const showQuickBreath = exIdx === 0 && setNum === 0 && phase === "work" && !quickBreathDone && store.get("breathing_pref", true);
   return (
     <div className="screen session-rise" style={{ paddingBottom: 30, position: "relative" }}>
-      {showQuickBreath && <QuickBreath onDone={() => setQuickBreathDone(true)} />}
-      {showFullBreathing && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 260 }}>
-          <BreathingScreen onDone={() => setShowFullBreathing(false)} voiceOn={voiceOn} />
-        </div>
-      )}
       <RpeOverlay rpeFor={rpeFor} onPick={applyRpe} />
         {autoDefaultBadge && (
           <div className="pop" style={{ position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 300, background: C.card, border: `1px solid ${C.cyan}`, borderRadius: 99, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: C.cyan }}>
@@ -8467,7 +8239,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
           })()}
           <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center" }}>
             <button onClick={() => setShowQuickNote((v) => !v)} aria-label="Nota rápida" style={{ fontSize: 18, padding: 4 }}>📝</button>
-            <button onClick={() => setShowFullBreathing(true)} aria-label="Respiración guiada" style={{ fontSize: 18, padding: 4 }}>🫁</button>
           </div>
           {showQuickNote && (
             <div style={{ marginTop: 10 }}>
@@ -9157,7 +8928,6 @@ function SettingsScreen({
   const [profile, setProfile] = useState(() => store.get("profile", {}));
   const [height, setHeight] = useState(() => store.get("height", ""));
   const [vibrationOn, setVibrationOn] = useState(() => store.get("vibration_on", true));
-  const [breathingPref, setBreathingPref] = useState(() => store.get("breathing_pref", true));
   const [reminderOn, setReminderOn] = useState(() => store.get("reminder_enabled", false));
   const [reminderHour, setReminderHour] = useState(() => store.get("reminder_hour", 17));
   const [nameInput, setNameInput] = useState(name);
@@ -9309,12 +9079,6 @@ function SettingsScreen({
           <SettingsToggle
             on={vibrationOn} aria-label="Alternar vibración"
             onClick={() => { const n = !vibrationOn; setVibrationOn(n); store.set("vibration_on", n); }}
-          />
-        </SettingsRow>
-        <SettingsRow label="Respiración pre-sesión 🫁">
-          <SettingsToggle
-            on={breathingPref} aria-label="Alternar respiración pre-sesión"
-            onClick={() => { const n = !breathingPref; setBreathingPref(n); store.set("breathing_pref", n); }}
           />
         </SettingsRow>
         <SettingsRow label="Superseries automáticas">
@@ -11828,7 +11592,7 @@ export default function App() {
             {tab === "entrenar" && (
               <Train
                 onStart={setLive} onAccent={(c) => setAccent(c || getTabAccent("entrenar"))} totalSessions={sessions.length}
-                noEquipment={noEquipment} onSaveSpecial={saveSession} name={name}
+                noEquipment={noEquipment} name={name}
                 sessions={sessions} streak={streak}
                 onCompleteBody={completeBody}
               />
