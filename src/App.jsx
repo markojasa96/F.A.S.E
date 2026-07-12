@@ -632,6 +632,7 @@ function JumpTestCard() {
   );
 }
 
+// eslint-disable-next-line no-unused-vars -- lógica de periodización se mantiene, solo se retiró de la UI
 function PlanPeriodizationCard({ sessions }) {
   const [, setTick] = useState(0);
   const refresh = () => setTick((n) => n + 1);
@@ -1955,13 +1956,6 @@ const BODY_SECTIONS = [
   },
 ];
 
-/* ─── Rangos por ejercicio ─── */
-const EXRANKS = [
-  { min: 15, name: "Leyenda", color: C.red },
-  { min: 8, name: "Campeón", color: C.yellow },
-  { min: 3, name: "Guerrero", color: C.green },
-  { min: 0, name: "Novato", color: C.mut },
-];
 
 /* ─── Utilidades ─── */
 const dayKey = (ts) => {
@@ -5900,7 +5894,6 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
           </div>
         );
       })()}
-      <PlanPeriodizationCard sessions={sessions} />
       <DeloadBanner sessions={sessions} />
 
       {/* Insight del día */}
@@ -10521,25 +10514,25 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {exStats.map(([name, st]) => {
-            const rank = EXRANKS.find((r) => st.count >= r.min);
-            return (
-              <div key={name} className="card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
-                  <div style={{ fontSize: 11, color: C.mut }}>
-                    {st.count} {st.count === 1 ? "vez" : "veces"}{st.maxW > 0 ? ` · máx ${st.maxW} kg` : ""}
-                  </div>
+          {exStats.map(([name, st]) => (
+            <div key={name} className="card" style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+                <div style={{ fontSize: 11, color: C.mut }}>
+                  {st.count} {st.count === 1 ? "sesión" : "sesiones"}
                 </div>
-                <span style={{
-                  fontSize: 11, fontWeight: 800, color: rank.color, flexShrink: 0,
-                  background: `${rank.color}18`, padding: "4px 9px", borderRadius: 99, border: `1px solid ${rank.color}44`,
-                }}>
-                  {rank.name}
-                </span>
               </div>
-            );
-          })}
+              {st.maxW > 0 && (
+                <span style={{
+                  fontSize: 12, fontWeight: 900, color: C.cyan, flexShrink: 0,
+                  background: `${C.cyan}12`, padding: "4px 10px", borderRadius: 99,
+                  border: `1px solid ${C.cyan}33`,
+                }}>
+                  {st.maxW} kg
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -10842,34 +10835,36 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart 
     );
   }
 
-  const globalIdx = levelFromCount(sessions.length, GLOBAL_LEVEL_THRESHOLDS);
-  const globalLvl = LEVELS[globalIdx];
-  const nextThreshold = GLOBAL_LEVEL_THRESHOLDS[globalIdx + 1];
-  const sessionsToNext = nextThreshold ? nextThreshold - sessions.length : null;
-  const prevThreshold = GLOBAL_LEVEL_THRESHOLDS[globalIdx] || 0;
-
   return (
     <div className="screen">
-      <div style={{ textAlign: "center", padding: "20px 0 16px" }}>
-        <div style={{ fontSize: 48 }}>{globalLvl.emoji}</div>
-        <div style={{ fontSize: 24, fontWeight: 900, color: globalLvl.color, marginTop: 8 }}>{globalLvl.name}</div>
-        <div style={{ fontSize: 13, color: C.mut, marginTop: 4 }}>
-          {sessions.length} {sessions.length === 1 ? "sesión total" : "sesiones totales"}
+      <div style={{ padding: "20px 0 16px" }}>
+        <p style={{ fontSize: 11, fontWeight: 800, color: C.mut, letterSpacing: 2 }}>
+          MI RENDIMIENTO
+        </p>
+        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <StatBox label="Racha" value={`${streak}d 🔥`} accent={C.orange} />
+          <StatBox label="Esta semana" value={sessions.filter((s) => s.ts >= startOfWeek()).length} accent={C.cyan} />
+          <StatBox label="Total" value={sessions.length} accent={C.green} />
         </div>
-        {sessionsToNext !== null && (
-          <>
-            <div style={{ height: 6, background: C.surface, borderRadius: 99, margin: "12px 0 6px", overflow: "hidden" }}>
-              <div style={{
-                height: "100%",
-                width: `${Math.min(100, (1 - sessionsToNext / (nextThreshold - prevThreshold)) * 100)}%`,
-                background: globalLvl.color, borderRadius: 99, transition: "width 0.5s ease",
-              }} />
+        {(() => {
+          const acwr = calcACWR(sessions);
+          const info = acwr > 1.5
+            ? { label: "Carga muy alta", color: C.red }
+            : acwr > 1.2
+              ? { label: "Carga moderada", color: C.yellow }
+              : acwr > 0
+                ? { label: "Carga óptima", color: C.green }
+                : null;
+          if (!info) return null;
+          return (
+            <div className="card" style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px" }}>
+              <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>ACWR — Carga semanal</span>
+              <span style={{ fontSize: 14, fontWeight: 900, color: info.color }}>
+                {acwr.toFixed(2)} · {info.label}
+              </span>
             </div>
-            <div style={{ fontSize: 11, color: C.dim }}>
-              → {LEVELS[globalIdx + 1]?.name ?? "Leyenda"} en {sessionsToNext} sesiones más
-            </div>
-          </>
-        )}
+          );
+        })()}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -10881,12 +10876,6 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart 
           </div>
           <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
         </button>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-        <StatBox label="Racha" value={`${streak}d 🔥`} />
-        <StatBox label="Esta semana" value={sessions.filter((s) => s.ts >= startOfWeek()).length} />
-        <StatBox label="Total" value={sessions.length} />
       </div>
     </div>
   );
