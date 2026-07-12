@@ -143,14 +143,6 @@ function formatVolume(kg) {
   return `${Math.round(kg)} kg`;
 }
 
-function volumeEquivalent(kg) {
-  if (kg >= 50000) return `${(kg / 5000).toFixed(1)} elefantes 🐘`;
-  if (kg >= 5000) return `${(kg / 80).toFixed(0)} personas 🧑`;
-  if (kg >= 1000) return `${(kg / 450).toFixed(1)} pianos 🎹`;
-  if (kg >= 200) return `${(kg / 80).toFixed(1)} personas 🧑`;
-  return `${Math.round(kg)} kg`;
-}
-
 function timeAgo(dateInput) {
   const diff = Date.now() - new Date(dateInput).getTime();
   const mins = Math.floor(diff / 60000);
@@ -538,16 +530,14 @@ function TapTestScreen({ onClose }) {
 
 /* ─── Debriefing post-partido: registro rápido de 4 datos ─── */
 function MatchDebriefScreen({ onSave, onClose }) {
-  const [duelos, setDuelos] = useState(5);
-  const [perdidas, setPerdidas] = useState(3);
-  const [rpe, setRpe] = useState(6);
+  const [rpe, setRpe] = useState(7);
   const [minutos, setMinutos] = useState(90);
-  const rpeColor = (v) => (v <= 3 ? C.green : v <= 6 ? C.yellow : C.red);
+  const rpeColor = (v) => (v <= 4 ? C.green : v <= 7 ? C.yellow : C.red);
 
   const save = () => {
     onSave({
       id: Date.now(), ts: Date.now(), kind: "partido",
-      duelos, perdidasBalon: perdidas, rpe, minutosJugados: minutos,
+      rpe, minutosJugados: minutos,
       load: minutos * rpe,
     });
     onClose();
@@ -556,37 +546,36 @@ function MatchDebriefScreen({ onSave, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto", padding: 24 }}>
       <button onClick={onClose} style={{ color: C.mut, fontSize: 14 }}>✕ Cerrar</button>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10, textAlign: "center" }}>Post-partido</h2>
-      <p style={{ fontSize: 12, color: C.mut, textAlign: "center" }}>30 segundos · Datos puros</p>
+      <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 12, textAlign: "center" }}>
+        ⚽ ¿Cómo estuvo el partido?
+      </h2>
+      <p style={{ fontSize: 12, color: C.mut, textAlign: "center", marginTop: 4 }}>
+        30 segundos · Para ajustar tu recuperación
+      </p>
 
       <div className="card" style={{ marginTop: 20 }}>
-        <p style={{ fontSize: 13, fontWeight: 700 }}>¿Cuántos duelos físicos ganaste?</p>
-        <input type="range" min="0" max="10" value={duelos} onChange={(e) => setDuelos(Number(e.target.value))} style={{ width: "100%", marginTop: 10 }} />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.dim }}><span>Ninguno</span><b style={{ color: C.text }}>{duelos}</b><span>Todos</span></div>
-      </div>
-
-      <div className="card" style={{ marginTop: 12 }}>
-        <p style={{ fontSize: 13, fontWeight: 700 }}>¿Cuántos balones perdiste bajo presión?</p>
-        <input type="range" min="0" max="10" value={perdidas} onChange={(e) => setPerdidas(Number(e.target.value))} style={{ width: "100%", marginTop: 10 }} />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.dim }}><span>Ninguno</span><b style={{ color: C.text }}>{perdidas}</b><span>Muchos</span></div>
-      </div>
-
-      <div className="card" style={{ marginTop: 12 }}>
-        <p style={{ fontSize: 13, fontWeight: 700 }}>¿Qué tan duro fue físicamente?</p>
+        <p style={{ fontSize: 13, fontWeight: 700 }}>¿Qué tan exigente fue?</p>
         <input type="range" min="1" max="10" value={rpe} onChange={(e) => setRpe(Number(e.target.value))} style={{ width: "100%", marginTop: 10 }} />
-        <div style={{ textAlign: "center", fontSize: 22, fontWeight: 900, color: rpeColor(rpe) }}>{rpe}/10</div>
+        <div style={{ textAlign: "center", fontSize: 28, fontWeight: 900, color: rpeColor(rpe), marginTop: 4 }}>
+          {rpe}/10
+        </div>
+        <p style={{ textAlign: "center", fontSize: 12, color: C.mut }}>
+          {rpe <= 4 ? "Partido ligero" : rpe <= 7 ? "Esfuerzo moderado" : "Partido muy intenso"}
+        </p>
       </div>
 
       <div className="card" style={{ marginTop: 12, textAlign: "center" }}>
         <p style={{ fontSize: 13, fontWeight: 700 }}>Minutos jugados</p>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 10 }}>
-          <button onClick={() => setMinutos((m) => Math.max(0, m - 5))} style={{ width: 40, height: 40, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, fontSize: 18, color: C.text }}>−</button>
-          <span style={{ fontSize: 32, fontWeight: 900 }}>{minutos}</span>
-          <button onClick={() => setMinutos((m) => Math.min(120, m + 5))} style={{ width: 40, height: 40, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, fontSize: 18, color: C.text }}>+</button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginTop: 10 }}>
+          <button onClick={() => setMinutos((m) => Math.max(0, m - 5))} style={{ width: 44, height: 44, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, fontSize: 20, color: C.text }}>−</button>
+          <span style={{ fontSize: 36, fontWeight: 900, minWidth: 60, textAlign: "center" }}>{minutos}</span>
+          <button onClick={() => setMinutos((m) => Math.min(120, m + 5))} style={{ width: 44, height: 44, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, fontSize: 20, color: C.text }}>+</button>
         </div>
       </div>
 
-      <button className="btn-xl btn-physics" onClick={save} style={{ marginTop: 20, background: C.cyan, color: "#07070C" }}>Guardar partido</button>
+      <button className="btn-xl btn-physics" onClick={save} style={{ marginTop: 20, background: C.orange, color: "#07070C", minHeight: 56 }}>
+        Guardar partido
+      </button>
     </div>
   );
 }
@@ -964,6 +953,16 @@ const WARMUP_ROUTINES = {
     { name: "Apertura torácica en el suelo (cada lado)", mode: "reps", reps: 8 },
     { name: "Rotaciones de cuello suaves (cada lado)", mode: "reps", reps: 10 },
     { name: "Estiramiento de cadena posterior", mode: "tiempo", duration: 30 },
+  ],
+  partido: [
+    { name: "Trote suave progresivo (3 min)", mode: "tiempo", duration: 180 },
+    { name: "Movilidad de cadera — círculos amplios (10 por lado)", mode: "reps", reps: 10 },
+    { name: "Deslizamientos laterales defensivos (10m × 5)", mode: "reps", reps: 5 },
+    { name: "Activación glúteo — puente de glúteo (15 reps)", mode: "reps", reps: 15 },
+    { name: "Saltos de tobillo suaves — progresivos (20 reps)", mode: "reps", reps: 20 },
+    { name: "Sprint corto al 60% (20m × 3)", mode: "reps", reps: 3 },
+    { name: "Sprint corto al 80% (20m × 2)", mode: "reps", reps: 2 },
+    { name: "Sprint al 100% (20m × 1)", mode: "reps", reps: 1 },
   ],
 };
 
@@ -1415,6 +1414,69 @@ const HERO_MILESTONES = [
   { id: "profesional", days: 180 },
   { id: "leyenda", days: 365 },
 ];
+
+/* ─── Gimnasio: entrenamientos nombrados en vez de jerga de focusId ─── */
+const GYM_METHODS = [
+  {
+    id: "ppl",
+    label: "Push / Pull / Legs",
+    emoji: "🔄",
+    desc: "El sistema más probado. Empuje (pecho/hombros), jalón (espalda) y piernas en días separados.",
+    focusCycle: ["push", "pull", "legs"],
+  },
+  {
+    id: "upper_lower",
+    label: "Upper / Lower",
+    emoji: "🔝",
+    desc: "Tren superior un día, tren inferior el siguiente. 4 días a la semana.",
+    focusCycle: ["upper", "legs"],
+  },
+  {
+    id: "full_body",
+    label: "Full Body",
+    emoji: "🔄",
+    desc: "Todo el cuerpo en cada sesión. Ideal para 3 días a la semana.",
+    focusCycle: ["full_body"],
+  },
+  {
+    id: "heavy_duty",
+    label: "Blood & Guts / Heavy Duty",
+    emoji: "🔴",
+    desc: "Alta intensidad, bajo volumen. 1 serie al fallo absoluto por ejercicio. Dorian Yates.",
+    focusCycle: ["push", "pull", "legs"],
+    methodology: "heavy_duty",
+  },
+  {
+    id: "arnold_split",
+    label: "Arnold Split",
+    emoji: "🏆",
+    desc: "Pecho+espalda, hombros+brazos, piernas. 6 días. Alta frecuencia por grupo.",
+    focusCycle: ["push", "pull", "upper", "push", "pull", "legs"],
+  },
+  {
+    id: "strength_5x5",
+    label: "Fuerza Pura (5×5)",
+    emoji: "💪",
+    desc: "5 series de 5 reps en los movimientos básicos. Peso máximo cada sesión.",
+    focusCycle: ["legs", "full_body", "legs"],
+    methodology: "dup",
+  },
+  {
+    id: "glutes_hypertrophy",
+    label: "Énfasis en Piernas y Glúteos",
+    emoji: "🦵",
+    desc: "Hip thrust, sentadilla búlgara, peso muerto rumano. Cadena posterior dominante.",
+    focusCycle: ["glutes_focus", "legs", "glutes_focus"],
+  },
+];
+const GYM_FOCUS_NAMES = {
+  push: "Empuje (pecho, hombros, tríceps)",
+  pull: "Jalón (espalda, bíceps)",
+  legs: "Piernas y glúteos",
+  upper: "Tren superior",
+  full_body: "Cuerpo completo",
+  glutes_focus: "Glúteos y cadena posterior",
+};
 
 /* ─── Disciplinas y enfoques ─── */
 const DISCIPLINES = {
@@ -2566,59 +2628,6 @@ function predictRecord(sessions, exercise) {
   };
 }
 
-/* ─── Comparativa visual de progresión (hitos con animales) ─── */
-const WEIGHT_MILESTONES = {
-  sentadilla: [
-    { w: 20, emoji: "🐇", name: "Conejo" }, { w: 40, emoji: "🐕", name: "Perro" },
-    { w: 60, emoji: "🦊", name: "Zorro" }, { w: 80, emoji: "🐺", name: "Lobo" },
-    { w: 100, emoji: "🐻", name: "Oso" }, { w: 130, emoji: "🦁", name: "León" },
-    { w: 160, emoji: "🐯", name: "Tigre" }, { w: 200, emoji: "🦍", name: "Gorila" },
-  ],
-  press: [
-    { w: 20, emoji: "🐇", name: "Conejo" }, { w: 40, emoji: "🦆", name: "Pato" },
-    { w: 60, emoji: "🐕", name: "Perro" }, { w: 80, emoji: "🐺", name: "Lobo" },
-    { w: 100, emoji: "🦁", name: "León" }, { w: 130, emoji: "🐂", name: "Toro" },
-    { w: 160, emoji: "🦏", name: "Rinoceronte" },
-  ],
-  dominadas: [
-    { w: 1, emoji: "🐣", name: "Pollito" }, { w: 4, emoji: "🐦", name: "Pájaro" },
-    { w: 7, emoji: "🐒", name: "Mono" }, { w: 11, emoji: "🦧", name: "Orangután" },
-    { w: 16, emoji: "🦍", name: "Gorila" }, { w: 21, emoji: "👽", name: "Alien" },
-  ],
-};
-
-function milestoneKeyForExercise(name) {
-  const n = name.toLowerCase();
-  if (/dominad/.test(n)) return "dominadas";
-  if (/sentadilla|squat|pistol/.test(n)) return "sentadilla";
-  if (/press banca|press de banca|bench/.test(n)) return "press";
-  return null;
-}
-
-function ProgressTimeline({ exercise, currentValue }) {
-  const key = milestoneKeyForExercise(exercise);
-  if (!key) return null;
-  const milestones = WEIGHT_MILESTONES[key];
-  return (
-    <div className="card" style={{ marginTop: 10, overflowX: "auto" }}>
-      <p style={{ fontSize: 11, color: C.dim, fontWeight: 700 }}>LÍNEA DE PROGRESIÓN</p>
-      <div style={{ display: "flex", gap: 14, marginTop: 10, paddingBottom: 4 }}>
-        {milestones.map((m) => {
-          const reached = currentValue >= m.w;
-          return (
-            <div key={m.w} style={{ textAlign: "center", minWidth: 52, opacity: reached ? 1 : 0.4, flexShrink: 0 }}>
-              <div style={{ fontSize: 26 }}>{reached ? m.emoji : "🔒"}</div>
-              <div style={{ fontSize: 10, color: reached ? C.text : C.dim, fontWeight: 700, marginTop: 2 }}>{m.name}</div>
-              <div style={{ fontSize: 9, color: C.dim }}>{m.w}{key === "dominadas" ? " reps" : "kg"}</div>
-              {reached && <div style={{ fontSize: 10, color: C.green }}>✓</div>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 /* RPE promedio histórico de un ejercicio */
 function avgRpeFor(sessions, exName) {
   const rpes = [];
@@ -2731,146 +2740,8 @@ function sessionVolume(s) {
 }
 
 /* ─── Definición de logros ─── */
-const ACHIEVEMENTS = [
-  { id: "first", emoji: "🪨", name: "Primera piedra", desc: "Completa tu primera sesión", secret: false,
-    check: (st) => st.totalSessions >= 1 },
-  { id: "week", emoji: "⭐", name: "Semana perfecta", desc: "7 días seguidos entrenando", secret: false,
-    check: (st) => st.bestStreak >= 7 },
-  { id: "month", emoji: "🔩", name: "Mes de hierro", desc: "30 días seguidos entrenando", secret: false,
-    check: (st) => st.bestStreak >= 30 },
-  { id: "centurion", emoji: "💯", name: "Centurión", desc: "100 sesiones totales", secret: false,
-    check: (st) => st.totalSessions >= 100 },
-  { id: "early", emoji: "🌅", name: "Madrugador", desc: "Entrena antes de las 7am", secret: false,
-    check: (st) => st.hasEarlySession },
-  { id: "night", emoji: "🌙", name: "Nocturno", desc: "Entrena después de las 10pm", secret: false,
-    check: (st) => st.hasLateSession },
-  { id: "noexcuses", emoji: "☔", name: "Sin excusas", desc: "Entrena un lunes y un viernes en la misma semana", secret: false,
-    check: (st) => st.hasMonAndFriSameWeek },
-  { id: "tonne", emoji: "🏋️", name: "Primera tonelada", desc: "Levanta 1,000 kg de volumen total", secret: false,
-    check: (st) => st.totalVolume >= 1000 },
-  { id: "tentonnes", emoji: "💪", name: "10 toneladas", desc: "Volumen acumulado de 10,000 kg", secret: false,
-    check: (st) => st.totalVolume >= 10000 },
-  { id: "sprinter", emoji: "⚡", name: "El velocista", desc: "Registra un sprint de 100m", secret: false,
-    check: (st) => st.hasSprint100 },
-  { id: "marathon", emoji: "🏃", name: "Maratonista", desc: "Completa una sesión de maratón", secret: false,
-    check: (st) => st.hasMarathonSession },
-  { id: "complete", emoji: "🎯", name: "El completo", desc: "Entrena las 4 disciplinas en una semana", secret: false,
-    check: (st) => st.allDisciplinesOneWeek },
-  { id: "explorer", emoji: "🗺️", name: "Explorador", desc: "Prueba AMRAP, EMOM e Intervalos", secret: false,
-    check: (st) => st.specialModesUsed >= 3 },
-  { id: "restless", emoji: "😤", name: "¿Descansas?", desc: "Entrena 14 días seguidos", secret: true,
-    check: (st) => st.bestStreak >= 14 },
-  { id: "theone", emoji: "👑", name: "Leyenda viviente", desc: "Alcanza nivel THE ONE en cualquier disciplina", secret: true,
-    check: (st) => st.reachedTheOne },
-  { id: "indestructible", emoji: "🛡️", name: "Indestructible", desc: "Usa el streak freeze y al día siguiente entrenas igual", secret: true,
-    check: (st) => st.usedFreezeAndTrained },
-  { id: "triple", emoji: "🔥", name: "Tres en raya", desc: "Completa 3 sesiones en una semana", secret: false,
-    check: (st) => st.sessionsThisWeekMax >= 3 },
-  { id: "comeback", emoji: "💫", name: "El regreso", desc: "Vuelve a entrenar después de 7 días sin", secret: false,
-    check: (st) => st.hadComebackMoment },
-  { id: "diverse", emoji: "🌈", name: "Versátil", desc: "Entrena 3 disciplinas diferentes", secret: false,
-    check: (st) => st.uniqueDisciplines >= 3 },
-  { id: "fifty", emoji: "⚡", name: "Medio camino", desc: "50 sesiones totales", secret: false,
-    check: (st) => st.totalSessions >= 50 },
-  { id: "recordbreaker", emoji: "📈", name: "Rompemarcas", desc: "Bate un récord personal", secret: false,
-    check: (st) => st.hasAnyPR },
-  { id: "consistent", emoji: "🎯", name: "Consistente", desc: "Entrena 3 semanas seguidas (al menos 1 vez/semana)", secret: false,
-    check: (st) => st.consecutiveWeeks >= 3 },
-];
-
-/* Calcula las estadísticas base usadas para evaluar todos los logros */
-function computeAchievementStats(sessions, freezes) {
-  const workouts = sessions.filter((s) => s.kind === "entreno");
-  const totalSessions = sessions.length;
-  const totalVolume = workouts.reduce((a, s) => a + sessionVolume(s), 0);
-  const bestStreak = longestStreakEver(sessions);
-  const hasEarlySession = sessions.some((s) => new Date(s.ts).getHours() < 7);
-  const hasLateSession = sessions.some((s) => new Date(s.ts).getHours() >= 22);
-  const weekMap = {};
-  sessions.forEach((s) => {
-    const wk = Math.floor(s.ts / (7 * 86400000));
-    if (!weekMap[wk]) weekMap[wk] = new Set();
-    weekMap[wk].add(new Date(s.ts).getDay());
-  });
-  const hasMonAndFriSameWeek = Object.values(weekMap).some((days) => days.has(1) && days.has(5));
-  const hasSprint100 = workouts.some((s) => s.exercises.some((e) => /sprint m[aá]ximo/i.test(e.name)));
-  const hasMarathonSession = workouts.some((s) => s.focusLabel === "Maratón");
-  const discWeekMap = {};
-  workouts.forEach((s) => {
-    const wk = Math.floor(s.ts / (7 * 86400000));
-    if (!discWeekMap[wk]) discWeekMap[wk] = new Set();
-    const base = s.disc?.startsWith("futbol") ? "futbol" : s.disc;
-    discWeekMap[wk].add(base);
-  });
-  const allDisciplinesOneWeek = Object.values(discWeekMap).some((set) =>
-    ["gimnasio", "calistenia", "futbol", "atletismo"].every((d) => set.has(d))
-  );
-  const specialModesUsed = new Set(
-    workouts.filter((s) => s.disc === "especial").map((s) => s.focusLabel?.split(" ")[0])
-  ).size;
-  const reachedTheOne = workouts.some((s) => s.levelIdx === 5);
-  const reachedLeyenda = workouts.some((s) => s.levelIdx >= 4);
-  const nextDayKey = (k) => {
-    const [y, m, d] = k.split("-").map(Number);
-    return dayKey(new Date(y, m - 1, d + 1).getTime());
-  };
-  const usedFreezeAndTrained = freezes.length > 0 && freezes.some((f) => sessions.some((s) => dayKey(s.ts) === nextDayKey(f)));
-
-  const weekSessionCounts = Object.values(
-    workouts.reduce((acc, s) => {
-      const wk = Math.floor(s.ts / (7 * 86400000));
-      acc[wk] = (acc[wk] || 0) + 1;
-      return acc;
-    }, {})
-  );
-  const sessionsThisWeekMax = Math.max(0, ...weekSessionCounts);
-
-  let hadComebackMoment = false;
-  for (let i = 1; i < workouts.length; i++) {
-    const gap = workouts[i].ts - workouts[i - 1].ts;
-    if (gap >= 7 * 86400000) { hadComebackMoment = true; break; }
-  }
-
-  const uniqueDisciplines = new Set(workouts.map((s) => (s.disc?.startsWith("futbol") ? "futbol" : s.disc))).size;
-
-  const hasAnyPR = computeRecords(sessions).length > 0;
-
-  let consecutiveWeeks = 0;
-  const allWeeks = [...new Set(workouts.map((s) => Math.floor(s.ts / (7 * 86400000))))].sort((a, b) => b - a);
-  let prevWeek = allWeeks[0];
-  for (const wk of allWeeks) {
-    if (prevWeek - wk <= 1) { consecutiveWeeks++; prevWeek = wk; }
-    else break;
-  }
-
-  return {
-    totalSessions, totalVolume, bestStreak, hasEarlySession, hasLateSession, hasMonAndFriSameWeek,
-    hasSprint100, hasMarathonSession, allDisciplinesOneWeek, specialModesUsed, reachedTheOne, reachedLeyenda, usedFreezeAndTrained,
-    sessionsThisWeekMax, hadComebackMoment, uniqueDisciplines, hasAnyPR, consecutiveWeeks,
-  };
-}
-
-/* Devuelve la lista completa de logros con su estado (unlocked + fecha), y guarda nuevos desbloqueos */
-function computeAchievements(sessions, freezes) {
-  const stats = computeAchievementStats(sessions, freezes);
-  const saved = store.get("achievements", {});
-  const now = Date.now();
-  let changed = false;
-  const list = ACHIEVEMENTS.map((a) => {
-    const already = saved[a.id];
-    const earned = a.check(stats);
-    if (earned && !already) {
-      saved[a.id] = now;
-      changed = true;
-    }
-    return { ...a, unlocked: !!saved[a.id], ts: saved[a.id] || null };
-  });
-  if (changed) store.set("achievements", saved);
-  return { list, justUnlocked: changed ? list.filter((a) => a.ts === now) : [] };
-}
-
 /* ─── Puntos de esfuerzo (XP total, sin rangos paralelos) ─── */
-function computeXP(sessions, achievementsUnlockedCount, bestStreak) {
+function computeXP(sessions, bestStreak) {
   const workouts = sessions.filter((s) => s.kind === "entreno");
   const totalSets = workouts.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.filter((st) => st.ok).length, 0), 0);
   const perfectSessions = workouts.filter((s) => s.exercises.every((e) => e.sets.length > 0 && e.sets.every((st) => st.ok))).length;
@@ -2880,7 +2751,6 @@ function computeXP(sessions, achievementsUnlockedCount, bestStreak) {
   const xp = workouts.length * 100
     + totalSets * 10
     + perfectSessions * 150
-    + achievementsUnlockedCount * 300
     + Math.floor(bestStreak / 7) * 500
     + recordsBonus
     + cooldownBonus
@@ -3832,6 +3702,109 @@ function updateRecoveryState(session) {
   store.set("recovery", recovery);
 }
 
+/**
+ * Devuelve el % de fatiga acumulada para cada zona corporal
+ * basándose en sesiones de los últimos 7 días.
+ * 0 = fresco, 100 = al límite
+ */
+function calcMuscleLoadMap(sessions) {
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 3600 * 1000;
+  const recent = sessions.filter((s) => s.kind === "entreno" && s.ts >= sevenDaysAgo);
+
+  const zones = {
+    "Piernas": { load: 0, color: "#A855F7", emoji: "🦵" },
+    "Pecho": { load: 0, color: "#3B82F6", emoji: "💪" },
+    "Espalda": { load: 0, color: "#22FF88", emoji: "🔙" },
+    "Hombros": { load: 0, color: "#00E5FF", emoji: "🏋️" },
+    "Core": { load: 0, color: "#FFD600", emoji: "🔥" },
+  };
+
+  const recoveryHours = { "Piernas": 72, "Pecho": 48, "Espalda": 60, "Hombros": 48, "Core": 24 };
+
+  recent.forEach((s) => {
+    const hours = (now - s.ts) / 3600000;
+    const decayFactor = (g) => Math.max(0, 1 - hours / recoveryHours[g]);
+
+    if (s.disc === "gimnasio") {
+      const focus = (s.focusLabel || "").toLowerCase();
+      const intensity = Math.min(1, sessionAvgRpe(s) / 10);
+
+      if (/pierna|glúte|gluteo|inferior/.test(focus)) {
+        zones["Piernas"].load += 70 * intensity * decayFactor("Piernas");
+        zones["Core"].load += 20 * intensity * decayFactor("Core");
+      } else if (/espalda|jalón|tiron|pull/.test(focus)) {
+        zones["Espalda"].load += 70 * intensity * decayFactor("Espalda");
+        zones["Hombros"].load += 15 * intensity * decayFactor("Hombros");
+      } else if (/pecho|empuje|push/.test(focus)) {
+        zones["Pecho"].load += 60 * intensity * decayFactor("Pecho");
+        zones["Hombros"].load += 30 * intensity * decayFactor("Hombros");
+      } else if (/hombro|upper|sup/.test(focus)) {
+        zones["Hombros"].load += 60 * intensity * decayFactor("Hombros");
+        zones["Pecho"].load += 20 * intensity * decayFactor("Pecho");
+      } else if (/full|todo/.test(focus)) {
+        zones["Piernas"].load += 40 * intensity * decayFactor("Piernas");
+        zones["Pecho"].load += 30 * intensity * decayFactor("Pecho");
+        zones["Espalda"].load += 30 * intensity * decayFactor("Espalda");
+      }
+    }
+    if (s.disc === "calistenia") {
+      zones["Pecho"].load += 30 * decayFactor("Pecho");
+      zones["Espalda"].load += 30 * decayFactor("Espalda");
+      zones["Core"].load += 40 * decayFactor("Core");
+    }
+    if (s.disc?.startsWith("futbol") || s.kind === "partido") {
+      zones["Piernas"].load += 60 * decayFactor("Piernas");
+      zones["Core"].load += 20 * decayFactor("Core");
+    }
+    if (s.disc === "atletismo") {
+      zones["Piernas"].load += 70 * decayFactor("Piernas");
+    }
+  });
+
+  Object.keys(zones).forEach((z) => {
+    zones[z].load = Math.min(100, Math.round(zones[z].load));
+  });
+
+  return zones;
+}
+
+function MuscleLoadCard({ sessions }) {
+  const zones = useMemo(() => calcMuscleLoadMap(sessions), [sessions]);
+
+  const getStatus = (load) => {
+    if (load >= 75) return { label: "Muy cargado", color: "#FF3B5C" };
+    if (load >= 50) return { label: "Cargado", color: "#FF7A2F" };
+    if (load >= 25) return { label: "Activo", color: "#FFD600" };
+    return { label: "Fresco", color: "#22FF88" };
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 12 }}>
+      <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginBottom: 12 }}>
+        CARGA MUSCULAR — ÚLTIMOS 7 DÍAS
+      </p>
+      {Object.entries(zones).map(([name, z]) => {
+        const status = getStatus(z.load);
+        return (
+          <div key={name} style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{z.emoji} {name}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: status.color }}>{status.label}</span>
+            </div>
+            <div style={{ height: 6, background: C.surface, borderRadius: 99, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${z.load}%`, background: status.color, borderRadius: 99, transition: "width 0.6s ease" }} />
+            </div>
+          </div>
+        );
+      })}
+      <p style={{ fontSize: 10, color: C.dim, marginTop: 8 }}>
+        Basado en tus sesiones recientes. Verde = listo para entrenar.
+      </p>
+    </div>
+  );
+}
+
 /* ─── Modelo de supercompensación: fase fisiológica real de cada grupo muscular ─── */
 const SUPERCOMP_RECOVERY_MULTIPLIER = {
   Piernas: 1.3, Espalda: 1.2, Pecho: 1.0, Hombros: 1.0, Brazos: 0.8, Core: 0.6,
@@ -4593,36 +4566,6 @@ const FOCUS_ZONES = {
 
 /* ═══════════════════ COMPONENTES UI ═══════════════════ */
 
-/* Confetti CSS puro: 20 partículas cayendo, sin librerías */
-const CONFETTI_COLORS = [C.cyan, C.green, C.orange, C.yellow, C.red, C.purple];
-function Confetti({ show }) {
-  const [particles] = useState(() => Array.from({ length: 8 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-    delay: Math.random() * 0.4,
-    duration: 1.8 + Math.random() * 0.8,
-    size: 6 + Math.random() * 6,
-    rotate: Math.random() * 360,
-  })));
-  if (!show) return null;
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, pointerEvents: "none", overflow: "hidden" }}>
-      {particles.map((p) => (
-        <span
-          key={p.id}
-          style={{
-            position: "absolute", top: -20, left: `${p.left}%`,
-            width: p.size, height: p.size * 0.4, background: p.color,
-            transform: `rotate(${p.rotate}deg)`,
-            animation: `confettiFall ${p.duration}s ease-in ${p.delay}s forwards`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 function MuscleMap({ zones }) {
   const on = (z) => zones.includes(z);
   const fill = (z) => (on(z) ? C.orange : "#1A1A2E");
@@ -5128,7 +5071,7 @@ function SelectionCard({ emoji, name, subtitle, selected, onSelect, color }) {
 
 /* Selector deslizable de números (edad, altura, peso). 56px por fila. */
 /* ─── Pantalla de bienvenida: onboarding de 4 pasos ─── */
-const ONBOARD_TOTAL_STEPS = 4;
+const ONBOARD_TOTAL_STEPS = 3;
 
 function Welcome({ onDone }) {
   const [step, setStep] = useState(1);
@@ -5136,7 +5079,6 @@ function Welcome({ onDone }) {
   const [name, setName] = useState("");
   const [goal, setGoal] = useState(null);
   const [fitnessLevel, setFitnessLevel] = useState(null);
-  const [matchDay, setMatchDay] = useState(6); // 6 = sábado por defecto
 
   const go = (next) => {
     setSlide("exit-left");
@@ -5180,16 +5122,6 @@ function Welcome({ onDone }) {
     { id: "avanzado", emoji: "🔥", label: "Avanzado", desc: "Más de 1 año entrenando regularmente", lvlIdx: 4 },
   ];
 
-  const MATCH_DAYS = [
-    { id: 1, label: "Lunes" },
-    { id: 2, label: "Martes" },
-    { id: 3, label: "Miércoles" },
-    { id: 4, label: "Jueves" },
-    { id: 5, label: "Viernes" },
-    { id: 6, label: "Sábado" },
-    { id: 0, label: "Domingo" },
-  ];
-
   const finish = () => {
     const cleanName = sanitize(name) || "Atleta";
     const selectedGoal = WELCOME_GOALS.find((g) => g.id === goal);
@@ -5199,7 +5131,6 @@ function Welcome({ onDone }) {
     store.set("training_goal", selectedGoal?.trainingGoal || "athletic");
     store.set("fitness_level", fitnessLevel?.id || "inicio");
     store.set("level_global", lvlIdxStart);
-    store.set("match_day", matchDay);
     store.set("futbol_position", "mediocampista"); // default, editable en settings
     store.set("profile", { goal: selectedGoal?.trainingGoal || "athletic", days: 4 });
     store.set("weekly_goal", 4);
@@ -5343,58 +5274,13 @@ function Welcome({ onDone }) {
         <button
           className="btn-xl"
           disabled={!fitnessLevel}
-          onClick={() => go(4)}
-          style={{ marginTop: 20, background: C.cyan, color: "#07070C", minHeight: 56 }}
+          onClick={finish}
+          style={{ marginTop: 20, background: C.green, color: "#07070C", minHeight: 56, fontSize: 17, fontWeight: 900 }}
         >
-          Siguiente →
+          ⚡ COMENZAR
         </button>
         <button
           onClick={() => go(1)}
-          style={{ marginTop: 10, color: C.mut, fontSize: 13, fontWeight: 600 }}
-        >
-          ← Atrás
-        </button>
-      </>
-    );
-  }
-
-  /* Paso 4 — Día de partido (o día libre de la semana) */
-  if (step === 4) {
-    return wrap(
-      <>
-        <p style={{ fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>
-          ¿Cuándo es tu partido o día libre?
-        </p>
-        <p style={{ fontSize: 12, color: C.mut, textAlign: "center", marginBottom: 20 }}>
-          El sistema ajusta la carga semanal para que llegues fresco ese día.
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {MATCH_DAYS.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => setMatchDay(d.id)}
-              style={{
-                padding: "18px 12px", borderRadius: 12, textAlign: "center",
-                border: `2px solid ${matchDay === d.id ? C.cyan : C.border}`,
-                background: matchDay === d.id ? `${C.cyan}18` : C.card,
-                color: matchDay === d.id ? C.cyan : C.text,
-                fontWeight: 700, fontSize: 15,
-              }}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-        <button
-          className="btn-xl"
-          onClick={finish}
-          style={{ marginTop: 24, background: C.green, color: "#07070C",
-            minHeight: 60, fontSize: 18, fontWeight: 900 }}
-        >
-          ⚡ GENERAR MI PLAN
-        </button>
-        <button
-          onClick={() => go(3)}
           style={{ marginTop: 10, color: C.mut, fontSize: 13, fontWeight: 600 }}
         >
           ← Atrás
@@ -5678,12 +5564,93 @@ function FullHistory({ sessions, onDelete, onBack, onUpdateNote }) {
   );
 }
 
+/* ─── Calentamiento pre-partido ─── */
+function PreMatchWarmup({ onClose }) {
+  const exercises = WARMUP_ROUTINES.partido || [];
+  const [idx, setIdx] = useState(0);
+  const [done, setDone] = useState(false);
+
+  if (done) {
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <div style={{ fontSize: 64 }}>⚽</div>
+        <h2 style={{ fontSize: 24, fontWeight: 900, marginTop: 16, textAlign: "center" }}>
+          Listo para el partido
+        </h2>
+        <p style={{ color: C.mut, fontSize: 14, marginTop: 8, textAlign: "center" }}>
+          Cuerpo activado. Sistema nervioso despierto.
+        </p>
+        <button className="btn-xl" onClick={onClose} style={{ marginTop: 24, background: C.green, color: "#07070C" }}>
+          ¡A la cancha!
+        </button>
+      </div>
+    );
+  }
+
+  const ex = exercises[idx];
+  const progress = (idx / exercises.length) * 100;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto", padding: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button onClick={onClose} style={{ color: C.mut, fontSize: 14 }}>✕ Salir</button>
+        <span style={{ fontSize: 12, color: C.mut, fontWeight: 700 }}>
+          {idx + 1} / {exercises.length}
+        </span>
+      </div>
+
+      <div style={{ height: 4, background: C.border, borderRadius: 99, overflow: "hidden", marginTop: 12 }}>
+        <div style={{ height: "100%", width: `${progress}%`, background: C.orange, borderRadius: 99, transition: "width 0.4s ease" }} />
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 8, marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: C.orange, letterSpacing: 2 }}>
+          ⚽ CALENTAMIENTO PRE-PARTIDO
+        </span>
+      </div>
+
+      <div className="card" style={{ marginTop: 20, textAlign: "center", padding: 28 }}>
+        <div style={{ fontSize: 48 }}>
+          {ex.mode === "tiempo" ? "⏱" : "🔁"}
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, marginTop: 16, lineHeight: 1.3 }}>
+          {ex.name}
+        </h2>
+        {ex.mode === "tiempo" && (
+          <p style={{ fontSize: 14, color: C.orange, fontWeight: 800, marginTop: 8 }}>
+            {Math.floor(ex.duration / 60) > 0
+              ? `${Math.floor(ex.duration / 60)} min ${ex.duration % 60 > 0 ? `${ex.duration % 60}s` : ""}`
+              : `${ex.duration} segundos`}
+          </p>
+        )}
+        {ex.mode === "reps" && (
+          <p style={{ fontSize: 14, color: C.orange, fontWeight: 800, marginTop: 8 }}>
+            {ex.reps} {ex.reps === 1 ? "repetición" : "repeticiones"}
+          </p>
+        )}
+      </div>
+
+      <button
+        className="btn-xl btn-physics"
+        onClick={() => {
+          if (idx < exercises.length - 1) setIdx(idx + 1);
+          else setDone(true);
+        }}
+        style={{ marginTop: 24, background: C.orange, color: "#07070C", fontSize: 18, minHeight: 60 }}
+      >
+        {idx < exercises.length - 1 ? "Siguiente →" : "¡Completado!"}
+      </button>
+    </div>
+  );
+}
+
 /* ─── INICIO ─── */
 function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, broken, canFreeze, onFreeze, onDeleteSession, onSaveMatch, onUpdateNote, onOpenSettings }) {
   const [menuId, setMenuId] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showPreMatch, setShowPreMatch] = useState(false);
   const longPressRef = useRef(null);
   const prevStreakRef = useRef(streak);
   const [streakBounce, setStreakBounce] = useState(false);
@@ -6001,6 +5968,34 @@ function Home({ name, sessions, streak, onTrain, onStartPlan, onRepeat, mode, br
           </div>
         );
       })()}
+
+      <MuscleLoadCard sessions={sessions} />
+
+      {/* Acceso rápido pre-partido */}
+      <button
+        onClick={() => setShowPreMatch(true)}
+        style={{
+          width: "100%", padding: "12px 16px", marginTop: 10,
+          background: `${C.orange}18`, border: `1px solid ${C.orange}44`,
+          borderRadius: 12, display: "flex", alignItems: "center", gap: 12,
+          textAlign: "left",
+        }}
+      >
+        <span style={{ fontSize: 24 }}>⚽</span>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.orange }}>
+            Calentamiento pre-partido
+          </div>
+          <div style={{ fontSize: 11, color: C.mut }}>
+            8 ejercicios · ~10 min · Activa el sistema nervioso
+          </div>
+        </div>
+        <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
+      </button>
+
+      {showPreMatch && (
+        <PreMatchWarmup onClose={() => setShowPreMatch(false)} />
+      )}
 
       {/* Racha (o mensaje motivacional si se rompió) */}
       {showFreezeConfirm && (
@@ -6436,6 +6431,7 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
   const [seed, setSeed] = useState(0);
   const [calLocation, setCalLocation] = useState(null);
   const [gymMethod, setGymMethod] = useState(null);
+  const [gymSplitMethod, setGymSplitMethod] = useState(() => store.get("gym_method", "ppl"));
   const [gymTypeChosen, setGymTypeChosen] = useState(false);
   const [extraFocusIds, setExtraFocusIds] = useState([]);
   const [extraStepDone, setExtraStepDone] = useState(false);
@@ -7126,25 +7122,59 @@ function Train({ onStart, onAccent, totalSessions, noEquipment, onSaveSpecial, s
     );
   }
 
-  /* ── Gimnasio Paso 1: ¿Cómo quieres entrenar hoy? (tipo de rutina) ── */
+  /* ── Gimnasio Paso 1: elige tu método de entrenamiento ── */
   if (discId === "gimnasio" && !gymTypeChosen) {
+    const gymSessionsCount = sessions.filter((s) => s.kind === "entreno" && s.disc === "gimnasio").length;
     return (
-      <div className="screen fade-up" style={{ textAlign: "center", paddingTop: 20 }}>
+      <div className="screen fade-up" style={{ paddingTop: 20 }}>
         <button onClick={backToDiscs} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "block", textAlign: "left" }}>
           ‹ Disciplinas
         </button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10 }}>¿Cómo quieres entrenar hoy?</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
-          {GYM_WORKOUT_TYPES.filter((t) => !t.minLevel || isCampeonPlusGym).map((t) => (
-            <button
-              key={t.id} className="card" onClick={() => { setFocusId(t.id); setGymTypeChosen(true); setWeekChoice(null); }}
-              style={{ textAlign: "left", padding: "12px 10px" }}
-            >
-              <div style={{ fontSize: 24 }}>{t.emoji}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4 }}>{t.name}</div>
-              <div style={{ fontSize: 10, color: C.mut, marginTop: 2 }}>{t.desc}</div>
-            </button>
-          ))}
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 10, textAlign: "center" }}>¿Cómo quieres entrenar hoy?</h2>
+        <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 16, marginBottom: 10 }}>
+          ELIGE TU MÉTODO DE ENTRENAMIENTO
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {GYM_METHODS.map((m) => {
+            const selected = gymSplitMethod === m.id;
+            const cycleIdx = gymSessionsCount % m.focusCycle.length;
+            const todayFocus = m.focusCycle[cycleIdx];
+            return (
+              <button
+                key={m.id}
+                onClick={() => {
+                  setGymSplitMethod(m.id);
+                  store.set("gym_method", m.id);
+                  setFocusId(todayFocus);
+                  if (m.methodology) store.set("default_methodology", m.methodology);
+                  setGymTypeChosen(true);
+                  setWeekChoice(null);
+                }}
+                style={{
+                  padding: "14px 16px", borderRadius: 14, textAlign: "left",
+                  border: `2px solid ${selected ? C.cyan : C.border}`,
+                  background: selected ? `${C.cyan}12` : C.card,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 22 }}>{m.emoji}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: selected ? C.cyan : C.text }}>
+                      {m.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.mut, marginTop: 3, lineHeight: 1.4 }}>
+                      {m.desc}
+                    </div>
+                  </div>
+                  {selected && <span style={{ fontSize: 18, color: C.cyan }}>✓</span>}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: C.cyan, fontWeight: 700 }}>
+                  Hoy toca: {GYM_FOCUS_NAMES[todayFocus] || todayFocus}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -8191,8 +8221,6 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
     const heroMilestones = [7, 21, 45, 90, 180, 365];
     const justUnlocked = heroMilestones.includes(newStreak) ? heroForStreak(newStreak) : null;
 
-    const bulldogs = (volume / 20).toFixed(0); // 1 bulldog ≈ 20kg
-
     const volDiffPct = priorAvgVolume > 0 ? Math.round(((volume - priorAvgVolume) / priorAvgVolume) * 100) : null;
 
     /* Detectar si esta sesión rompió algún récord previo */
@@ -8313,7 +8341,9 @@ function ActiveSession({ plan, streak, sessions, onSave, onSaveNote, onClose, vo
         </div>
 
         {volume > 0 && (
-          <p style={{ fontSize: 11, color: C.mut, marginTop: 8 }}>Levantaste el peso de {bulldogs} bulldogs 🐕</p>
+          <p style={{ fontSize: 13, color: C.mut, marginTop: 8 }}>
+            Volumen total: <b style={{ color: C.text }}>{volume.toLocaleString()} kg</b>
+          </p>
         )}
 
         {volDiffPct !== null && volDiffPct > 0 && (
@@ -9432,39 +9462,20 @@ function SettingsScreen({
           const counts = {};
           sessions.forEach((s) => { if (s.kind === "entreno") counts[s.disc] = (counts[s.disc] || 0) + 1; });
           const favDisc = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
-          const defaultMethod = store.get("default_methodology", "standard");
-          const methods = [
-            { id: "standard", label: "Estándar" },
-            { id: "dup", label: "DUP" },
-          ];
           return (
             <>
               {favDisc && (
                 <p style={{ fontSize: 12, color: C.mut }}>Tu disciplina más frecuente: <b style={{ color: C.text }}>{discLabels[favDisc] || favDisc}</b></p>
               )}
-              <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 10 }}>METODOLOGÍA POR DEFECTO (GIMNASIO)</p>
-              <div className="chip-wrap" style={{ marginTop: 6 }}>
-                {methods.map((m) => (
-                  <button
-                    key={m.id}
-                    className={`chip ${defaultMethod === m.id ? "on" : ""}`}
-                    style={defaultMethod === m.id ? { background: C.cyan } : {}}
-                    onClick={() => { store.set("default_methodology", m.id); refresh(); }}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
               <p style={{ fontSize: 11, color: C.mut, fontWeight: 700, marginTop: 14 }}>NIVEL POR DISCIPLINA</p>
               <div style={{ marginTop: 6 }}>
                 {discIds.map((id) => {
                   const discSessions = sessions.filter((s) => s.kind === "entreno" && s.disc === id);
                   if (!discSessions.length) return null;
-                  const lvl = LEVELS[mostFrequentLevel(discSessions)];
                   return (
                     <div key={id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0" }}>
                       <span style={{ color: C.mut }}>{discLabels[id]}</span>
-                      <span style={{ color: lvl.color, fontWeight: 700 }}>{lvl.emoji} {lvl.name}</span>
+                      <span style={{ color: C.text, fontWeight: 700 }}>{discSessions.length} sesiones</span>
                     </div>
                   );
                 })}
@@ -9615,34 +9626,6 @@ function SettingsScreen({
           </SettingsRow>
         </div>
       )}
-
-      <AccordionSection icon="📊" title="Plan de 12 semanas">
-      <div className="card">
-        <SettingsRow label="Periodización de 12 semanas">
-          <SettingsToggle
-            on={!!store.get("plan_start", null)}
-            aria-label="Alternar plan de 12 semanas"
-            onClick={() => {
-              if (store.get("plan_start", null)) {
-                showConfirm({
-                  title: "¿Desactivar el plan de 12 semanas?",
-                  confirmLabel: "Desactivar",
-                  confirmColor: C.orange,
-                  onConfirm: () => { store.set("plan_start", null); refresh(); },
-                });
-              } else {
-                store.set("plan_start", new Date().toISOString());
-                store.set("plan_last_phase", null);
-                refresh();
-              }
-            }}
-          />
-        </SettingsRow>
-        <p style={{ fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.4 }}>
-          Ajusta automáticamente series y descansos en 4 fases (base, acumulación, intensificación, deload) durante 12 semanas.
-        </p>
-      </div>
-      </AccordionSection>
 
       <AccordionSection icon="💾" title="Datos y backup">
       <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -10061,14 +10044,6 @@ const MACRO_GOALS = [
   { id: "performance", label: "Rendimiento deportivo", emoji: "⚡" },
 ];
 
-const MACRO_ACTIVITY = [
-  { id: "sedentary", label: "Sedentario", desc: "Oficina, poco ejercicio", emoji: "🛋️", mult: 1.2 },
-  { id: "light", label: "Ligero", desc: "1-3 días/semana", emoji: "🚶", mult: 1.375 },
-  { id: "moderate", label: "Moderado", desc: "3-5 días/semana", emoji: "🏃", mult: 1.55 },
-  { id: "active", label: "Muy activo", desc: "6-7 días/semana", emoji: "💪", mult: 1.725 },
-  { id: "athlete", label: "Atleta", desc: "2 sesiones diarias", emoji: "⚡", mult: 1.9 },
-];
-
 function MacrosCalculator({ sessions, onBack }) {
   const savedWeightLog = getWeightLog();
   const savedWeight = savedWeightLog.length ? savedWeightLog[savedWeightLog.length - 1].weight : null;
@@ -10080,10 +10055,14 @@ function MacrosCalculator({ sessions, onBack }) {
   const [sex, setSex] = useState("m");
   const [bodyFat, setBodyFat] = useState(() => store.get("body_fat", ""));
   const [goal, setGoal] = useState(null);
-  const [activity, setActivity] = useState(() => {
-    const mult = getActivityMult(sessions, 3);
-    return MACRO_ACTIVITY.reduce((best, a) => (Math.abs(a.mult - mult) < Math.abs(best.mult - mult) ? a : best)).id;
-  });
+  const activityMult = getActivityMult(sessions, store.get("weekly_goal", 4));
+  const activityLabel = (() => {
+    if (activityMult >= 1.9) return "Atleta (2 sesiones/día)";
+    if (activityMult >= 1.725) return "Muy activo (6-7 días/sem)";
+    if (activityMult >= 1.55) return "Moderado (3-5 días/sem)";
+    if (activityMult >= 1.375) return "Ligero (1-3 días/sem)";
+    return "Sedentario";
+  })();
 
   const imc = weight && height ? parseFloat(weight) / (parseFloat(height) / 100) ** 2 : null;
 
@@ -10096,7 +10075,7 @@ function MacrosCalculator({ sessions, onBack }) {
     const bf = parseFloat(bodyFat);
     if (bf > 0) store.set("body_fat", bodyFat); else store.set("body_fat", "");
     const tmb = calcTMB(w, h, a, sex, bf);
-    const mult = MACRO_ACTIVITY.find((x) => x.id === activity)?.mult || 1.55;
+    const mult = activityMult;
     const tdee = tmb * mult;
     const gm = {
       muscle: { calories: tdee + 300, protein: w * 2.0, carbsCals: tdee * 0.45, fatCals: tdee * 0.25 },
@@ -10205,21 +10184,10 @@ function MacrosCalculator({ sessions, onBack }) {
           ))}
         </div>
 
-        <div className="sec-title" style={{ marginTop: 14 }}>Nivel de actividad</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {MACRO_ACTIVITY.map((a) => (
-            <button
-              key={a.id} className="card"
-              onClick={() => setActivity(a.id)}
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left", border: activity === a.id ? `2px solid ${C.cyan}` : undefined }}
-            >
-              <span style={{ fontSize: 18 }}>{a.emoji}</span>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700 }}>{a.label}</div>
-                <div style={{ fontSize: 10, color: C.mut }}>{a.desc}</div>
-              </div>
-            </button>
-          ))}
+        <div style={{ padding: "10px 14px", background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, marginTop: 14 }}>
+          <p style={{ fontSize: 11, color: C.mut, fontWeight: 700 }}>NIVEL DE ACTIVIDAD (AUTO)</p>
+          <p style={{ fontSize: 14, fontWeight: 800, marginTop: 4 }}>{activityLabel}</p>
+          <p style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>Calculado de tu historial de sesiones.</p>
         </div>
 
         <button
@@ -10631,32 +10599,15 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   const [detail, setDetail] = useState(false);
   const [show1rm, setShow1rm] = useState(false);
   const [recordDetail, setRecordDetail] = useState(null);
-  const [showAchievements, setShowAchievements] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showMacros, setShowMacros] = useState(false);
 
-  const [newAchievement, setNewAchievement] = useState(null);
-  const [achConfetti, setAchConfetti] = useState(false);
-  const { list: achievements, justUnlocked } = useMemo(() => computeAchievements(sessions, freezes), [sessions, freezes]);
-  const unlockedCount = achievements.filter((a) => a.unlocked).length;
-
-  useEffect(() => {
-    if (justUnlocked.length === 0) return undefined;
-    const t0 = setTimeout(() => {
-      setNewAchievement(justUnlocked[0]);
-      setAchConfetti(true);
-    }, 0);
-    const t1 = setTimeout(() => setNewAchievement(null), 3000);
-    const t2 = setTimeout(() => setAchConfetti(false), 2500);
-    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [justUnlocked.length]);
   const [bestStreak] = useState(() => {
     const best = Math.max(longestStreakEver(sessions), streak, store.get("best_streak", 0));
     store.set("best_streak", best);
     return best;
   });
-  const xpInfo = useMemo(() => computeXP(sessions, unlockedCount, bestStreak), [sessions, unlockedCount, bestStreak]);
+  const xpInfo = useMemo(() => computeXP(sessions, bestStreak), [sessions, bestStreak]);
   const globalStats = useMemo(() => computeGlobalStats(sessions), [sessions]);
   const totalVolumeShown = useCountUp(globalStats.totalVolume, 1200);
 
@@ -10722,33 +10673,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   if (show1rm) return <OneRM onBack={() => setShow1rm(false)} />;
   if (showMacros) return <MacrosCalculator sessions={sessions} onBack={() => setShowMacros(false)} />;
 
-  if (showAchievements) {
-    return (
-      <div className="screen">
-        <button onClick={() => setShowAchievements(false)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>
-          ‹ Progreso
-        </button>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginTop: 8 }}>🏅 Logros</h2>
-        <p className="muted" style={{ marginTop: 2 }}>{unlockedCount} de {achievements.length} desbloqueados</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-          {achievements.map((a) => {
-            const hidden = a.secret && !a.unlocked;
-            return (
-              <div key={a.id} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", opacity: a.unlocked ? 1 : 0.5 }}>
-                <span style={{ fontSize: 30 }}>{hidden ? "❓" : a.unlocked ? a.emoji : "🔒"}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800 }}>{hidden ? "Logro secreto" : a.name}</div>
-                  <div style={{ fontSize: 11, color: C.mut, marginTop: 2 }}>{hidden ? "Sigue entrenando para descubrirlo" : a.desc}</div>
-                  {a.unlocked && <div style={{ fontSize: 10, color: C.cyan, marginTop: 2 }}>Desbloqueado {fmtDate(a.ts)}</div>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
   if (showStats) {
     const s = globalStats;
     const favDisc = DISCIPLINES[s.favDiscId];
@@ -10770,7 +10694,7 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           </div>
           {s.totalVolume > 0 && (
             <div style={{ fontSize: 12, color: C.mut, marginTop: 4 }}>
-              Has levantado el peso de {volumeEquivalent(s.totalVolume)}
+              {s.totalVolume.toLocaleString()} kg de volumen total
             </div>
           )}
         </div>
@@ -10850,8 +10774,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
           return <p style={{ fontSize: 12, fontWeight: 700, color: rpeColor(avg), marginTop: 4 }}>RPE promedio: {avg.toFixed(1)}</p>;
         })()}
 
-        <ProgressTimeline exercise={recordDetail} currentValue={maxVal} />
-
         {(() => {
           const pred = predictRecord(sessions, recordDetail);
           if (!pred) return null;
@@ -10907,14 +10829,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
   if (!detail) {
     return (
       <div className="screen">
-        <Confetti show={achConfetti} />
-        {newAchievement && (
-          <div className="card unlock-pop" style={{ position: "fixed", top: 70, left: 12, right: 12, zIndex: 100, borderColor: C.yellow, background: "#13131dee", textAlign: "center", padding: "14px" }}>
-            <div style={{ fontSize: 30 }}>{newAchievement.emoji}</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: C.yellow, marginTop: 4 }}>¡Logro desbloqueado!</div>
-            <div style={{ fontSize: 12, color: C.text, marginTop: 2 }}>{newAchievement.name}</div>
-          </div>
-        )}
         <h2 style={{ fontSize: 18, fontWeight: 800 }}>Progreso</h2>
         <p className="muted" style={{ marginTop: 2 }}>Tu nivel global como atleta</p>
 
@@ -11003,10 +10917,6 @@ function Progress({ sessions, freezes = [], streak = 0, onQuickStart }) {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button className="card" onClick={() => setShowAchievements(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
-            <div style={{ fontSize: 20 }}>🏅</div>
-            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Logros ({unlockedCount})</div>
-          </button>
           <button className="card" onClick={() => setShowStats(true)} style={{ flex: 1, textAlign: "center", padding: "12px 6px" }}>
             <div style={{ fontSize: 20 }}>📊</div>
             <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>Estadísticas</div>
@@ -11591,6 +11501,7 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart 
     return (
       <div className="screen">
         <button onClick={() => onSection(null)} style={{ color: C.mut, fontSize: 12, fontWeight: 600, padding: "4px 0" }}>‹ Yo</button>
+        <MuscleLoadCard sessions={sessions} />
         <Progress sessions={sessions} freezes={freezes} streak={streak} onQuickStart={onQuickStart} />
       </div>
     );
@@ -11631,7 +11542,7 @@ function YoScreen({ section, onSection, sessions, freezes, streak, onQuickStart 
           <span style={{ fontSize: 28 }}>📊</span>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800 }}>Mi progreso</div>
-            <div style={{ fontSize: 12, color: C.mut }}>Récords, estadísticas, DNA atlético, logros y más</div>
+            <div style={{ fontSize: 12, color: C.mut }}>Récords, estadísticas, DNA atlético y más</div>
           </div>
           <span style={{ marginLeft: "auto", color: C.dim }}>›</span>
         </button>
